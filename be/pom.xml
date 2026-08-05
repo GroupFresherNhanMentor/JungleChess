@@ -10,7 +10,7 @@
         <relativePath /> <!-- lookup parent from repository -->
     </parent>
     <groupId>fpt.qn</groupId>
-    <artifactId>iothospital</artifactId>
+    <artifactId>jungleChess</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>mes</name>
     <description>Demo project for Spring Boot</description>
@@ -34,7 +34,7 @@
         <testcontainers.version>1.21.4</testcontainers.version>
         <uuid-creator.version>6.1.1</uuid-creator.version>
         <!-- override to match local DB when running codegen -->
-        <db.url>jdbc:postgresql://localhost:5432/iot-hospital-management-system</db.url>
+        <db.url>jdbc:postgresql://localhost:5432/jungle-chess-system</db.url>
         <db.username>postgres</db.username>
         <db.password>postgres</db.password>
         <auth.performance.excluded-groups>performance</auth.performance.excluded-groups>
@@ -58,20 +58,19 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc</artifactId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
             <version>${springdoc.version}</version>
         </dependency>
         <dependency>
@@ -132,17 +131,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-restclient</artifactId>
+            <artifactId>spring-boot-starter-webflux-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -224,7 +213,7 @@
                             <fluentSetters>true</fluentSetters>
                         </generate>
                         <target>
-                            <packageName>fpt.qn.iothospital.jooq</packageName>
+                            <packageName>fpt.qn.junglechess.jooq</packageName>
                             <directory>target/generated-sources/jooq</directory>
                         </target>
                     </generator>
@@ -269,6 +258,6 @@
 </project>
 
 
-    <!-- @PreAuthorize("@security.isAdmin()")
+<!-- @PreAuthorize("@security.isAdmin()")
     @PreAuthorize("@security.isAdminOrSelf(#id)")
     @PreAuthorize("@security.isDoctor()") -->

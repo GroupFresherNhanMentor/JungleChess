@@ -1,10 +1,10 @@
 spring:
   application:
-    name: iothospital
+    name: jungleChess
 
   # ─── DataSource ───────────────────────────────────────────────
   datasource:
-    url: jdbc:postgresql://localhost:5432/iot-hospital-management-system
+    url: jdbc:postgresql://localhost:5432/jungle-chess-system
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
@@ -69,4 +69,4 @@ management:
 logging:
   level:
     org.jooq.tools.LoggerListener: DEBUG
-    fpt.qn.iothospital: DEBUG
+    fpt.qn.junglechess: DEBUG

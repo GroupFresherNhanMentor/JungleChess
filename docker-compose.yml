@@ -3,7 +3,7 @@ services:
     image: postgres:18-alpine
     container_name: ioth-db
     environment:
-      POSTGRES_DB: iot-hospital-management-system
+      POSTGRES_DB: jungle-chess-system
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
@@ -12,7 +12,7 @@ services:
       # SỬA LỖI: Trỏ đúng vào thư mục /data của postgres
       - ioth-db-data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d iot-hospital-management-system"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d jungle-chess-system"]
       interval: 10s
       timeout: 5s
       retries: 5

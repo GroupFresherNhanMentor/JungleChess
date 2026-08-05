@@ -13,7 +13,7 @@ jobs:
       postgres:
         image: postgres:18-alpine
         env:
-          POSTGRES_DB: mes
+          POSTGRES_DB: jungle-chess-system
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:

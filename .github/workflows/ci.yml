@@ -1,0 +1,56 @@
+name: CI - Compile Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  compile-check:
+    name: Compile Check
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: mes
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mes"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: "25"
+          distribution: "temurin"
+          cache: maven
+
+      # Vẫn giữ Flyway để jOOQ codegen có thể tạo ra source code trước khi compile
+      - name: Apply Flyway migrations for jOOQ codegen
+        working-directory: be
+        run: |
+          ./mvnw flyway:migrate \
+            -Ddb.url=jdbc:postgresql://localhost:5432/jungle-chess-system \
+            -Ddb.username=postgres \
+            -Ddb.password=postgres \
+            --no-transfer-progress
+
+      - name: Compile project
+        working-directory: be
+        run: |
+          ./mvnw test-compile \
+            -Ddb.url=jdbc:postgresql://localhost:5432/jungle-chess-system \
+            -Ddb.username=postgres \
+            -Ddb.password=postgres \
+            -DskipTests \
+            --no-transfer-progress

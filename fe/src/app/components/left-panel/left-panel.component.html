@@ -1,0 +1,45 @@
+<div id="left-panel">
+  <!-- Captured by Red (Player 1) -->
+  <div id="captured-by-player1" class="captured-panel">
+    <h2>{{ loc.translate('capturedByRedLabel') }}</h2>
+    <div class="pieces-container">
+      <ng-container *ngIf="capturedByRed.length === 0">
+        <span class="captured-none-text">
+          {{ loc.translate('capturedNone') }}
+        </span>
+      </ng-container>
+      <div
+        *ngFor="let p of capturedByRed"
+        class="captured-piece player0"
+        [title]="p.type"
+      >
+        <img
+          [src]="'assets/images/head_no_background/' + p.type + '.png'"
+          [alt]="p.type"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Action buttons -->
+  <div id="left-panel-actions">
+    <div id="action-buttons-group" class="panel-button-group">
+      <button id="reset-button" (click)="resetGame.emit()">
+        {{ loc.translate('resetButton') }}
+      </button>
+      <button
+        id="undo-button"
+        [disabled]="!canUndo"
+        (click)="undoMove.emit()"
+      >
+        {{ loc.translate('undoButton') }}
+      </button>
+    </div>
+    <button id="randomize-board-button" (click)="randomizeBoard.emit()">
+      {{ loc.translate('randomizeBoardButton') }}
+    </button>
+    <button id="rules-button" (click)="openRules.emit()" class="rules-btn">
+      📖 {{ loc.translate('rulesButton') }}
+    </button>
+  </div>
+</div>

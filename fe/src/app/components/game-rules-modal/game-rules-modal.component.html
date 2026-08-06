@@ -1,0 +1,47 @@
+<div class="modal-backdrop" *ngIf="isOpen" (click)="onBackdropClick($event)">
+  <div class="modal-card">
+    <!-- Modal Header -->
+    <div class="modal-header">
+      <h2>{{ loc.translate('rulesTitle') }}</h2>
+      <button class="modal-close-btn" (click)="close.emit()">&times;</button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="modal-body">
+      <ul id="rules-list">
+        <li>{{ loc.translate('ruleMovement') }}</li>
+        <li>
+          <strong>{{ getRuleRankLabel() }}</strong>
+          <div class="rank-hierarchy" style="margin-top: 5px;">
+            <ng-container *ngFor="let p of pieceRankList; let last = last">
+              <span class="rank-piece">
+                <img
+                  [src]="'assets/images/head_no_background/' + p + '.png'"
+                  [alt]="p"
+                  class="rank-piece-icon"
+                />
+                {{ getAnimalName(p) }}
+              </span>
+              <span *ngIf="!last" class="rank-separator">&gt;</span>
+            </ng-container>
+          </div>
+        </li>
+        <li>{{ loc.translate('ruleCapture') }}</li>
+        <li [innerHTML]="loc.translate('ruleRatElephant')"></li>
+        <li [innerHTML]="loc.translate('ruleElephantRat')"></li>
+        <li [innerHTML]="loc.translate('ruleTraps')"></li>
+        <li [innerHTML]="loc.translate('ruleWater')"></li>
+        <li [innerHTML]="loc.translate('ruleJump')"></li>
+        <li [innerHTML]="loc.translate('ruleDens')"></li>
+        <li>{{ loc.translate('ruleWinCondition') }}</li>
+      </ul>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="modal-footer">
+      <button class="modal-action-btn" (click)="close.emit()">
+        {{ loc.translate('closeButton') }}
+      </button>
+    </div>
+  </div>
+</div>

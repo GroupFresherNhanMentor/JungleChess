@@ -1,0 +1,4 @@
+/* Styles specific to Board Component */
+:host {
+  display: block;
+}

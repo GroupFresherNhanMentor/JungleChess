@@ -1,0 +1,21 @@
+/* Styles specific to Game Controls Component */
+:host {
+  display: block;
+  width: 100%;
+}
+
+.rules-modal-btn {
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  background-color: #3498db;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.rules-modal-btn:hover {
+  background-color: #2980b9;
+}

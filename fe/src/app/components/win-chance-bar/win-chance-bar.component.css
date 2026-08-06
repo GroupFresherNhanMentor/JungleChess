@@ -1,0 +1,5 @@
+/* Styles specific to Win Chance Bar Component */
+:host {
+  display: block;
+  width: 100%;
+}

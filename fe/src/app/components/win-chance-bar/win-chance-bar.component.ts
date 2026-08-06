@@ -6,20 +6,8 @@ import { Piece } from '../../core/models/game.models';
   selector: 'app-win-chance-bar',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div id="win-chance-bar-container">
-      <div id="win-chance-bar" [title]="titleText">
-        <div
-          id="win-chance-bar-blue"
-          [style.width.%]="bluePercentage"
-        ></div>
-        <div
-          id="win-chance-bar-red"
-          [style.width.%]="100 - bluePercentage"
-        ></div>
-      </div>
-    </div>
-  `
+  templateUrl: './win-chance-bar.component.html',
+  styleUrl: './win-chance-bar.component.css'
 })
 export class WinChanceBarComponent implements OnChanges {
   @Input() pieces: Piece[] = [];

@@ -7,58 +7,8 @@ import { LocalizationService } from '../../core/services/localization.service';
   selector: 'app-right-panel',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div id="right-panel">
-      <!-- Captured by Blue (Player 0) -->
-      <div id="captured-by-player0" class="captured-panel">
-        <h2>{{ loc.translate('capturedByBlueLabel') }}</h2>
-        <div class="pieces-container">
-          <ng-container *ngIf="capturedByBlue.length === 0">
-            <span style="font-size: 0.85em; color: #777; width: 100%; text-align: center;">
-              {{ loc.translate('capturedNone') }}
-            </span>
-          </ng-container>
-          <div
-            *ngFor="let p of capturedByBlue"
-            class="captured-piece player1"
-            [title]="p.type"
-          >
-            <img
-              [src]="'assets/images/head_no_background/' + p.type + '.png'"
-              [alt]="p.type"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- Move History -->
-      <div id="move-history">
-        <h2>{{ loc.translate('moveHistoryLabel') }}</h2>
-        <ol id="move-list">
-          <li *ngFor="let m of moveHistory">
-            <span
-              class="piece-hist"
-              [ngClass]="m.piece.side === 0 ? 'player0' : 'player1'"
-            >
-              <img
-                [src]="'assets/images/head_no_background/' + m.piece.type + '.png'"
-                [alt]="m.piece.type"
-              />
-            </span>
-            <span>{{ formatMove(m) }}</span>
-          </li>
-        </ol>
-      </div>
-
-      <!-- Turn Indicator -->
-      <p class="turn-info">
-        <span>{{ loc.translate('turnLabel') }} </span>
-        <span [style.color]="currentTurn === 0 ? 'blue' : 'red'">
-          {{ getTurnText() }}
-        </span>
-      </p>
-    </div>
-  `
+  templateUrl: './right-panel.component.html',
+  styleUrl: './right-panel.component.css'
 })
 export class RightPanelComponent {
   @Input() capturedByBlue: Piece[] = [];

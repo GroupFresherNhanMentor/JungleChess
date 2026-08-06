@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
+  ChatMessage,
   GameMode,
   Language,
   Move,
@@ -20,6 +21,7 @@ import { LeftPanelComponent } from './components/left-panel/left-panel.component
 import { RightPanelComponent } from './components/right-panel/right-panel.component';
 import { WinChanceBarComponent } from './components/win-chance-bar/win-chance-bar.component';
 import { GameRulesModalComponent } from './components/game-rules-modal/game-rules-modal.component';
+import { ChatComponent } from './components/chat/chat.component';
 
 @Component({
   selector: 'app-root',
@@ -32,7 +34,8 @@ import { GameRulesModalComponent } from './components/game-rules-modal/game-rule
     LeftPanelComponent,
     RightPanelComponent,
     WinChanceBarComponent,
-    GameRulesModalComponent
+    GameRulesModalComponent,
+    ChatComponent
   ],
   templateUrl: './app.component.html'
 })
@@ -51,11 +54,20 @@ export class AppComponent implements OnInit {
   moveHistory: Move[] = [];
   capturedByRed: Piece[] = []; // Blue pieces captured by Red
   capturedByBlue: Piece[] = []; // Red pieces captured by Blue
+  chatMessages: ChatMessage[] = [];
 
   statusMessage: string = '';
   isGameOver: boolean = false;
   isAiThinking: boolean = false;
   isRulesModalOpen: boolean = false;
+
+  private botTaunts = [
+    'Tôi đã tính trước 9 nước cờ rồi đó! 🤖',
+    'Nước cờ này chuẩn bị bị bắt nhé! 🔥',
+    'Chơi khéo đấy, nhưng tôi vẫn dẫn trước! 😎',
+    'Tập trung đi bạn ơi! ⚔️',
+    'Cơ hội thắng của tôi là rất cao! 🚀'
+  ];
 
   constructor(
     public loc: LocalizationService,
@@ -85,12 +97,74 @@ export class AppComponent implements OnInit {
     this.isAiThinking = false;
     this.actualAiDepth = 0;
 
+    const timeStr = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    this.chatMessages = [
+      {
+        id: 'sys-start',
+        sender: 'Hệ thống',
+        text:
+          this.currentLang === 'vn'
+            ? 'Chào mừng bạn đến với Cờ Thú Online!'
+            : 'Welcome to Jungle Chess Online!',
+        timestamp: timeStr,
+        isSystem: true
+      }
+    ];
+
     this.updateStatusMessage();
     this.cdr.detectChanges();
 
     // If PvA mode and AI (Red = 1) moves first
     if (this.gameMode === 'PVA' && this.currentTurn === 1) {
       this.triggerAiMove();
+    }
+  }
+
+  public onSendChatMessage(text: string): void {
+    const timeStr = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const senderSide = this.gameMode === 'PVA' ? 0 : this.currentTurn;
+    const senderName =
+      senderSide === 0
+        ? this.loc.translate('playerStartsBlue')
+        : this.loc.translate('playerStartsRed');
+
+    const userMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      sender: senderName,
+      side: senderSide,
+      text,
+      timestamp: timeStr
+    };
+
+    this.chatMessages = [...this.chatMessages, userMsg];
+    this.cdr.detectChanges();
+
+    // In PVA mode, AI bot occasionally replies with a taunt
+    if (this.gameMode === 'PVA') {
+      setTimeout(() => {
+        const randomTaunt =
+          this.botTaunts[Math.floor(Math.random() * this.botTaunts.length)];
+        const botMsg: ChatMessage = {
+          id: `bot-msg-${Date.now()}`,
+          sender: 'Máy (Red AI)',
+          side: 1,
+          text: randomTaunt,
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        };
+        this.chatMessages = [...this.chatMessages, botMsg];
+        this.cdr.detectChanges();
+      }, 1000);
     }
   }
 

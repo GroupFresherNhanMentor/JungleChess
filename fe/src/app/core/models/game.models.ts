@@ -22,6 +22,15 @@ export interface Move {
   notation?: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  sender: string;
+  side?: PieceSide; // 0: Blue, 1: Red, undefined: System / Spectator
+  text: string;
+  timestamp: string;
+  isSystem?: boolean;
+}
+
 export type TileType = 'land' | 'water' | 'trap' | 'den';
 
 export interface Tile {
@@ -37,8 +46,8 @@ export type Language = 'en' | 'vn';
 export const PIECE_RANKS: Record<PieceType, number> = {
   rat: 1,
   cat: 2,
-  wolf: 3,
-  dog: 4,
+  dog: 3,
+  wolf: 4,
   leopard: 5,
   tiger: 6,
   lion: 7,

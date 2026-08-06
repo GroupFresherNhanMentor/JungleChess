@@ -45,15 +45,15 @@
 │ id (PK)               │       │ id (PK)       │
 │ match_id (FK)         │       │ room_id       │
 │ user_id (FK, nullable)│       │ mode          │
-│ bot_id (FK, nullable) │       │ status        │
-│ side                  │       │ winner_side   │
-│ is_bot                │       │ end_reason    │
-└───────────────────────┘       │ started_at    │
-                                 │ ended_at      │
-        ┌────────────────┐      └───────┬───────┘
-        │      bots       │              │1
-        │─────────────────│              │
-        │ id (PK)          │              │*
+│ bot_id (FK, nullable) │──┐    │ status        │
+│ side                  │  │    │ winner_side   │
+│ is_bot                │  │    │ end_reason    │
+└───────────────────────┘  │    │ started_at    │
+                           │    │ ended_at      │
+        ┌────────────────┐ │    └───────┬───────┘
+        │      bots       │ │            │1
+        │─────────────────│ │            │
+        │ id (PK)          │<─┘            │*
         │ name             │      ┌───────┴────────┐
         │ difficulty       │      │  match_moves    │
         │ search_depth     │      │─────────────────│

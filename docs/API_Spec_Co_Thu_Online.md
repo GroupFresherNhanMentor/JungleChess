@@ -28,8 +28,8 @@
   |---|---|---|
   | RAT | Chuột | 1 |
   | CAT | Mèo | 2 |
-  | WOLF | Sói | 3 |
-  | DOG | Chó | 4 |
+  | DOG | Chó | 3 |
+  | WOLF | Sói | 4 |
   | LEOPARD | Báo | 5 |
   | TIGER | Hổ | 6 |
   | LION | Sư Tử | 7 |
@@ -231,9 +231,11 @@ heart-beat:10000,10000
     { "sessionId": "sess-1", "side": "PLAYER_1", "isBot": false, "username": "nghia123" },
     { "sessionId": "sess-2", "side": "PLAYER_2", "isBot": false, "username": "khoi88" }
   ],
-  "status": "PLAYING"
+  "status": "PLAYING",
+  "yourSide": "PLAYER_2"
 }
 ```
+> Ghi chú: Field `yourSide` trong broadcast là thông tin side phân định cho client vừa gửi yêu cầu join (hoặc client dựa vào `sessionId` của mình trong mảng `players` để xác định side).
 
 ---
 
@@ -349,6 +351,7 @@ heart-beat:10000,10000
 | ROOM_FULL | Phòng đã đủ người chơi | `/user/queue/errors` |
 | NOT_YOUR_TURN | Gửi move không đúng lượt | `/user/queue/errors` |
 | INVALID_MOVE | Nước đi phạm luật cờ thú | `/user/queue/errors` |
+| ACTION_NOT_ALLOWED | Thực hiện hành động không được phép (VD: client gửi move ở chế độ EvE/spectator) | `/user/queue/errors` |
 | GAME_ALREADY_ENDED | Gửi move sau khi ván đã kết thúc | `/user/queue/errors` |
 
 ---

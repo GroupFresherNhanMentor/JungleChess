@@ -16,7 +16,7 @@ Tài liệu này mô tả chi tiết các yêu cầu chức năng và phi chức
 Sản phẩm là một web-app cho phép:
 - Người chơi tạo/tham gia phòng chơi qua kết nối thời gian thực (WebSocket).
 - Xác thực người dùng bằng access token/refresh token.
-- Chơi cờ thú theo đúng luật quốc tế (bàn cờ 9x7, bẫy, hang, sông, thứ bậc động vật, luật chuột-voi, luật nhảy sông của hổ/sư tử).
+- Chơi cờ thú theo đúng luật quốc tế (bàn cờ 9 hàng x 7 cột, bẫy, hang, sông, thứ bậc động vật, luật chuột-voi, luật nhảy sông của hổ/sư tử).
 - Ba chế độ chơi: PvP trên cùng một máy (2 người thay phiên trên 1 thiết bị), PvE (người chơi đấu với AI bot), EvE (2 bot tự đấu, người dùng xem/quan sát).
 - Giao diện đẹp, mượt, có animation và âm thanh.
 
@@ -48,7 +48,7 @@ Hệ thống gồm 2 phần chính:
 - **Frontend (Angular):** giao diện bàn cờ, animation quân cờ, âm thanh, quản lý kết nối WebSocket, hiển thị phòng/sảnh chờ, xử lý luồng chơi cho cả 3 chế độ.
 
 ### 2.2 Chức năng chính
-1. Đăng ký/Đăng nhập, quản lý phiên (access token + refresh token) qua WebSocket.
+1. Đăng ký/Đăng nhập qua REST API, xác thực và quản lý phiên (access token + refresh token) cho kết nối WebSocket.
 2. Tạo phòng, tham gia phòng, rời phòng, mời chơi lại.
 3. Chơi cờ thú theo luật quốc tế, đồng bộ real-time giữa các client.
 4. Bot AI có khả năng tính nước đi (tối thiểu 1 mức độ khó, có thể mở rộng nhiều mức).
@@ -70,8 +70,8 @@ Hệ thống gồm 2 phần chính:
 
 ## 3. LUẬT CHƠI CỜ THÚ QUỐC TẾ (tóm tắt làm cơ sở cho module Game Rule)
 
-- **Bàn cờ:** 7 cột x 9 hàng.
-- **Quân cờ (mỗi bên 8 quân, xếp hạng từ thấp đến cao):** Chuột (1) < Mèo (2) < Sói (3) < Chó (4) < Báo (5) < Hổ (6) < Sư Tử (7) < Voi (8).
+- **Bàn cờ:** 9 hàng x 7 cột.
+- **Quân cờ (mỗi bên 8 quân, xếp hạng từ thấp đến cao):** Chuột (1) < Mèo (2) < Chó (3) < Sói (4) < Báo (5) < Hổ (6) < Sư Tử (7) < Voi (8).
 - **Nguyên tắc ăn quân:** quân có hạng cao hơn hoặc bằng ăn được quân hạng thấp hơn hoặc bằng, **ngoại lệ:** Chuột ăn được Voi (hạng thấp nhất khắc chế hạng cao nhất), nhưng Voi không ăn được Chuột.
 - **Sông (River):** chỉ Chuột được đi vào/bơi qua; Hổ và Sư Tử được phép **nhảy thẳng qua sông** theo hàng/cột (bị chặn nếu có Chuột đang ở giữa sông trên đường nhảy).
 - **Bẫy (Trap):** đặt trước hang của mỗi bên (3 ô/bên). Quân đối phương đứng vào bẫy của mình sẽ bị mất hiệu lực thứ bậc (hạng = 0), có thể bị bất kỳ quân nào của đối phương ăn.
@@ -100,7 +100,7 @@ Hệ thống gồm 2 phần chính:
 | Mã | Yêu cầu |
 |---|---|
 | ROOM-01 | Người chơi có thể tạo phòng mới, chọn chế độ chơi (PvP cùng máy / PvE / EvE). |
-| ROOM-02 | Người chơi có thể tham gia (join) phòng đã tồn tại bằng mã phòng (áp dụng cho các chế độ có kết nối mạng, nếu mở rộng PvP online). |
+| ROOM-02 | Người chơi có thể tham gia (join) phòng đã tồn tại bằng mã phòng (hỗ trợ cho chế độ PvE/EvE hoặc mở rộng PvP online). |
 | ROOM-03 | Hệ thống quản lý danh sách phòng đang hoạt động, trạng thái (đang chờ, đang chơi, đã kết thúc). |
 | ROOM-04 | Mỗi nước đi được gửi lên server qua WebSocket, server kiểm tra hợp lệ theo luật trước khi phát (broadcast) trạng thái mới tới các client trong phòng. |
 | ROOM-05 | Server là nguồn xác định duy nhất (source of truth) cho: lượt đi hiện tại, trạng thái bàn cờ, thắng/thua/hòa. |
@@ -122,7 +122,7 @@ Hệ thống gồm 2 phần chính:
 ### 4.4 Module Luật chơi (Game Rule Engine – dùng chung Backend/Frontend)
 | Mã | Yêu cầu |
 |---|---|
-| RULE-01 | Định nghĩa bàn cờ 7x9, vị trí sông, bẫy, hang theo đúng chuẩn quốc tế. |
+| RULE-01 | Định nghĩa bàn cờ 9 hàng x 7 cột, vị trí sông, bẫy, hang theo đúng chuẩn quốc tế. |
 | RULE-02 | Kiểm tra tính hợp lệ của nước đi: đúng hướng liền kề, đúng luật ăn quân theo hạng, luật đặc biệt Chuột–Voi, luật bẫy, luật sông. |
 | RULE-03 | Xử lý luật nhảy sông của Hổ/Sư Tử (kiểm tra đường nhảy có bị Chuột chặn không). |
 | RULE-04 | Xác định điều kiện thắng/thua/hòa sau mỗi nước đi. |
@@ -131,7 +131,7 @@ Hệ thống gồm 2 phần chính:
 ### 4.5 Module Giao diện & Trải nghiệm (Frontend)
 | Mã | Yêu cầu |
 |---|---|
-| UI-01 | Vẽ bàn cờ 7x9 đúng bố cục quốc tế (sông, bẫy, hang) với asset đồ họa các con thú. |
+| UI-01 | Vẽ bàn cờ 9 hàng x 7 cột đúng bố cục quốc tế (sông, bẫy, hang) với asset đồ họa các con thú. |
 | UI-02 | Highlight ô có thể đi khi chọn 1 quân cờ. |
 | UI-03 | Animation di chuyển quân cờ mượt (drag/drop hoặc click-click), animation khi ăn quân, animation khi vào hang (thắng). |
 | UI-04 | Âm thanh: đi quân, ăn quân, thắng/thua, thông báo lượt đối phương. |

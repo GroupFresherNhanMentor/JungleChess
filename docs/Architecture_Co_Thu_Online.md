@@ -142,6 +142,8 @@ com.cothu.backend
 | Client → Server | `/app/room/{roomId}/rematch` | Yêu cầu chơi lại |
 | Server → Client | `/topic/room/{roomId}/state` | Broadcast trạng thái bàn cờ mới nhất sau mỗi nước đi |
 | Server → Client | `/topic/room/{roomId}/result` | Thông báo thắng/thua/hòa |
+| Server → Client | `/topic/room/{roomId}/players` | Broadcast cập nhật danh sách người chơi trong phòng |
+| Server → Client | `/user/queue/room-created` | Trả kết quả tạo phòng riêng cho người gửi request |
 | Server → Client | `/user/queue/errors` | Gửi lỗi riêng cho từng client (VD: nước đi không hợp lệ, hết hạn phiên) |
 
 ### 4.5 Kiến trúc Bot AI
@@ -199,10 +201,13 @@ src/app
 **User**
 | Field | Type |
 |---|---|
-| id | UUID/Long |
+| id | UUID |
 | username | String |
-| passwordHash | String |
+| passwordHash | String (nullable nếu isGuest = true) |
+| displayName | String (nullable) |
+| isGuest | Boolean |
 | createdAt | Timestamp |
+| updatedAt | Timestamp |
 
 **RefreshToken**
 | Field | Type |

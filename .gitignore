@@ -1,0 +1,35 @@
+# Monorepo .gitignore for JungleChess
+
+# Frontend (fe)
+fe/node_modules/
+fe/dist/
+fe/.angular/
+fe/tmp/
+fe/out-tsc/
+fe/bazel-out/
+fe/npm-debug.log*
+fe/yarn-error.log*
+fe/coverage/
+
+# Backend (be)
+be/target/
+be/build/
+be/.gradle/
+be/.settings/
+be/.classpath
+be/.project
+
+# IDEs, Editors & System
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
+.history/*
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,52 @@
+<h1 id="game-title">{{ loc.translate('gameTitle') }}</h1>
+
+<!-- Game Controls Header -->
+<app-game-controls
+  [(currentLang)]="currentLang"
+  [gameMode]="gameMode"
+  (gameModeChange)="onGameModeChange($event)"
+  [firstMoveSide]="firstMoveSide"
+  (firstMoveSideChange)="onFirstMoveSideChange($event)"
+  [(aiDepth)]="aiDepth"
+  [(aiTimeLimit)]="aiTimeLimit"
+  [actualAiDepth]="actualAiDepth"
+></app-game-controls>
+
+<!-- Main Game Layout -->
+<div id="game-layout">
+  <!-- Left Panel: Captured by Red & Actions -->
+  <app-left-panel
+    [capturedByRed]="capturedByRed"
+    [canUndo]="moveHistory.length > 0 && !isAiThinking"
+    (resetGame)="initGame()"
+    (undoMove)="undoMove()"
+    (randomizeBoard)="randomizeBoard()"
+  ></app-left-panel>
+
+  <!-- Main Board Area -->
+  <div id="main-game-area">
+    <app-board
+      [pieces]="pieces"
+      [selectedPos]="selectedPos"
+      [validMoves]="validMoves"
+      [lastMove]="getLastMove()"
+      (squareClick)="onSquareClick($event)"
+    ></app-board>
+
+    <!-- Status message -->
+    <p id="status">{{ statusMessage }}</p>
+
+    <!-- Win Chance Bar -->
+    <app-win-chance-bar [pieces]="pieces"></app-win-chance-bar>
+  </div>
+
+  <!-- Right Panel: Captured by Blue, Move History & Turn Indicator -->
+  <app-right-panel
+    [capturedByBlue]="capturedByBlue"
+    [moveHistory]="moveHistory"
+    [currentTurn]="currentTurn"
+  ></app-right-panel>
+</div>
+
+<!-- Game Rules & Authors Footer -->
+<app-game-rules></app-game-rules>

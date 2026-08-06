@@ -1,0 +1,63 @@
+<div id="chat-panel" class="chat-container">
+  <h2>💬 {{ loc.translate('chatTitle') }}</h2>
+
+  <!-- Messages List -->
+  <div #chatContainer class="chat-messages-list">
+    <div *ngIf="messages.length === 0" class="chat-empty">
+      <span>{{ loc.translate('chatPlaceholder') }}</span>
+    </div>
+
+    <div
+      *ngFor="let msg of messages"
+      class="chat-message-item"
+      [ngClass]="{
+        'system-msg': msg.isSystem,
+        'blue-sender': msg.side === 0,
+        'red-sender': msg.side === 1
+      }"
+    >
+      <ng-container *ngIf="msg.isSystem">
+        <span class="system-text">ℹ️ {{ msg.text }}</span>
+      </ng-container>
+      <ng-container *ngIf="!msg.isSystem">
+        <div class="msg-header">
+          <span
+            class="sender-badge"
+            [ngClass]="msg.side === 0 ? 'player0' : 'player1'"
+          >
+            {{ msg.sender }}
+          </span>
+          <span class="msg-time">{{ msg.timestamp }}</span>
+        </div>
+        <div class="msg-body">{{ msg.text }}</div>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- Quick Taunts / Emotes -->
+  <div class="quick-emotes">
+    <button
+      type="button"
+      *ngFor="let emote of quickEmotes"
+      (click)="sendQuickEmote(emote)"
+      class="emote-btn"
+    >
+      {{ emote }}
+    </button>
+  </div>
+
+  <!-- Chat Input Form -->
+  <form (submit)="onSend($event)" class="chat-input-form">
+    <input
+      type="text"
+      [(ngModel)]="newMessageText"
+      name="messageText"
+      [placeholder]="loc.translate('chatPlaceholder')"
+      class="chat-input"
+      autocomplete="off"
+    />
+    <button type="submit" [disabled]="!newMessageText.trim()" class="send-btn">
+      {{ loc.translate('chatSend') }}
+    </button>
+  </form>
+</div>

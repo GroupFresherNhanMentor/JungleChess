@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
+  ChatMessage,
   GameMode,
   Language,
   Move,
@@ -20,6 +21,7 @@ import { LeftPanelComponent } from './components/left-panel/left-panel.component
 import { RightPanelComponent } from './components/right-panel/right-panel.component';
 import { WinChanceBarComponent } from './components/win-chance-bar/win-chance-bar.component';
 import { GameRulesModalComponent } from './components/game-rules-modal/game-rules-modal.component';
+import { ChatComponent } from './components/chat/chat.component';
 
 @Component({
   selector: 'app-root',
@@ -32,7 +34,8 @@ import { GameRulesModalComponent } from './components/game-rules-modal/game-rule
     LeftPanelComponent,
     RightPanelComponent,
     WinChanceBarComponent,
-    GameRulesModalComponent
+    GameRulesModalComponent,
+    ChatComponent
   ],
   templateUrl: './app.component.html'
 })
@@ -51,28 +54,39 @@ export class AppComponent implements OnInit {
   moveHistory: Move[] = [];
   capturedByRed: Piece[] = []; // Blue pieces captured by Red
   capturedByBlue: Piece[] = []; // Red pieces captured by Blue
+  chatMessages: ChatMessage[] = [];
 
   statusMessage: string = '';
   isGameOver: boolean = false;
   isAiThinking: boolean = false;
   isRulesModalOpen: boolean = false;
 
+  private botTaunts = [
+    'Tôi đã tính trước 9 nước cờ rồi đó! 🤖',
+    'Nước cờ này chuẩn bị bị bắt nhé! 🔥',
+    'Chơi khéo đấy, nhưng tôi vẫn dẫn trước! 😎',
+    'Tập trung đi bạn ơi! ⚔️',
+    'Cơ hội thắng của tôi là rất cao! 🚀'
+  ];
+
   constructor(
     public loc: LocalizationService,
     private ruleService: GameRuleService,
     private audioService: AudioService,
-    private aiBotService: AiBotService
+    private aiBotService: AiBotService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.loc.currentLang$.subscribe(() => {
       this.updateStatusMessage();
+      this.cdr.markForCheck();
     });
     this.initGame();
   }
 
   public initGame(): void {
-    this.pieces = this.ruleService.getInitialPieces();
+    this.pieces = [...this.ruleService.getInitialPieces()];
     this.currentTurn = this.firstMoveSide;
     this.selectedPos = null;
     this.validMoves = [];
@@ -83,7 +97,26 @@ export class AppComponent implements OnInit {
     this.isAiThinking = false;
     this.actualAiDepth = 0;
 
+    const timeStr = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    this.chatMessages = [
+      {
+        id: 'sys-start',
+        sender: 'Hệ thống',
+        text:
+          this.currentLang === 'vn'
+            ? 'Chào mừng bạn đến với Cờ Thú Online!'
+            : 'Welcome to Jungle Chess Online!',
+        timestamp: timeStr,
+        isSystem: true
+      }
+    ];
+
     this.updateStatusMessage();
+    this.cdr.detectChanges();
 
     // If PvA mode and AI (Red = 1) moves first
     if (this.gameMode === 'PVA' && this.currentTurn === 1) {
@@ -91,12 +124,58 @@ export class AppComponent implements OnInit {
     }
   }
 
+  public onSendChatMessage(text: string): void {
+    const timeStr = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const senderSide = this.gameMode === 'PVA' ? 0 : this.currentTurn;
+    const senderName =
+      senderSide === 0
+        ? this.loc.translate('playerStartsBlue')
+        : this.loc.translate('playerStartsRed');
+
+    const userMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      sender: senderName,
+      side: senderSide,
+      text,
+      timestamp: timeStr
+    };
+
+    this.chatMessages = [...this.chatMessages, userMsg];
+    this.cdr.detectChanges();
+
+    // In PVA mode, AI bot occasionally replies with a taunt
+    if (this.gameMode === 'PVA') {
+      setTimeout(() => {
+        const randomTaunt =
+          this.botTaunts[Math.floor(Math.random() * this.botTaunts.length)];
+        const botMsg: ChatMessage = {
+          id: `bot-msg-${Date.now()}`,
+          sender: 'Máy (Red AI)',
+          side: 1,
+          text: randomTaunt,
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        };
+        this.chatMessages = [...this.chatMessages, botMsg];
+        this.cdr.detectChanges();
+      }, 1000);
+    }
+  }
+
   public openRulesModal(): void {
     this.isRulesModalOpen = true;
+    this.cdr.detectChanges();
   }
 
   public closeRulesModal(): void {
     this.isRulesModalOpen = false;
+    this.cdr.detectChanges();
   }
 
   public onGameModeChange(mode: GameMode): void {
@@ -134,6 +213,7 @@ export class AppComponent implements OnInit {
           this.pieces
         );
         this.updateStatusMessage(clickedPiece);
+        this.cdr.detectChanges();
       }
     } else {
       // Check if clicking same square -> deselect
@@ -144,6 +224,7 @@ export class AppComponent implements OnInit {
         this.selectedPos = null;
         this.validMoves = [];
         this.updateStatusMessage();
+        this.cdr.detectChanges();
         return;
       }
 
@@ -155,6 +236,7 @@ export class AppComponent implements OnInit {
           this.pieces
         );
         this.updateStatusMessage(clickedPiece);
+        this.cdr.detectChanges();
         return;
       }
 
@@ -173,6 +255,7 @@ export class AppComponent implements OnInit {
         this.selectedPos = null;
         this.validMoves = [];
         this.updateStatusMessage();
+        this.cdr.detectChanges();
       }
     }
   }
@@ -197,24 +280,33 @@ export class AppComponent implements OnInit {
 
     // Capture piece logic
     if (targetPiece) {
-      this.pieces = this.pieces.filter((p) => p.id !== targetPiece.id);
       if (piece.side === 0) {
-        this.capturedByBlue.push(targetPiece);
+        this.capturedByBlue = [...this.capturedByBlue, targetPiece];
       } else {
-        this.capturedByRed.push(targetPiece);
+        this.capturedByRed = [...this.capturedByRed, targetPiece];
       }
     }
 
-    // Move piece
-    piece.position = { col: to.col, row: to.row };
+    // Update pieces array immutably
+    this.pieces = this.pieces
+      .filter((p) => !(targetPiece && p.id === targetPiece.id))
+      .map((p) => {
+        if (p.id === piece.id) {
+          return {
+            ...p,
+            position: { col: to.col, row: to.row }
+          };
+        }
+        return p;
+      });
 
     const moveRecord: Move = {
       from,
       to,
-      piece: { ...piece },
+      piece: { ...piece, position: { col: to.col, row: to.row } },
       capturedPiece: targetPiece ? { ...targetPiece } : null
     };
-    this.moveHistory.push(moveRecord);
+    this.moveHistory = [...this.moveHistory, moveRecord];
 
     // Check Win Condition
     const winCheck = this.ruleService.checkWinCondition(
@@ -242,12 +334,14 @@ export class AppComponent implements OnInit {
         this.audioService.playDraw();
         this.statusMessage = this.loc.translate('statusDraw');
       }
+      this.cdr.detectChanges();
       return;
     }
 
     // Toggle turn
     this.currentTurn = (1 - this.currentTurn) as PieceSide;
     this.updateStatusMessage();
+    this.cdr.detectChanges();
 
     // Trigger AI if PVA mode and AI turn
     if (this.gameMode === 'PVA' && this.currentTurn === 1 && !this.isGameOver) {
@@ -260,6 +354,7 @@ export class AppComponent implements OnInit {
     this.statusMessage = this.loc.translate('statusAIThinking', {
       aiName: this.loc.translate('aiName')
     });
+    this.cdr.detectChanges();
 
     setTimeout(async () => {
       const aiMove = await this.aiBotService.computeMove(
@@ -273,12 +368,24 @@ export class AppComponent implements OnInit {
 
       if (aiMove) {
         this.actualAiDepth = aiMove.depthAchieved;
-        this.executeMove(aiMove.from, aiMove.to);
+        // Step 1: Highlight AI's selected piece & target move square
+        this.selectedPos = { ...aiMove.from };
+        this.validMoves = [{ ...aiMove.to }];
+        this.cdr.detectChanges();
+
+        // Step 2: Brief delay so user visually sees AI selecting & moving piece
+        setTimeout(() => {
+          this.selectedPos = null;
+          this.validMoves = [];
+          this.executeMove(aiMove.from, aiMove.to);
+          this.cdr.detectChanges();
+        }, 350);
       } else {
         // AI has no moves -> Player wins
         this.isGameOver = true;
         this.audioService.playVictory();
         this.statusMessage = this.loc.translate('errorAINoMoves');
+        this.cdr.detectChanges();
       }
     }, 400);
   }
@@ -293,22 +400,26 @@ export class AppComponent implements OnInit {
       if (!lastMove) break;
 
       // Restore moved piece position
-      const p = this.pieces.find(
-        (x) =>
-          x.position.col === lastMove.to.col &&
-          x.position.row === lastMove.to.row
-      );
-      if (p) {
-        p.position = { ...lastMove.from };
-      }
+      this.pieces = this.pieces.map((p) => {
+        if (
+          p.id === lastMove.piece.id ||
+          (p.position.col === lastMove.to.col && p.position.row === lastMove.to.row)
+        ) {
+          return {
+            ...p,
+            position: { ...lastMove.from }
+          };
+        }
+        return p;
+      });
 
       // Restore captured piece if any
       if (lastMove.capturedPiece) {
-        this.pieces.push({ ...lastMove.capturedPiece });
+        this.pieces = [...this.pieces, { ...lastMove.capturedPiece }];
         if (lastMove.piece.side === 0) {
-          this.capturedByBlue.pop();
+          this.capturedByBlue = this.capturedByBlue.slice(0, -1);
         } else {
-          this.capturedByRed.pop();
+          this.capturedByRed = this.capturedByRed.slice(0, -1);
         }
       }
 
@@ -319,6 +430,7 @@ export class AppComponent implements OnInit {
     this.validMoves = [];
     this.isGameOver = false;
     this.updateStatusMessage();
+    this.cdr.detectChanges();
   }
 
   public randomizeBoard(): void {
@@ -344,17 +456,22 @@ export class AppComponent implements OnInit {
       ];
     }
 
-    // Assign positions to pieces
-    this.pieces.forEach((p, idx) => {
+    // Assign positions to pieces immutably
+    this.pieces = this.pieces.map((p, idx) => {
       if (idx < landPositions.length) {
-        p.position = { ...landPositions[idx] };
+        return {
+          ...p,
+          position: { ...landPositions[idx] }
+        };
       }
+      return p;
     });
 
     this.selectedPos = null;
     this.validMoves = [];
     this.audioService.playMove();
     this.updateStatusMessage();
+    this.cdr.detectChanges();
   }
 
   public updateStatusMessage(selectedPiece?: Piece): void {

@@ -1,0 +1,12 @@
+<div id="win-chance-bar-container">
+  <div id="win-chance-bar" [title]="titleText">
+    <div
+      id="win-chance-bar-blue"
+      [style.width.%]="bluePercentage"
+    ></div>
+    <div
+      id="win-chance-bar-red"
+      [style.width.%]="100 - bluePercentage"
+    ></div>
+  </div>
+</div>

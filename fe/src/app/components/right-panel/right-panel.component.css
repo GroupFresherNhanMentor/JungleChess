@@ -1,0 +1,11 @@
+/* Styles specific to Right Panel Component */
+:host {
+  display: block;
+}
+
+.captured-none-text {
+  font-size: 0.85em;
+  color: #777777;
+  width: 100%;
+  text-align: center;
+}

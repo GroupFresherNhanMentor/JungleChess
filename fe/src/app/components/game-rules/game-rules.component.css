@@ -1,0 +1,4 @@
+/* Styles specific to Game Rules Component */
+:host {
+  display: block;
+}

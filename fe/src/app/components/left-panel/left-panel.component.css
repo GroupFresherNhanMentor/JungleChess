@@ -1,0 +1,18 @@
+/* Styles specific to Left Panel Component */
+:host {
+  display: block;
+}
+
+.captured-none-text {
+  font-size: 0.85em;
+  color: #777777;
+  width: 100%;
+  text-align: center;
+}
+
+.rules-btn {
+  background-color: #e8f4fd !important;
+  border-color: #3498db !important;
+  color: #2980b9 !important;
+  font-weight: 600 !important;
+}

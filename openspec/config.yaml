@@ -1,32 +1,33 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Project context
+# This is shown to AI assistants when creating proposal, design, and task artifacts.
+context: |
+  Project: Cờ Thú Online (Jungle Chess / Dou Shou Qi)
+  Tech Stack:
+    - Backend: Java / Spring Boot (Web, WebSocket/STOMP, Security, Data JPA, PostgreSQL)
+    - Frontend: Angular (RxJS, @stomp/stompjs, SVG board UI, CSS animations)
+    - Realtime Protocol: STOMP over WebSocket (SockJS fallback)
+    - Auth: JWT Access Token + Refresh Token with WS Handshake/Channel Interceptors
+  Architecture Conventions:
+    - Server is the single source of truth for game state and move validation.
+    - Core logic split into modular Game Rule Engine, Bot AI Engine (Minimax + Alpha-Beta), and Room/Session Manager.
+    - REST for Auth (/api/auth/*) and STOMP for realtime gameplay (/app/room/*, /topic/room/*).
+  Specifications:
+    - Requirements: docs/SRS_Co_Thu_Online.md
+    - Architecture: docs/Architecture_Co_Thu_Online.md
+    - DB Schema: docs/DB_Design_Co_Thu_Online.md
+    - API Contract: docs/API_Spec_Co_Thu_Online.md
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+# Per-artifact rules
+rules:
+  proposal:
+    - Keep proposals structured with Problem, Scope, and Proposed Approach
+    - Reference relevant specs in docs/ if modifying existing game rules or contracts
+  design:
+    - Include architectural impact on BE (Spring Boot) and FE (Angular)
+    - Verify API contract consistency with docs/API_Spec_Co_Thu_Online.md
+  tasks:
+    - Divide work into small, independently testable subtasks
+    - Mark verification criteria for both automated tests and manual checks
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing

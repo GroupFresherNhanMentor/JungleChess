@@ -5,14 +5,20 @@ schema: spec-driven
 context: |
   Project: Cờ Thú Online (Jungle Chess / Dou Shou Qi)
   Tech Stack:
-    - Backend: Java / Spring Boot (Web, WebSocket/STOMP, Security, Data JPA, PostgreSQL)
-    - Frontend: Angular (RxJS, @stomp/stompjs, SVG board UI, CSS animations)
-    - Realtime Protocol: STOMP over WebSocket (SockJS fallback)
-    - Auth: JWT Access Token + Refresh Token with WS Handshake/Channel Interceptors
+    - Backend: Java 17 / Spring Boot 3+ (WebFlux, RSocket, Security, R2DBC, Redis Reactive)
+    - Frontend: Angular (RxJS, rsocket-js over WebSocket, SVG board UI, CSS animations)
+    - Realtime Protocol: RSocket over WebSocket (transport: websocket, mapping-path: /rsocket)
+    - Auth: JWT Access Token + Refresh Token (co-worker's responsibility)
   Architecture Conventions:
     - Server is the single source of truth for game state and move validation.
-    - Core logic split into modular Game Rule Engine, Bot AI Engine (Minimax + Alpha-Beta), and Room/Session Manager.
-    - REST for Auth (/api/auth/*) and STOMP for realtime gameplay (/app/room/*, /topic/room/*).
+    - All clients (human players, PVE bots, EVE bots) connect via RSocket identically — server is mode-agnostic for gameplay.
+    - Game modes: PVP (2 human WS clients), PVE (1 human + 1 bot WS client), EVE (2 Docker bot WS clients, admin-triggered).
+    - RoomState stored in Redis. Per-room broadcast via Reactor Sinks.Many. Global lobby via singleton Sinks.Many.
+    - GameRuleEngine is a pure-logic module (no Spring, no IO) — called by RoomService and independently unit-testable.
+    - EVE rooms: admin-only creation via REST; server triggers 2 Docker containers (--rm) which connect as normal WS clients.
+    - Spectators: separate role, can join mid-game, no max count, read-only (cannot move/rematch).
+    - Bet mechanics deferred — only allowBet flag stored in RoomState for now.
+    - Rematch: PVP only, valid only while both players remain connected.
   Specifications:
     - Requirements: docs/SRS_Co_Thu_Online.md
     - Architecture: docs/Architecture_Co_Thu_Online.md
@@ -25,9 +31,10 @@ rules:
     - Keep proposals structured with Problem, Scope, and Proposed Approach
     - Reference relevant specs in docs/ if modifying existing game rules or contracts
   design:
-    - Include architectural impact on BE (Spring Boot) and FE (Angular)
-    - Verify API contract consistency with docs/API_Spec_Co_Thu_Online.md
+    - Include architectural impact on BE (Spring Boot WebFlux / RSocket)
+    - Document all RSocket routes with interaction model, payload, and access control
+    - Document RoomEvent types and the Sink broadcast model
   tasks:
     - Divide work into small, independently testable subtasks
     - Mark verification criteria for both automated tests and manual checks
-
+    - Order tasks so each builds on the previous (models → repo → service → controller)

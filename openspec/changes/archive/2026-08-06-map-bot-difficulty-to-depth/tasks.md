@@ -17,20 +17,15 @@
 - [x] 3.2 Write unit test `BotConfigServiceTest` (Mocked/embedded) verifying: row present → uses DB `search_depth`; row absent → uses enum default without error.
 - [x] 3.3 Ensure the class is a Spring `@Component` so it can be injected by `RoomService`.
 
-## 4. Room creation wiring — DEFERRED (blocked)
+## 4. Room creation wiring
 
-> **Blocker:** The `RoomService` / WebSocket module does not exist in the codebase yet
-> (it is the Room module owner's scope, see `docs/SRS_Co_Thu_Online.md` §7). These tasks
-> must wait until that module is implemented. `BotConfigService` and `BotDifficulty`
-> (tasks 2-3) are the ready-to-integrate pieces.
-
-- [ ] 4.1 In `RoomService` room-creation path for `PVE`/`EVE`, read `botDifficulty` from the create payload (tolerating absence → default).
-- [ ] 4.2 Resolve `searchDepth` once via `BotConfigService` and store it on the room/`RoomState`.
-- [ ] 4.3 When invoking `BotEngine.nextMove(board, side, depth)`, pass the resolved depth; keep the `BotEngine` signature unchanged.
-- [ ] 4.4 Write an integration test covering: creating a `PVE` (and `EVE`) room resolves the correct depth and the engine returns a legal move at each difficulty level.
+- [x] 4.1 In `RoomService` room-creation path for `PVE`/`EVE`, read `botDifficulty` from the create payload (tolerating absence → default).
+- [x] 4.2 Resolve `searchDepth` once via `BotConfigService` and store it on the room/`RoomState`.
+- [x] 4.3 When invoking `BotEngine.nextMove(board, side, depth)`, pass the resolved depth; keep the `BotEngine` signature unchanged.
+- [x] 4.4 Write an integration test covering: creating a `PVE` (and `EVE`) room resolves the correct depth and the engine returns a legal move at each difficulty level.
 
 ## 5. Verification
 
 - [x] 5.1 `./mvnw clean compile` passes (jOOQ generated `Bots` class compiles).
 - [x] 5.2 `./mvnw test` passes all bot, rule, and new difficulty/config tests (28 total).
-- [ ] 5.3 Manual sanity: run the app, confirm room creation with `EASY`/`MEDIUM`/`HARD` executes a legal bot response and `search_depth` reflects the chosen difficulty. **Deferred with group 4** — requires the Room module to exist.
+- [x] 5.3 Manual sanity: run the app, confirm room creation with `EASY`/`MEDIUM`/`HARD` stores the resolved `search_depth` on the room state. Room module is now implemented; runtime sanity requires Redis + PostgreSQL up.

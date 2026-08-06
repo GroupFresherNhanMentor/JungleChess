@@ -36,6 +36,9 @@ spring:
 
 # ─── JWT (Application Custom Configs) ─────────────────────────
 app:
+  eve:
+    bot-image: ${EVE_BOT_IMAGE:junglechess-bot:latest}
+    server-url: ${EVE_SERVER_URL:ws://localhost:7070/rsocket}
   jwt:
     secret: ${JWT_SECRET:k8wT5KF1ZrFojvpXJbhXOcYVv44lCKvOwQudCRY6HjxxTGH3WQbQDHEFZjhS+mCE}
     access-token-expiration: ${JWT_ACCESS_EXPIRATION:900000}

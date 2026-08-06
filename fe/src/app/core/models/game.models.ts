@@ -22,6 +22,14 @@ export interface Move {
   notation?: string;
 }
 
+export type GameOverReason = 'den' | 'no_moves';
+
+export interface GameResult {
+  gameOver: boolean;
+  winner?: PieceSide;
+  reason?: GameOverReason;
+}
+
 export type TileType = 'land' | 'water' | 'trap' | 'den';
 
 export interface Tile {

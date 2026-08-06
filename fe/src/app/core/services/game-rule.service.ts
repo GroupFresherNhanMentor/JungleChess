@@ -5,6 +5,7 @@ import {
   PieceType,
   PIECE_RANKS,
   Position,
+  GameResult,
   Tile,
   TileType
 } from '../models/game.models';
@@ -138,7 +139,9 @@ export class GameRuleService {
         if (piece.type === 'rat') {
           // Rat can enter water
           const occupant = this.getPieceAt(pieces, nextCol, nextRow);
-          if (!occupant || occupant.side !== piece.side) {
+          if (!occupant) {
+            validMoves.push({ col: nextCol, row: nextRow });
+          } else if (occupant.side !== piece.side && this.canCapture(piece, occupant)) {
             validMoves.push({ col: nextCol, row: nextRow });
           }
         } else if (piece.type === 'lion' || piece.type === 'tiger') {
@@ -219,13 +222,16 @@ export class GameRuleService {
     const attackerTile = this.getTileInfo(attacker.position.col, attacker.position.row);
     const defenderTile = this.getTileInfo(defender.position.col, defender.position.row);
 
-    // If defender is trapped in attacker's trap -> defender effective rank is 0
-    if (defenderTile.type === 'trap' && defenderTile.side === attacker.side) {
-      return true;
+    const attackerRank = this.getEffectiveRank(attacker, attackerTile);
+    const defenderRank = this.getEffectiveRank(defender, defenderTile);
+
+    // A piece trapped by its opponent loses its capture power.
+    if (attackerRank === 0) {
+      return false;
     }
 
-    // Rat in water cannot capture piece on land
-    if (attackerTile.type === 'water' && defenderTile.type === 'land') {
+    // A Rat in water can only capture another Rat in water.
+    if (attackerTile.type === 'water' && defenderTile.type !== 'water') {
       return false;
     }
 
@@ -240,13 +246,13 @@ export class GameRuleService {
     }
 
     // General rank comparison
-    return attacker.rank >= defender.rank;
+    return attackerRank >= defenderRank;
   }
 
   public checkWinCondition(
     pieces: Piece[],
     currentTurnSide: PieceSide
-  ): { gameOver: boolean; winner?: PieceSide; reason?: string } {
+  ): GameResult {
     // 1. Check if any piece entered enemy den
     const redDenOccupant = this.getPieceAt(pieces, 3, 0);
     if (redDenOccupant && redDenOccupant.side === 0) {
@@ -258,18 +264,7 @@ export class GameRuleService {
       return { gameOver: true, winner: 1, reason: 'den' }; // Red entered Blue den
     }
 
-    // 2. Check if player has no remaining pieces
-    const bluePieces = pieces.filter((p) => p.side === 0);
-    const redPieces = pieces.filter((p) => p.side === 1);
-
-    if (bluePieces.length === 0) {
-      return { gameOver: true, winner: 1, reason: 'elimination' };
-    }
-    if (redPieces.length === 0) {
-      return { gameOver: true, winner: 0, reason: 'elimination' };
-    }
-
-    // 3. Check if current turn player has any valid moves
+    // 2. Check if current turn player has any valid moves.
     const currentSidePieces = pieces.filter((p) => p.side === currentTurnSide);
     let hasMoves = false;
 
@@ -287,5 +282,9 @@ export class GameRuleService {
     }
 
     return { gameOver: false };
+  }
+
+  private getEffectiveRank(piece: Piece, tile: Tile): number {
+    return tile.type === 'trap' && tile.side !== piece.side ? 0 : piece.rank;
   }
 }

@@ -9,8 +9,10 @@ import fpt.qn.junglechess.game.rule.GameRuleEngine;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 
 @Component
 @RequiredArgsConstructor
@@ -18,6 +20,7 @@ public class AlphaBetaBotEngine implements BotEngine {
 
     private final GameRuleEngine gameRuleEngine;
     private final BoardEvaluator boardEvaluator;
+    private final Random random;
 
     /**
      * Works on a clone of {@code board} so the caller's state is never mutated,
@@ -38,19 +41,31 @@ public class AlphaBetaBotEngine implements BotEngine {
         // Sort moves: captures first for better alpha-beta pruning
         orderMoves(validMoves);
 
-        Move bestMove = validMoves.get(0);
         int bestValue = Integer.MIN_VALUE;
         int alpha = Integer.MIN_VALUE;
         int beta = Integer.MAX_VALUE;
+        List<Move> tiedBest = new ArrayList<>();
 
         for (Move move : validMoves) {
+            if (deadlineExceeded(deadline)) {
+                // Time is up: stop expanding new root moves and return the best found so far.
+                break;
+            }
+
             workingBoard.makeMove(move);
             int value = minimax(workingBoard, depth - 1, alpha, beta, false, side, deadline);
             workingBoard.undoMove(move);
 
             if (value > bestValue) {
                 bestValue = value;
-                bestMove = move;
+                tiedBest.clear();
+                tiedBest.add(move);
+            } else if (value == bestValue) {
+                // Another move evaluates to the same best score: record the tie so we can
+                // break it randomly below. This keeps each equal-best choice optimal while
+                // making EvE matches (and repeated queries) vary instead of always picking
+                // the first move in list order.
+                tiedBest.add(move);
             }
             alpha = Math.max(alpha, bestValue);
             if (beta <= alpha) {
@@ -58,7 +73,10 @@ public class AlphaBetaBotEngine implements BotEngine {
             }
         }
 
-        return bestMove;
+        // tiedBest is never empty: it always contains at least the first evaluated move.
+        // Picking uniformly among the equal-best moves keeps play optimal while making
+        // EvE matches (and repeated queries) vary instead of always taking list order.
+        return tiedBest.get(random.nextInt(tiedBest.size()));
     }
 
     private int minimax(Board board, int depth, int alpha, int beta, boolean isMaximizing, Side botSide, long deadline) {

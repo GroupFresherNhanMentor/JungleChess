@@ -14,6 +14,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.Random;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class AlphaBetaBotEngineTest {
@@ -26,7 +28,9 @@ class AlphaBetaBotEngineTest {
     void setUp() {
         ruleEngine = new DefaultGameRuleEngine();
         evaluator = new BoardEvaluator(ruleEngine);
-        botEngine = new AlphaBetaBotEngine(ruleEngine, evaluator);
+        // Fixed seed keeps the engine's randomsource deterministic for these assertions
+        // (capture / win tie-breaks resolve to the expected move regardless of ties).
+        botEngine = new AlphaBetaBotEngine(ruleEngine, evaluator, new Random(42));
     }
 
     @Test
@@ -100,5 +104,22 @@ class AlphaBetaBotEngineTest {
         assertNotNull(move, "Bot should return a best-so-far move even when time-bounded");
         assertTrue(elapsedMs <= budgetMs + 150,
                 "Bot exceeded time budget: elapsedMs=" + elapsedMs + " budgetMs=" + budgetMs);
+    }
+
+    @Test
+    @DisplayName("HARD difficulty (depth 6) responds well within the 3s budget")
+    void botRespondsWithinBudgetAtHardDepth() {
+        Board board = Board.createInitialBoard();
+
+        long budgetMs = 3_000L;
+        long start = System.nanoTime();
+        Move move = botEngine.nextMove(board, Side.PLAYER_1, BotDifficulty.HARD.getSearchDepth(), budgetMs);
+        long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
+
+        assertNotNull(move, "Bot should find a legal move at depth 6");
+        assertTrue(ruleEngine.isValidMove(board, move),
+                "Bot must only return legal moves at depth 6, but returned " + move);
+        assertTrue(elapsedMs <= budgetMs,
+                "Bot exceeded the " + budgetMs + "ms response budget at depth 6: elapsedMs=" + elapsedMs);
     }
 }

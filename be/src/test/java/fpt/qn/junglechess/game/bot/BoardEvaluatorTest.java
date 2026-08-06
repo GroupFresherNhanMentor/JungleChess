@@ -90,4 +90,29 @@ class BoardEvaluatorTest {
                 "Threatened WOLF should score lower, holding material constant "
                         + "(free=" + freeScore + ", attacked=" + attackedScore + ")");
     }
+
+    @Test
+    @DisplayName("Enemy piece the bot can capture next move boosts the side's score")
+    void threateningEnemyPieceBonus() {
+        // Identical material on both sides (1 LION + 1 WOLF), plain land rows 6-7.
+        Piece lion = new Piece(Side.PLAYER_1, PieceType.LION);
+        Piece wolf = new Piece(Side.PLAYER_2, PieceType.WOLF);
+
+        // Not capturable: enemy WOLF at (7,2) is DIAGONAL to our LION at (6,3).
+        Board free = new Board();
+        free.setPiece(new Position(6, 3), lion);
+        free.setPiece(new Position(7, 2), wolf);
+        int freeScore = evaluator.evaluate(free, Side.PLAYER_1);
+
+        // Capturable: enemy WOLF at (6,2) is orthogonally LEFT of our LION at (6,3),
+        // and the LION can capture it next move.
+        Board capturable = new Board();
+        capturable.setPiece(new Position(6, 3), lion);
+        capturable.setPiece(new Position(6, 2), wolf);
+        int capturableScore = evaluator.evaluate(capturable, Side.PLAYER_1);
+
+        assertTrue(capturableScore > freeScore,
+                "Enemy piece the bot can capture next move should boost the score, holding material constant "
+                        + "(free=" + freeScore + ", capturable=" + capturableScore + ")");
+    }
 }

@@ -79,13 +79,22 @@ public class BoardEvaluator {
                     trapPenalty = 150;
                 }
 
-                // Threat penalty if an adjacent enemy piece can capture this piece next move
-                int threatPenalty = 0;
-                if (piece.side() == side && isThreatened(board, r, c, piece)) {
-                    threatPenalty = THREAT_PENALTY;
+                // Threat weight: a piece that can be captured next move is worth 150 less to
+                // its owner. This applies symmetrically — our own exposed piece (subtracted
+                // from our score) and an opponent piece we threaten (subtracted from the
+                // opponent's contribution, i.e. added to our score via the `score -=` below).
+                int threatWeight = 0;
+                if (piece.side() == side) {
+                    if (isThreatened(board, r, c, piece, opponent)) {
+                        threatWeight = THREAT_PENALTY;
+                    }
+                } else {
+                    if (isThreatened(board, r, c, piece, side)) {
+                        threatWeight = THREAT_PENALTY;
+                    }
                 }
 
-                int totalPieceScore = pieceVal + positionalBonus - trapPenalty - threatPenalty;
+                int totalPieceScore = pieceVal + positionalBonus - trapPenalty - threatWeight;
 
                 if (piece.side() == side) {
                     score += totalPieceScore;
@@ -99,12 +108,16 @@ public class BoardEvaluator {
     }
 
     /**
-     * True if an enemy piece adjacent to {@code (row, col)} can capture {@code piece}
-     * on its next move. Reuses {@link GameRuleEngine#canCapture} so the bot never
-     * duplicates rule logic. Own-side trap squares are ignored here: an enemy standing
+     * True if a piece of {@code attackerSide} adjacent to {@code (row, col)} can capture
+     * {@code piece} on its next move. Reuses {@link GameRuleEngine#canCapture} so the bot
+     * never duplicates rule logic. Own-side trap squares are ignored here: an enemy standing
      * on our trap is neutralized (rank 0) and cannot capture anything.
+     *
+     * <p>Called for both the side's own pieces (penalty applies when a hostile attacker
+     * threatens them) and the opponent's pieces (bonus applies when the side's own attacker
+     * threatens them), so evaluation is symmetric.
      */
-    private boolean isThreatened(Board board, int row, int col, Piece piece) {
+    private boolean isThreatened(Board board, int row, int col, Piece piece, Side attackerSide) {
         int[] dr = {-1, 1, 0, 0};
         int[] dc = {0, 0, -1, 1};
 
@@ -115,17 +128,18 @@ public class BoardEvaluator {
                 continue;
             }
 
-            Piece enemy = board.getPiece(er, ec);
-            if (enemy == null || enemy.side() == piece.side()) {
+            Piece attacker = board.getPiece(er, ec);
+            if (attacker == null || attacker.side() != attackerSide) {
                 continue;
             }
 
-            // Enemy standing on OUR trap is neutralized (rank 0) — cannot capture.
+            // Attacker standing on the threatened piece's trap is neutralized (rank 0) —
+            // cannot capture.
             if (Board.isTrap(er, ec, piece.side())) {
                 continue;
             }
 
-            if (gameRuleEngine.canCapture(enemy, piece)) {
+            if (gameRuleEngine.canCapture(attacker, piece)) {
                 return true;
             }
         }

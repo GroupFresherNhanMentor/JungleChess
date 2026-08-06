@@ -1,82 +1,59 @@
 package fpt.qn.junglechess.game.bot.config;
 
-import io.r2dbc.spi.ConnectionFactory;
+import fpt.qn.junglechess.game.bot.BotDifficulty;
+import fpt.qn.junglechess.jooq.Tables;
 import org.jooq.DSLContext;
+import org.jooq.Record1;
+import org.jooq.Result;
 import org.jooq.SQLDialect;
-import org.jooq.conf.Settings;
 import org.jooq.impl.DSL;
-import org.jooq.impl.DefaultConfiguration;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
+import org.jooq.tools.jdbc.MockConnection;
+import org.jooq.tools.jdbc.MockDataProvider;
+import org.jooq.tools.jdbc.MockResult;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-
-import fpt.qn.junglechess.game.bot.BotDifficulty;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Integration-style unit test for {@link BotConfigService} against the local
- * dockerized PostgreSQL (localhost:5432/jc), seeded by the Flyway migration.
- * Verifies both the DB-backed and fallback paths of {@code resolveDepth}.
+ * DB-independent unit test for {@link BotConfigService}.
+ * Uses jOOQ's built-in {@link MockDataProvider} to simulate database queries
+ * in memory without requiring a running PostgreSQL server.
  */
 class BotConfigServiceTest {
 
-    private static DSLContext dsl;
-    private BotConfigService service;
+    @Test
+    @DisplayName("DB provides search depth when difficulty row exists")
+    void dbProvidesDepthWhenRowExists() {
+        MockDataProvider provider = context -> {
+            DSLContext create = DSL.using(SQLDialect.POSTGRES);
+            Result<Record1<Integer>> result = create.newResult(Tables.BOTS.SEARCH_DEPTH);
+            Record1<Integer> record = create.newRecord(Tables.BOTS.SEARCH_DEPTH);
+            record.value1(6);
+            result.add(record);
+            return new MockResult[] { new MockResult(1, result) };
+        };
 
-    @BeforeAll
-    static void setUpDsl() {
-        ConnectionFactory connectionFactory = new io.r2dbc.postgresql.PostgresqlConnectionFactory(
-                io.r2dbc.postgresql.PostgresqlConnectionConfiguration.builder()
-                        .host("localhost")
-                        .port(5432)
-                        .database("jc")
-                        .username("postgres")
-                        .password("postgres")
-                        .build());
+        DSLContext dsl = DSL.using(new MockConnection(provider), SQLDialect.POSTGRES);
+        BotConfigService service = new BotConfigService(dsl);
 
-        DefaultConfiguration config = new DefaultConfiguration();
-        config.set(connectionFactory);
-        config.set(SQLDialect.POSTGRES);
-        config.set(new Settings().withReturnAllOnUpdatableRecord(true));
-        dsl = DSL.using(config);
-    }
-
-    @BeforeEach
-    void setUp() {
-        service = new BotConfigService(dsl);
+        Integer depth = service.resolveDepth(BotDifficulty.HARD).block();
+        assertEquals(6, depth);
     }
 
     @Test
-    @DisplayName("Seeded bots table provides depth for each difficulty")
-    void seededTableProvidesDepths() {
-        assertEquals(Integer.valueOf(2), service.resolveDepth(BotDifficulty.EASY).block());
-        assertEquals(Integer.valueOf(4), service.resolveDepth(BotDifficulty.MEDIUM).block());
-        assertEquals(Integer.valueOf(6), service.resolveDepth(BotDifficulty.HARD).block());
-    }
+    @DisplayName("Falls back to enum default depth when DB returns empty")
+    void fallsBackToEnumDefaultWhenEmpty() {
+        MockDataProvider provider = context -> {
+            DSLContext create = DSL.using(SQLDialect.POSTGRES);
+            Result<Record1<Integer>> emptyResult = create.newResult(Tables.BOTS.SEARCH_DEPTH);
+            return new MockResult[] { new MockResult(0, emptyResult) };
+        };
 
-    @Test
-    @DisplayName("Missing difficulty row falls back to enum default without error")
-    void missingRowFallsBackToDefault() {
-        // Delete the MEDIUM row to simulate an unseeded entry, then expect the enum default.
-        Mono.from(dsl.deleteFrom(fpt.qn.junglechess.jooq.Tables.BOTS)
-                .where(fpt.qn.junglechess.jooq.Tables.BOTS.DIFFICULTY.eq("MEDIUM")))
-                .block();
+        DSLContext dsl = DSL.using(new MockConnection(provider), SQLDialect.POSTGRES);
+        BotConfigService service = new BotConfigService(dsl);
 
-        try {
-            assertEquals(Integer.valueOf(4),
-                    service.resolveDepth(BotDifficulty.MEDIUM).block(),
-                    "resolveDepth must fall back to enum default when row is absent");
-        } finally {
-            // Restore the seeded row so subsequent tests see a consistent DB.
-            Mono.from(dsl.insertInto(fpt.qn.junglechess.jooq.Tables.BOTS)
-                    .set(fpt.qn.junglechess.jooq.Tables.BOTS.NAME, "Bot Trung Bình")
-                    .set(fpt.qn.junglechess.jooq.Tables.BOTS.DIFFICULTY, "MEDIUM")
-                    .set(fpt.qn.junglechess.jooq.Tables.BOTS.SEARCH_DEPTH, 4)
-                    .set(fpt.qn.junglechess.jooq.Tables.BOTS.DESCRIPTION, "Cân bằng tốc độ và độ khó"))
-                    .block();
-        }
+        Integer depth = service.resolveDepth(BotDifficulty.MEDIUM).block();
+        assertEquals(4, depth);
     }
 }

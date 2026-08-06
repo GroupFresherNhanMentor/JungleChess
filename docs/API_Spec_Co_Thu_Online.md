@@ -35,7 +35,7 @@
   | LION | Sư Tử | 7 |
   | ELEPHANT | Voi | 8 |
 
-- Chế độ chơi (`mode`): `PVP_LOCAL` | `PVE` | `EVE`.
+- Chế độ chơi (`mode`): `PVP_ONLINE` | `PVE` | `EVE`.
 - Bên chơi (`side`): `PLAYER_1` | `PLAYER_2`.
 - Trạng thái phòng (`roomStatus`): `WAITING` | `PLAYING` | `ENDED`.
 
@@ -200,7 +200,7 @@ heart-beat:10000,10000
 ```
 | Field | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
-| mode | enum | ✔ | `PVP_LOCAL` \| `PVE` \| `EVE` |
+| mode | enum | ✔ | `PVP_ONLINE` \| `PVE` \| `EVE` |
 | botDifficulty | enum | chỉ khi mode = PVE/EVE | `EASY` \| `MEDIUM` \| `HARD` |
 
 **Phản hồi** — server gửi tới `/user/queue/room-created`:
@@ -333,7 +333,7 @@ heart-beat:10000,10000
   "moveNumber": 0
 }
 ```
-> Quy ước: nếu là `PVP_LOCAL`, rematch có hiệu lực ngay khi 1 người bấm (chỉ có 1 kết nối). Nếu tương lai mở rộng PvP qua mạng (2 kết nối khác nhau), cần cơ chế cả 2 bên đồng ý (`rematchRequested` → chờ `rematchAccepted`).
+> Quy ước: đối với `PVP_ONLINE` (2 kết nối khác nhau), rematch gửi yêu cầu tới phòng và khi cả 2 bên (hoặc chủ phòng reset) đồng ý ván mới sẽ khởi tạo lại.
 
 ---
 

@@ -130,7 +130,7 @@ INSERT INTO bots (id, name, difficulty, search_depth, description) VALUES
 |---|---|---|---|
 | id | UUID | PK | Định danh ván đấu |
 | room_id | VARCHAR(50) | NOT NULL | Mã phòng lúc chơi (tham chiếu tới log realtime) |
-| mode | VARCHAR(20) | NOT NULL | `PVP_LOCAL` \| `PVE` \| `EVE` |
+| mode | VARCHAR(20) | NOT NULL | `PVP_ONLINE` \| `PVE` \| `EVE` |
 | status | VARCHAR(20) | NOT NULL | `PLAYING` \| `ENDED` \| `ABORTED` |
 | winner_side | VARCHAR(20) | NULL | `PLAYER_1` \| `PLAYER_2` \| `NULL` (hòa/chưa kết thúc) |
 | end_reason | VARCHAR(30) | NULL | `DEN_REACHED` \| `NO_VALID_MOVE` \| `OPPONENT_DISCONNECTED_TIMEOUT` |
@@ -217,7 +217,7 @@ CREATE TABLE bots (
 CREATE TABLE matches (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     room_id         VARCHAR(50) NOT NULL,
-    mode            VARCHAR(20) NOT NULL CHECK (mode IN ('PVP_LOCAL','PVE','EVE')),
+    mode            VARCHAR(20) NOT NULL CHECK (mode IN ('PVP_ONLINE','PVE','EVE')),
     status          VARCHAR(20) NOT NULL CHECK (status IN ('PLAYING','ENDED','ABORTED')),
     winner_side     VARCHAR(20) CHECK (winner_side IN ('PLAYER_1','PLAYER_2')),
     end_reason      VARCHAR(30) CHECK (end_reason IN ('DEN_REACHED','NO_VALID_MOVE','OPPONENT_DISCONNECTED_TIMEOUT')),

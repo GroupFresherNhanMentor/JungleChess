@@ -2,9 +2,12 @@ package fpt.qn.junglechess.game.rule;
 
 import fpt.qn.junglechess.game.model.*;
 
+import org.springframework.stereotype.Component;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Component
 public class DefaultGameRuleEngine implements GameRuleEngine {
 
     private static final int[][] DIRECTIONS = {
@@ -180,7 +183,8 @@ public class DefaultGameRuleEngine implements GameRuleEngine {
         }
     }
 
-    private boolean canCapture(Piece attacker, Piece defender) {
+    @Override
+    public boolean canCapture(Piece attacker, Piece defender) {
         // Exception: Rat vs Elephant
         if (attacker.type() == PieceType.RAT && defender.type() == PieceType.ELEPHANT) {
             return true;

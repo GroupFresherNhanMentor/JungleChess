@@ -135,8 +135,8 @@ com.cothu.backend
 
 | Hướng | Destination | Mục đích |
 |---|---|---|
-| Client → Server | `/app/room/create` | Tạo phòng mới (kèm mode: PVP_LOCAL / PVE / EVE) |
-| Client → Server | `/app/room/{roomId}/join` | Tham gia phòng |
+| Client → Server | `/app/room/create` | Tạo phòng mới (kèm mode: PVP_ONLINE / PVE / EVE) |
+| Client → Server | `/app/room/{roomId}/join` | Tham gia phòng (dùng trong PVP_ONLINE) |
 | Client → Server | `/app/room/{roomId}/move` | Gửi nước đi (from, to) |
 | Client → Server | `/app/room/{roomId}/leave` | Rời phòng |
 | Client → Server | `/app/room/{roomId}/rematch` | Yêu cầu chơi lại |
@@ -189,7 +189,7 @@ src/app
 ### 5.2 Nguyên tắc thiết kế Frontend
 - **WebSocketService** là điểm duy nhất giao tiếp STOMP: cung cấp API `connect()`, `subscribeRoom(roomId)`, `sendMove(move)`, tự động `reconnect` khi mất kết nối, phát sự kiện trạng thái kết nối cho UI hiển thị.
 - **Game State Service** (RxJS `BehaviorSubject`) giữ trạng thái bàn cờ hiện tại nhận từ server, các component chỉ subscribe để render — **không tự tính toán thắng/thua ở client**, chỉ tính toán tạm thời để highlight nước đi hợp lệ (UX), quyết định cuối cùng luôn chờ server xác nhận.
-- **Game Flow Service** điều phối chuyển màn hình theo trạng thái phòng (WAITING → PLAYING → ENDED) và theo chế độ chơi (PVP_LOCAL / PVE / EVE) để hiển thị đúng luồng tương tác (VD: PvP cùng máy cho phép cả 2 bên thao tác luân phiên trên cùng UI; EvE chỉ hiển thị, không cho tương tác).
+- **Game Flow Service** điều phối chuyển màn hình theo trạng thái phòng (WAITING → PLAYING → ENDED) và theo chế độ chơi (PVP_ONLINE / PVE / EVE) để hiển thị đúng luồng tương tác (VD: PvP Online chỉ cho phép di chuyển quân khi `currentTurn` trùng với `yourSide` của client).
 - **Animation & Sound** tách thành service riêng, lắng nghe sự kiện từ Game State Service (move, capture, win) để trigger hiệu ứng, không xen logic nghiệp vụ vào trong.
 
 ---
@@ -223,7 +223,7 @@ src/app
 |---|---|
 | id | UUID/Long |
 | roomId | String |
-| mode | Enum(PVP_LOCAL, PVE, EVE) |
+| mode | Enum(PVP_ONLINE, PVE, EVE) |
 | result | String |
 | moves | JSON (danh sách nước đi) |
 | playedAt | Timestamp |
@@ -234,12 +234,13 @@ src/app
 ```json
 {
   "roomId": "string",
-  "mode": "PVP_LOCAL | PVE | EVE",
+  "mode": "PVP_ONLINE | PVE | EVE",
   "status": "WAITING | PLAYING | ENDED",
   "board": [[ "piece_code|null", ... ]],
   "currentTurn": "PLAYER_1 | PLAYER_2",
   "players": [
-    { "sessionId": "string", "side": "PLAYER_1", "isBot": false }
+    { "sessionId": "string", "side": "PLAYER_1", "isBot": false, "username": "nghia123" },
+    { "sessionId": "string", "side": "PLAYER_2", "isBot": false, "username": "khoi88" }
   ],
   "history": [ { "from": [x,y], "to": [x,y], "captured": "piece_code|null" } ]
 }
@@ -263,10 +264,12 @@ src/app
 3. Client chỉ subscribe `/topic/room/{id}/state` để hiển thị, không có quyền gửi `move`.
 4. Kết thúc khi có kết quả, server gửi `/topic/room/{id}/result`.
 
-### 7.3 Luồng PvP cùng máy (1 thiết bị)
-1. Client tạo phòng mode `PVP_LOCAL` → server tạo `RoomState` với 2 side đều gán cho cùng 1 `sessionId` (chỉ 1 kết nối WebSocket).
-2. Mỗi lượt, UI xác định bên nào đang được phép thao tác dựa vào `currentTurn` nhận từ server (không tự suy luận).
-3. Nước đi vẫn gửi qua `/app/room/{id}/move`, server vẫn validate như bình thường, đảm bảo tính nhất quán luật dù chơi cùng máy.
+### 7.3 Luồng PvP Online (2 người chơi / 2 thiết bị)
+1. **Khởi tạo phòng**: Player 1 bấm "Tạo phòng PvP Online" → gửi STOMP `/app/room/create` (mode `PVP_ONLINE`). Server tạo `RoomState` với status `WAITING`, gán Player 1 làm `PLAYER_1`, trả `roomId` về cho Player 1 qua `/user/queue/room-created`.
+2. **Tham gia phòng**: Player 1 gửi mã `roomId` cho Player 2. Player 2 bấm "Join phòng" → gửi STOMP `/app/room/{roomId}/join`. Server gán Player 2 làm `PLAYER_2`, đổi status sang `PLAYING`, broadcast danh sách players tới `/topic/room/{roomId}/players` và khởi tạo ván đấu.
+3. **Thao tác nước đi**: Mỗi lượt đi, chỉ người chơi tương ứng với `currentTurn` mới được phép gửi nước đi qua `/app/room/{roomId}/move`. Server validate nước đi bằng `GameRuleEngine`.
+4. **Đồng bộ trạng thái**: Nếu nước đi hợp lệ, server cập nhật bàn cờ và đổi `currentTurn`, broadcast `RoomState` mới tới `/topic/room/{roomId}/state` cho cả 2 client render animation.
+5. **Kết thúc ván**: Khi một bên thắng (vào hang/đối phương hết nước đi) hoặc ngắt kết nối/timeout, server broadcast kết quả qua `/topic/room/{roomId}/result`.
 
 ---
 

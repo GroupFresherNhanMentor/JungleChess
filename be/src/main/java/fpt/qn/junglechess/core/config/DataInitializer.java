@@ -14,14 +14,15 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import fpt.qn.junglechess.common.util.UuidV7;
 import fpt.qn.junglechess.jooq.enums.SysRole;
 import fpt.qn.junglechess.jooq.enums.UserStatus;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Component
 @Profile("!test")
 public class DataInitializer implements ApplicationRunner {
-
-    public static final UUID ADMIN_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     @Value("${app.seed.admin.username}")
     private String adminUsername;
@@ -31,9 +32,6 @@ public class DataInitializer implements ApplicationRunner {
 
     @Value("${app.seed.admin.full-name}")
     private String adminFullName;
-
-    @Value("${app.seed.admin.email}")
-    private String adminEmail;
 
     @Value("${app.seed.admin.employee-id}")
     private String adminEmployeeId;
@@ -47,36 +45,50 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     @Override
-    public void run(ApplicationArguments args) throws Exception {
-        seedAdmin();
+    public void run(ApplicationArguments args) {
+        seedRoles().then(seedAdmin()).block();
     }
 
-    private void seedAdmin() {
-        if (dsl.fetchExists(USERS, USERS.USERNAME.eq(adminUsername))) return;
+    private Mono<Void> seedRoles() {
+        return Flux.fromArray(SysRole.values())
+                .concatMap(role -> Mono.from(
+                        dsl.insertInto(ROLES)
+                                .set(ROLES.ID, UuidV7.generate())
+                                .set(ROLES.NAME, role)
+                                .onDuplicateKeyIgnore()
+                ))
+                .then();
+    }
 
-        // 1. Insert admin user (no role column anymore)
-        dsl.insertInto(USERS)
-                .set(USERS.ID, ADMIN_USER_ID)
-                .set(USERS.USERNAME, adminUsername)
-                .set(USERS.PASSWORD, passwordEncoder.encode(adminPassword))
-                .set(USERS.FULL_NAME, adminFullName)
-                .set(USERS.EMAIL, adminEmail)
-                .set(USERS.EMPLOYEE_ID, adminEmployeeId)
-                .set(USERS.STATUS, UserStatus.ACTIVE)
-                .execute();
-
-        // 2. Assign ADMIN role via user_roles junction table
-        UUID adminRoleId = dsl.select(ROLES.ID)
-                .from(ROLES)
-                .where(ROLES.NAME.eq(SysRole.ADMIN))
-                .fetchOneInto(UUID.class);
-
-        if (adminRoleId != null) {
-            dsl.insertInto(USER_ROLES)
-                    .set(USER_ROLES.USER_ID, ADMIN_USER_ID)
-                    .set(USER_ROLES.ROLE_ID, adminRoleId)
-                    .onDuplicateKeyIgnore()
-                    .execute();
-        }
+    private Mono<Void> seedAdmin() {
+        UUID adminId = UuidV7.generate();
+        return Mono.from(
+                dsl.selectOne()
+                        .whereExists(dsl.selectFrom(USERS).where(USERS.USERNAME.eq(adminUsername)))
+        )
+        .hasElement()
+        .flatMap(exists -> {
+            if (exists) return Mono.<Void>empty();
+            return Mono.from(
+                    dsl.insertInto(USERS)
+                            .set(USERS.ID, adminId)
+                            .set(USERS.USERNAME, adminUsername)
+                            .set(USERS.PASSWORD, passwordEncoder.encode(adminPassword))
+                            .set(USERS.FULL_NAME, adminFullName)
+                            .set(USERS.EMPLOYEE_ID, adminEmployeeId)
+                            .set(USERS.STATUS, UserStatus.ACTIVE)
+            ).then(
+                    Mono.from(
+                            dsl.select(ROLES.ID).from(ROLES).where(ROLES.NAME.eq(SysRole.ADMIN))
+                    ).flatMap(roleRecord ->
+                            Mono.from(
+                                    dsl.insertInto(USER_ROLES)
+                                            .set(USER_ROLES.USER_ID, adminId)
+                                            .set(USER_ROLES.ROLE_ID, roleRecord.value1())
+                                            .onDuplicateKeyIgnore()
+                            ).then()
+                    )
+            );
+        });
     }
 }

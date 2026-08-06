@@ -4,14 +4,16 @@ spring:
 
   # ─── DataSource ───────────────────────────────────────────────
   datasource:
-    url: jdbc:postgresql://localhost:5432/jungle-chess-system
+    url: jdbc:postgresql://localhost:5432/jc
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
 
-  # ─── jOOQ ─────────────────────────────────────────────────────
-  jooq:
-    sql-dialect: POSTGRES
+  # ─── R2DBC ────────────────────────────────────────────────────
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/jc
+    username: postgres
+    password: postgres
 
   # ─── Flyway ───────────────────────────────────────────────────
   flyway:
@@ -19,16 +21,18 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+  # ─── RSocket ──────────────────────────────────────────────────
+  rsocket:
+    server:
+      transport: websocket
+      mapping-path: /rsocket
+
   # ─── Redis ────────────────────────────────────────────────────
   data:
     redis:
       host: localhost
       port: 6379
 
-  # ─── Virtual Threads (Java 21+) ───────────────────────────────
-  threads:
-    virtual:
-      enabled: true
 
 # ─── JWT (Application Custom Configs) ─────────────────────────
 app:
@@ -41,8 +45,7 @@ app:
       username: ${SEED_ADMIN_USERNAME:admin}
       password: ${SEED_ADMIN_PASSWORD:Admin@123}
       full-name: ${SEED_ADMIN_FULL_NAME:System Administrator}
-      email: ${SEED_ADMIN_EMAIL:admin@hospital.local}
-      employee-id: ${SEED_ADMIN_EMPLOYEE_ID:EMP-0001}
+      employee-id: ${SEED_ADMIN_EMPLOYEE_ID:JC-0001}
 
 # ─── Swagger / OpenAPI ────────────────────────────────────────
 springdoc:

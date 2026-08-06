@@ -13,13 +13,13 @@ jobs:
       postgres:
         image: postgres:18-alpine
         env:
-          POSTGRES_DB: jungle-chess-system
+          POSTGRES_DB: jc
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d mes"
+          --health-cmd "pg_isready -U postgres -d jc"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -40,7 +40,7 @@ jobs:
         working-directory: be
         run: |
           ./mvnw flyway:migrate \
-            -Ddb.url=jdbc:postgresql://localhost:5432/jungle-chess-system \
+            -Ddb.url=jdbc:postgresql://localhost:5432/jc \
             -Ddb.username=postgres \
             -Ddb.password=postgres \
             --no-transfer-progress
@@ -49,7 +49,7 @@ jobs:
         working-directory: be
         run: |
           ./mvnw test-compile \
-            -Ddb.url=jdbc:postgresql://localhost:5432/jungle-chess-system \
+            -Ddb.url=jdbc:postgresql://localhost:5432/jc \
             -Ddb.username=postgres \
             -Ddb.password=postgres \
             -DskipTests \

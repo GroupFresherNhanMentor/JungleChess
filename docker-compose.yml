@@ -1,18 +1,18 @@
 services:
   db:
     image: postgres:18-alpine
-    container_name: ioth-db
+    container_name: jc-db
     environment:
-      POSTGRES_DB: jungle-chess-system
+      POSTGRES_DB: jc
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
       # SỬA LỖI: Trỏ đúng vào thư mục /data của postgres
-      - ioth-db-data:/var/lib/postgresql
+      - jc-db-data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d jungle-chess-system"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d jc"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -20,11 +20,11 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: ioth-redis
+    container_name: jc-redis
     ports:
       - "6379:6379"
     volumes:
-      - ioth-redis-data:/data
+      - jc-redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -32,32 +32,9 @@ services:
       retries: 5
     restart: always
 
-  hivemq:
-    image: hivemq/hivemq-ce:2026.5
-    container_name: hms-hivemq
-    ports:
-      - "1883:1883"  # Port MQTT
-      - "8888:8888"  # Port Health API (theo docs HiveMQ)
-    volumes:
-      # Bổ sung volume cho HiveMQ (tùy chọn nhưng nên có để giữ log/data)
-      - ioth-hivemq-data:/opt/hivemq/data
-      - ioth-hivemq-logs:/opt/hivemq/logs
-    healthcheck:
-      # Gọi trực tiếp REST API /health của HiveMQ theo docs chính thức
-      test: ["CMD-SHELL", "curl -f http://localhost:8888/health || exit 1"]
-      interval: 10s     # Kiểm tra mỗi 10 giây
-      timeout: 5s       # Chờ tối đa 5 giây
-      retries: 5        # Thử lại 5 lần
-      start_period: 15s # HiveMQ cần khoảng 10-15s để boot JVM
-    restart: always
-
 # Khai báo tất cả các named volumes bên dưới
 volumes:
-  ioth-db-data:
+  jc-db-data:
     driver: local
-  ioth-redis-data:
-    driver: local
-  ioth-hivemq-data:
-    driver: local
-  ioth-hivemq-logs:
+  jc-redis-data:
     driver: local

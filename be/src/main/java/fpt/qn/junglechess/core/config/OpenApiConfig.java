@@ -18,15 +18,15 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("HMS-IoT – Hospital Management System API")
+                        .title("Jungle Chess API")
                         .version("1.0.0")
                         .description("""
-                                REST API documentation for HMS-IoT (Hospital Management System tích hợp IoT).
+                                REST API documentation for Jungle Chess – multiplayer web game.
                                 Kiến trúc Monolith Modular – Spring Boot 4.1 + jOOQ + PostgreSQL + HiveMQ.
                                 """)
                         .contact(new Contact()
-                                .name("Team 8 – FPT")
-                                .email("team8@hospital.local")))
+                                .name("Team – FPT")
+                                .email("team@junglechess.local")))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components()
                         .addSecuritySchemes("bearerAuth",

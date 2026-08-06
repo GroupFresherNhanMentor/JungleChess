@@ -1,9 +1,6 @@
 package fpt.qn.junglechess.auth.service.impl;
 
-import java.util.List;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.stereotype.Service;
@@ -16,16 +13,15 @@ import fpt.qn.junglechess.auth.exception.AccountLockedException;
 import fpt.qn.junglechess.auth.exception.InvalidCredentialsException;
 import fpt.qn.junglechess.auth.service.AuthService;
 import fpt.qn.junglechess.jooq.enums.UserStatus;
-import fpt.qn.junglechess.user.exception.UserNotFoundException;
 import fpt.qn.junglechess.security.JwtTokenProvider;
 import fpt.qn.junglechess.security.RedisTokenBlacklistService;
+import fpt.qn.junglechess.user.exception.UserNotFoundException;
 import fpt.qn.junglechess.user.mapper.UserMapper;
 import fpt.qn.junglechess.user.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 @Service
 @RequiredArgsConstructor
@@ -41,28 +37,23 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public Mono<LoginResponse> login(LoginRequest request) {
-        return Mono.fromCallable(() -> {
-            var user = userRepository.findByUsername(request.getUsername())
-                    .orElseThrow(InvalidCredentialsException::new);
-
-            if (user.getStatus() == UserStatus.LOCKED) {
-                throw new AccountLockedException();
-            }
-
-            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                throw new InvalidCredentialsException();
-            }
-
-            List<String> roles = userRepository.findRolesByUserId(user.getId());
-            String accessToken = jwtTokenProvider.generateAccessToken(user.getUsername(), roles, user.getId());
-            String refreshToken = jwtTokenProvider.generateRefreshToken(user.getUsername());
-
-            return LoginResponse.builder()
-                    .accessToken(accessToken)
-                    .refreshToken(refreshToken)
-                    .user(userMapper.toDto(user))
-                    .build();
-        }).subscribeOn(Schedulers.boundedElastic());
+        return userRepository.findByUsername(request.getUsername())
+                .switchIfEmpty(Mono.error(new InvalidCredentialsException()))
+                .flatMap(user -> {
+                    if (user.getStatus() == UserStatus.LOCKED) {
+                        return Mono.error(new AccountLockedException());
+                    }
+                    if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                        return Mono.error(new InvalidCredentialsException());
+                    }
+                    return userRepository.findRolesByUserId(user.getId())
+                            .collectList()
+                            .map(roles -> LoginResponse.builder()
+                                    .accessToken(jwtTokenProvider.generateAccessToken(user.getUsername(), roles, user.getId()))
+                                    .refreshToken(jwtTokenProvider.generateRefreshToken(user.getUsername()))
+                                    .user(userMapper.toDto(user))
+                                    .build());
+                });
     }
 
     @Override
@@ -84,25 +75,20 @@ public class AuthServiceImpl implements AuthService {
                                 if (isBlacklisted) {
                                     return Mono.error(new InvalidCredentialsException("Refresh token has been revoked/blacklisted"));
                                 }
-
-                                return Mono.fromCallable(() -> {
-                                    String username = jwt.getSubject();
-                                    var user = userRepository.findByUsername(username)
-                                            .orElseThrow(UserNotFoundException::new);
-
-                                    if (user.getStatus() == UserStatus.LOCKED) {
-                                        throw new AccountLockedException();
-                                    }
-
-                                    List<String> roles = userRepository.findRolesByUserId(user.getId());
-                                    String newAccessToken = jwtTokenProvider.generateAccessToken(user.getUsername(), roles, user.getId());
-                                    String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getUsername());
-
-                                    return RefreshTokenResponse.builder()
-                                            .accessToken(newAccessToken)
-                                            .refreshToken(newRefreshToken)
-                                            .build();
-                                }).subscribeOn(Schedulers.boundedElastic());
+                                String username = jwt.getSubject();
+                                return userRepository.findByUsername(username)
+                                        .switchIfEmpty(Mono.error(new UserNotFoundException()))
+                                        .flatMap(user -> {
+                                            if (user.getStatus() == UserStatus.LOCKED) {
+                                                return Mono.error(new AccountLockedException());
+                                            }
+                                            return userRepository.findRolesByUserId(user.getId())
+                                                    .collectList()
+                                                    .map(roles -> RefreshTokenResponse.builder()
+                                                            .accessToken(jwtTokenProvider.generateAccessToken(user.getUsername(), roles, user.getId()))
+                                                            .refreshToken(jwtTokenProvider.generateRefreshToken(user.getUsername()))
+                                                            .build());
+                                        });
                             });
                 })
                 .onErrorMap(JwtException.class, e -> new InvalidCredentialsException("Invalid or expired refresh token"));

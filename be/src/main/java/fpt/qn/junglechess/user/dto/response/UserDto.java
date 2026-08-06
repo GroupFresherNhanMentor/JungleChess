@@ -24,7 +24,6 @@ public class UserDto {
     String employeeId;
     String username;
     String fullName;
-    String email;
     List<String> roles;   // sourced from user_roles JOIN roles
     String status;
     LocalDateTime createdAt;

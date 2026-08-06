@@ -8,7 +8,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import fpt.qn.junglechess.common.dto.PageResponse;
-import fpt.qn.junglechess.common.dto.PaginationResult;
 import fpt.qn.junglechess.jooq.enums.SysRole;
 import fpt.qn.junglechess.jooq.enums.UserStatus;
 import fpt.qn.junglechess.jooq.tables.records.UsersRecord;
@@ -20,7 +19,6 @@ import fpt.qn.junglechess.user.dto.request.UpdateUserStatusRequest;
 import fpt.qn.junglechess.user.dto.response.CreateUserResponse;
 import fpt.qn.junglechess.user.dto.response.ResetPasswordResponse;
 import fpt.qn.junglechess.user.dto.response.UserDto;
-import fpt.qn.junglechess.user.exception.EmailAlreadyExistsException;
 import fpt.qn.junglechess.user.exception.InvalidOldPasswordException;
 import fpt.qn.junglechess.user.exception.SelfLockoutException;
 import fpt.qn.junglechess.user.exception.UserNotFoundException;
@@ -33,8 +31,8 @@ import fpt.qn.junglechess.user.util.PasswordGenerator;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 @Service
 @RequiredArgsConstructor
@@ -49,175 +47,150 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Mono<PageResponse<UserDto>> getUsers(String keyword, SysRole role, UserStatus status, int page, int size) {
-        return Mono.fromCallable(() -> {
-            PaginationResult<UsersRecord> result = userRepository.findAll(keyword, role, status, page, size);
-            var dtos = result.getItems().stream()
-                    .map(record -> {
-                        UserDto dto = userMapper.toDto(record);
-                        dto.setRoles(userRepository.findRolesByUserId(record.getId()));
-                        return dto;
-                    })
-                    .toList();
-            return PageResponse.of(dtos, page, size, result.getTotal());
-        }).subscribeOn(Schedulers.boundedElastic());
+        return userRepository.findAll(keyword, role, status, page, size)
+                .flatMap(result -> Flux.fromIterable(result.getItems())
+                        .flatMap(record -> userRepository.findRolesByUserId(record.getId())
+                                .collectList()
+                                .map(roles -> {
+                                    UserDto dto = userMapper.toDto(record);
+                                    dto.setRoles(roles);
+                                    return dto;
+                                }))
+                        .collectList()
+                        .map(dtos -> PageResponse.of(dtos, page, size, result.getTotal())));
     }
 
     @Override
     public Mono<UserDto> getUserById(UUID id) {
-        return Mono.fromCallable(() -> {
-            UsersRecord record = userRepository.findById(id)
-                    .orElseThrow(UserNotFoundException::new);
-            UserDto dto = userMapper.toDto(record);
-            dto.setRoles(userRepository.findRolesByUserId(record.getId()));
-            return dto;
-        }).subscribeOn(Schedulers.boundedElastic());
+        return userRepository.findById(id)
+                .switchIfEmpty(Mono.error(new UserNotFoundException()))
+                .flatMap(record -> userRepository.findRolesByUserId(record.getId())
+                        .collectList()
+                        .map(roles -> {
+                            UserDto dto = userMapper.toDto(record);
+                            dto.setRoles(roles);
+                            return dto;
+                        }));
     }
 
     @Override
     public Mono<CreateUserResponse> createUser(CreateUserRequest request) {
-        return Mono.fromCallable(() -> {
-            if (userRepository.existsByEmail(request.getEmail())) {
-                throw new EmailAlreadyExistsException();
-            }
-
-            String tempPassword = passwordGenerator.generateSecurePassword();
-            int maxRetries = 10;
-
-            for (int attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    UserDto userDto = userCreationTransactionHelper.executeAttempt(request, tempPassword);
-                    return CreateUserResponse.builder()
-                            .user(userDto)
-                            .generatedPassword(tempPassword)
-                            .build();
-                } catch (DataAccessException e) {
-                    if (isDuplicateEmailConstraint(e)) throw new EmailAlreadyExistsException();
-                    if (!isDuplicateUsernameConstraint(e)) throw e;
-                    if (attempt == maxRetries) throw new UsernameAlreadyExistsException();
-                }
-            }
-            throw new UsernameAlreadyExistsException();
-        }).subscribeOn(Schedulers.boundedElastic());
+        String tempPassword = passwordGenerator.generateSecurePassword();
+        return userCreationTransactionHelper.executeAttempt(request, tempPassword)
+                .retryWhen(reactor.util.retry.Retry.max(9)
+                        .filter(e -> e instanceof DataAccessException dae && isDuplicateUsernameConstraint(dae)))
+                .onErrorMap(reactor.core.Exceptions::isRetryExhausted,
+                        e -> new UsernameAlreadyExistsException())
+                .map(userDto -> CreateUserResponse.builder()
+                        .user(userDto)
+                        .generatedPassword(tempPassword)
+                        .build());
     }
 
     @Override
     public Mono<UserDto> updateUser(UUID id, UpdateUserRequest request) {
-        return Mono.fromCallable(() -> {
-            UsersRecord record = userRepository.findByIdForUpdate(id)
-                    .orElseThrow(UserNotFoundException::new);
+        return userRepository.findById(id)
+                .switchIfEmpty(Mono.error(new UserNotFoundException()))
+                .flatMap(record -> {
+                    if (request.getFullName() != null) record.setFullName(request.getFullName());
 
-            if (request.getEmail() != null
-                    && userRepository.existsByEmailAndIdNot(request.getEmail(), record.getId())) {
-                throw new EmailAlreadyExistsException();
-            }
+                    Mono<Void> roleUpdate = request.getRole() != null
+                            ? userRepository.assignRole(record.getId(), request.getRole())
+                            : Mono.empty();
 
-            if (request.getFullName() != null) record.setFullName(request.getFullName());
-            if (request.getEmail() != null) record.setEmail(request.getEmail());
-
-            // Update role via user_roles (clear existing, assign new)
-            if (request.getRole() != null) {
-                userRepository.assignRole(record.getId(), request.getRole());
-            }
-
-            userRepository.update(record);
-
-            UserDto dto = userMapper.toDto(record);
-            dto.setRoles(userRepository.findRolesByUserId(record.getId()));
-            return dto;
-        }).subscribeOn(Schedulers.boundedElastic());
+                    return roleUpdate
+                            .then(userRepository.update(record))
+                            .flatMap(updated -> userRepository.findRolesByUserId(updated.getId())
+                                    .collectList()
+                                    .map(roles -> {
+                                        UserDto dto = userMapper.toDto(updated);
+                                        dto.setRoles(roles);
+                                        return dto;
+                                    }));
+                });
     }
 
     @Override
     public Mono<UserDto> updateUserStatus(UUID id, UpdateUserStatusRequest request) {
         return getCurrentPrincipalUsername()
-                .flatMap(currentUsername -> Mono.fromCallable(() -> {
-                    UsersRecord record = userRepository.findByIdForUpdate(id)
-                            .orElseThrow(UserNotFoundException::new);
-
-                    if (record.getUsername().equals(currentUsername)) {
-                        throw new SelfLockoutException();
-                    }
-
-                    record.setStatus(request.getStatus());
-                    userRepository.update(record);
-
-                    UserDto dto = userMapper.toDto(record);
-                    dto.setRoles(userRepository.findRolesByUserId(record.getId()));
-                    return dto;
-                }).subscribeOn(Schedulers.boundedElastic()));
+                .flatMap(currentUsername -> userRepository.findById(id)
+                        .switchIfEmpty(Mono.error(new UserNotFoundException()))
+                        .flatMap(record -> {
+                            if (record.getUsername().equals(currentUsername)) {
+                                return Mono.error(new SelfLockoutException());
+                            }
+                            record.setStatus(request.getStatus());
+                            return userRepository.update(record)
+                                    .flatMap(updated -> userRepository.findRolesByUserId(updated.getId())
+                                            .collectList()
+                                            .map(roles -> {
+                                                UserDto dto = userMapper.toDto(updated);
+                                                dto.setRoles(roles);
+                                                return dto;
+                                            }));
+                        }));
     }
 
     @Override
     public Mono<ResetPasswordResponse> resetPasswordByAdmin(UUID id) {
-        return Mono.fromCallable(() -> {
-            UsersRecord record = userRepository.findByIdForUpdate(id)
-                    .orElseThrow(UserNotFoundException::new);
-
-            String generatedPassword = passwordGenerator.generateSecurePassword();
-            record.setPassword(passwordEncoder.encode(generatedPassword));
-            userRepository.update(record);
-
-            return ResetPasswordResponse.builder()
-                    .userId(record.getId())
-                    .username(record.getUsername())
-                    .generatedPassword(generatedPassword)
-                    .build();
-        }).subscribeOn(Schedulers.boundedElastic());
+        return userRepository.findById(id)
+                .switchIfEmpty(Mono.error(new UserNotFoundException()))
+                .flatMap(record -> {
+                    String generatedPassword = passwordGenerator.generateSecurePassword();
+                    record.setPassword(passwordEncoder.encode(generatedPassword));
+                    return userRepository.update(record)
+                            .map(updated -> ResetPasswordResponse.builder()
+                                    .userId(updated.getId())
+                                    .username(updated.getUsername())
+                                    .generatedPassword(generatedPassword)
+                                    .build());
+                });
     }
 
     @Override
     public Mono<UserDto> getCurrentUser() {
-        return getCurrentUserRecord().flatMap(record -> Mono.fromCallable(() -> {
-            UserDto dto = userMapper.toDto(record);
-            dto.setRoles(userRepository.findRolesByUserId(record.getId()));
-            return dto;
-        }).subscribeOn(Schedulers.boundedElastic()));
+        return getCurrentUserRecord()
+                .flatMap(record -> userRepository.findRolesByUserId(record.getId())
+                        .collectList()
+                        .map(roles -> {
+                            UserDto dto = userMapper.toDto(record);
+                            dto.setRoles(roles);
+                            return dto;
+                        }));
     }
 
     @Override
     public Mono<UserDto> updateCurrentUser(UpdateCurrentUserRequest request) {
         return getCurrentUserRecord()
-                .flatMap(record -> Mono.fromCallable(() -> {
-                    if (request.getEmail() != null
-                            && userRepository.existsByEmailAndIdNot(request.getEmail(), record.getId())) {
-                        throw new EmailAlreadyExistsException();
-                    }
+                .flatMap(record -> {
                     if (request.getFullName() != null) record.setFullName(request.getFullName());
-                    if (request.getEmail() != null) record.setEmail(request.getEmail());
-                    userRepository.update(record);
-
-                    UserDto dto = userMapper.toDto(record);
-                    dto.setRoles(userRepository.findRolesByUserId(record.getId()));
-                    return dto;
-                }).subscribeOn(Schedulers.boundedElastic()));
+                    return userRepository.update(record)
+                            .flatMap(updated -> userRepository.findRolesByUserId(updated.getId())
+                                    .collectList()
+                                    .map(roles -> {
+                                        UserDto dto = userMapper.toDto(updated);
+                                        dto.setRoles(roles);
+                                        return dto;
+                                    }));
+                });
     }
 
     @Override
     public Mono<Void> changePassword(ChangePasswordRequest request) {
         return getCurrentUserRecord()
-                .flatMap(currentUser -> Mono.fromCallable(() -> {
-                    UsersRecord record = userRepository.findByIdForUpdate(currentUser.getId())
-                            .orElseThrow(UserNotFoundException::new);
-
+                .flatMap(record -> {
                     if (!passwordEncoder.matches(request.getOldPassword(), record.getPassword())) {
-                        throw new InvalidOldPasswordException();
+                        return Mono.error(new InvalidOldPasswordException());
                     }
-
                     record.setPassword(passwordEncoder.encode(request.getNewPassword()));
-                    userRepository.update(record);
-                    return (Void) null;
-                }).subscribeOn(Schedulers.boundedElastic()))
-                .then();
+                    return userRepository.update(record).then();
+                });
     }
-
-    // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private Mono<UsersRecord> getCurrentUserRecord() {
         return getCurrentPrincipalUsername()
-                .flatMap(username -> Mono.fromCallable(() ->
-                        userRepository.findByUsername(username)
-                                .orElseThrow(UserNotFoundException::new)
-                ).subscribeOn(Schedulers.boundedElastic()));
+                .flatMap(username -> userRepository.findByUsername(username)
+                        .switchIfEmpty(Mono.error(new UserNotFoundException())));
     }
 
     private Mono<String> getCurrentPrincipalUsername() {
@@ -229,11 +202,5 @@ public class UserServiceImpl implements UserService {
         Throwable cause = e.getRootCause();
         return cause != null && cause.getMessage() != null
                 && cause.getMessage().contains("users_username_key");
-    }
-
-    private boolean isDuplicateEmailConstraint(DataAccessException e) {
-        Throwable cause = e.getRootCause();
-        return cause != null && cause.getMessage() != null
-                && cause.getMessage().contains("users_email_key");
     }
 }

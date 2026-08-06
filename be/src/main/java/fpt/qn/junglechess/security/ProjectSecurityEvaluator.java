@@ -33,53 +33,18 @@ public class ProjectSecurityEvaluator {
         return Optional.empty();
     }
 
-    /** Returns true if the current user has the ADMIN role. */
     public boolean isAdmin() {
-        return getCurrentPrincipal()
-                .map(p -> p.getAuthorities().stream()
-                        .anyMatch(a -> SysRole.ADMIN.getLiteral().equals(a.getAuthority())))
-                .orElse(false);
+        return hasRole(SysRole.ADMIN);
     }
 
-    /** Returns true if the current user has the DOCTOR role. */
-    public boolean isDoctor() {
-        return hasRole(SysRole.DOCTOR);
+    public boolean isUser() {
+        return hasRole(SysRole.USER);
     }
 
-    /** Returns true if the current user has the NURSE role. */
-    public boolean isNurse() {
-        return hasRole(SysRole.NURSE);
+    public boolean isBot() {
+        return hasRole(SysRole.BOT);
     }
 
-    /** Returns true if the current user has the RECEPTIONIST role. */
-    public boolean isReceptionist() {
-        return hasRole(SysRole.RECEPTIONIST);
-    }
-
-    /** Returns true if the current user has the PHARMACIST role. */
-    public boolean isPharmacist() {
-        return hasRole(SysRole.PHARMACIST);
-    }
-
-    /** Returns true if the current user has the LAB_TECHNICIAN role. */
-    public boolean isLabTechnician() {
-        return hasRole(SysRole.LAB_TECHNICIAN);
-    }
-
-    /** Returns true if the current user has the BILLING_STAFF role. */
-    public boolean isBillingStaff() {
-        return hasRole(SysRole.BILLING_STAFF);
-    }
-
-    /** Returns true if the current user has the PATIENT role. */
-    public boolean isPatient() {
-        return hasRole(SysRole.PATIENT);
-    }
-
-    /**
-     * Returns true if the current authenticated user's ID matches the given userId.
-     * Useful for allowing users to access/modify their own resources.
-     */
     public boolean isSelf(UUID userId) {
         if (userId == null) return false;
         return getCurrentPrincipal()
@@ -87,15 +52,9 @@ public class ProjectSecurityEvaluator {
                 .orElse(false);
     }
 
-    /**
-     * Returns true if the caller is an ADMIN OR is the user themselves.
-     * Common pattern: admins can manage all users, users can manage themselves.
-     */
     public boolean isAdminOrSelf(UUID userId) {
         return isAdmin() || isSelf(userId);
     }
-
-    // ─── helpers ─────────────────────────────────────────────────────────────
 
     private boolean hasRole(SysRole role) {
         return getCurrentPrincipal()

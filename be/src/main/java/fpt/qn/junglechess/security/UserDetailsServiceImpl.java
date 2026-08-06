@@ -10,7 +10,6 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 @Service
 @RequiredArgsConstructor
@@ -21,10 +20,8 @@ public class UserDetailsServiceImpl implements ReactiveUserDetailsService {
 
     @Override
     public Mono<UserDetails> findByUsername(String username) {
-        return Mono.fromCallable(() ->
-                userRepository.findByUsername(username)
-                        .map(record -> (UserDetails) UserPrincipal.from(record))
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username))
-        ).subscribeOn(Schedulers.boundedElastic());
+        return userRepository.findByUsername(username)
+                .map(record -> (UserDetails) UserPrincipal.from(record))
+                .switchIfEmpty(Mono.error(new UsernameNotFoundException("User not found: " + username)));
     }
 }

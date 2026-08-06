@@ -5,16 +5,24 @@ import fpt.qn.junglechess.game.model.Piece;
 import fpt.qn.junglechess.game.model.PieceType;
 import fpt.qn.junglechess.game.model.Position;
 import fpt.qn.junglechess.game.model.Side;
+import fpt.qn.junglechess.game.rule.GameRuleEngine;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.EnumMap;
 import java.util.Map;
 
 @Component
+@RequiredArgsConstructor
 public class BoardEvaluator {
 
     public static final int WIN_SCORE = 100000;
     public static final int LOSS_SCORE = -100000;
+
+    /** Penalty subtracted from a piece's value when it can be captured next move. */
+    private static final int THREAT_PENALTY = 150;
+
+    private final GameRuleEngine gameRuleEngine;
 
     private static final Map<PieceType, Integer> PIECE_VALUES = new EnumMap<>(PieceType.class);
 
@@ -71,7 +79,13 @@ public class BoardEvaluator {
                     trapPenalty = 150;
                 }
 
-                int totalPieceScore = pieceVal + positionalBonus - trapPenalty;
+                // Threat penalty if an adjacent enemy piece can capture this piece next move
+                int threatPenalty = 0;
+                if (piece.side() == side && isThreatened(board, r, c, piece)) {
+                    threatPenalty = THREAT_PENALTY;
+                }
+
+                int totalPieceScore = pieceVal + positionalBonus - trapPenalty - threatPenalty;
 
                 if (piece.side() == side) {
                     score += totalPieceScore;
@@ -82,5 +96,40 @@ public class BoardEvaluator {
         }
 
         return score;
+    }
+
+    /**
+     * True if an enemy piece adjacent to {@code (row, col)} can capture {@code piece}
+     * on its next move. Reuses {@link GameRuleEngine#canCapture} so the bot never
+     * duplicates rule logic. Own-side trap squares are ignored here: an enemy standing
+     * on our trap is neutralized (rank 0) and cannot capture anything.
+     */
+    private boolean isThreatened(Board board, int row, int col, Piece piece) {
+        int[] dr = {-1, 1, 0, 0};
+        int[] dc = {0, 0, -1, 1};
+
+        for (int i = 0; i < dr.length; i++) {
+            int er = row + dr[i];
+            int ec = col + dc[i];
+            if (er < 0 || er >= Board.ROWS || ec < 0 || ec >= Board.COLS) {
+                continue;
+            }
+
+            Piece enemy = board.getPiece(er, ec);
+            if (enemy == null || enemy.side() == piece.side()) {
+                continue;
+            }
+
+            // Enemy standing on OUR trap is neutralized (rank 0) — cannot capture.
+            if (Board.isTrap(er, ec, piece.side())) {
+                continue;
+            }
+
+            if (gameRuleEngine.canCapture(enemy, piece)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

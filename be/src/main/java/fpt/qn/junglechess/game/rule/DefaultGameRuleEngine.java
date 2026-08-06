@@ -183,7 +183,8 @@ public class DefaultGameRuleEngine implements GameRuleEngine {
         }
     }
 
-    private boolean canCapture(Piece attacker, Piece defender) {
+    @Override
+    public boolean canCapture(Piece attacker, Piece defender) {
         // Exception: Rat vs Elephant
         if (attacker.type() == PieceType.RAT && defender.type() == PieceType.ELEPHANT) {
             return true;

@@ -25,7 +25,7 @@ class AlphaBetaBotEngineTest {
     @BeforeEach
     void setUp() {
         ruleEngine = new DefaultGameRuleEngine();
-        evaluator = new BoardEvaluator();
+        evaluator = new BoardEvaluator(ruleEngine);
         botEngine = new AlphaBetaBotEngine(ruleEngine, evaluator);
     }
 
@@ -73,5 +73,32 @@ class AlphaBetaBotEngineTest {
         botEngine.nextMove(board, Side.PLAYER_1, 3);
 
         assertEquals(clone, board, "Board state must be restored after minimax execution");
+    }
+
+    @Test
+    @DisplayName("Bot never returns an illegal move on the initial board")
+    void botNeverReturnsIllegalMove() {
+        Board board = Board.createInitialBoard();
+
+        Move move = botEngine.nextMove(board, Side.PLAYER_1, 3);
+
+        assertNotNull(move, "Bot should find at least one legal move from the initial board");
+        assertTrue(ruleEngine.isValidMove(board, move),
+                "Bot must only return legal moves, but returned " + move);
+    }
+
+    @Test
+    @DisplayName("Bot respects a hard time limit under CPU pressure")
+    void botRespectsTimeLimit() {
+        Board board = Board.createInitialBoard();
+
+        long budgetMs = 20;
+        long start = System.nanoTime();
+        Move move = botEngine.nextMove(board, Side.PLAYER_1, 5, budgetMs);
+        long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
+
+        assertNotNull(move, "Bot should return a best-so-far move even when time-bounded");
+        assertTrue(elapsedMs <= budgetMs + 150,
+                "Bot exceeded time budget: elapsedMs=" + elapsedMs + " budgetMs=" + budgetMs);
     }
 }

@@ -9,7 +9,6 @@ import fpt.qn.junglechess.game.rule.GameRuleEngine;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -20,12 +19,21 @@ public class AlphaBetaBotEngine implements BotEngine {
     private final GameRuleEngine gameRuleEngine;
     private final BoardEvaluator boardEvaluator;
 
+    /**
+     * Works on a clone of {@code board} so the caller's state is never mutated,
+     * regardless of timeouts or unexpected errors. Search stops when the deadline
+     * (in nanoseconds) is exceeded and the best move found so far is returned.
+     */
     @Override
-    public Move nextMove(Board board, Side side, int depth) {
-        List<Move> validMoves = gameRuleEngine.getValidMoves(board, side);
+    public Move nextMove(Board board, Side side, int depth, long timeoutMillis) {
+        Board workingBoard = board.cloneBoard();
+
+        List<Move> validMoves = gameRuleEngine.getValidMoves(workingBoard, side);
         if (validMoves.isEmpty()) {
             return null;
         }
+
+        long deadline = System.nanoTime() + timeoutMillis * 1_000_000L;
 
         // Sort moves: captures first for better alpha-beta pruning
         orderMoves(validMoves);
@@ -36,9 +44,9 @@ public class AlphaBetaBotEngine implements BotEngine {
         int beta = Integer.MAX_VALUE;
 
         for (Move move : validMoves) {
-            board.makeMove(move);
-            int value = minimax(board, depth - 1, alpha, beta, false, side);
-            board.undoMove(move);
+            workingBoard.makeMove(move);
+            int value = minimax(workingBoard, depth - 1, alpha, beta, false, side, deadline);
+            workingBoard.undoMove(move);
 
             if (value > bestValue) {
                 bestValue = value;
@@ -53,7 +61,12 @@ public class AlphaBetaBotEngine implements BotEngine {
         return bestMove;
     }
 
-    private int minimax(Board board, int depth, int alpha, int beta, boolean isMaximizing, Side botSide) {
+    private int minimax(Board board, int depth, int alpha, int beta, boolean isMaximizing, Side botSide, long deadline) {
+        if (deadlineExceeded(deadline)) {
+            // Time is up: return a static evaluation of the position as-is.
+            return boardEvaluator.evaluate(board, botSide);
+        }
+
         if (depth <= 0 || gameRuleEngine.isGameOver(board)) {
             return boardEvaluator.evaluate(board, botSide);
         }
@@ -72,7 +85,7 @@ public class AlphaBetaBotEngine implements BotEngine {
             int maxEval = Integer.MIN_VALUE;
             for (Move move : validMoves) {
                 board.makeMove(move);
-                int eval = minimax(board, depth - 1, alpha, beta, false, botSide);
+                int eval = minimax(board, depth - 1, alpha, beta, false, botSide, deadline);
                 board.undoMove(move);
                 maxEval = Math.max(maxEval, eval);
                 alpha = Math.max(alpha, eval);
@@ -85,7 +98,7 @@ public class AlphaBetaBotEngine implements BotEngine {
             int minEval = Integer.MAX_VALUE;
             for (Move move : validMoves) {
                 board.makeMove(move);
-                int eval = minimax(board, depth - 1, alpha, beta, true, botSide);
+                int eval = minimax(board, depth - 1, alpha, beta, true, botSide, deadline);
                 board.undoMove(move);
                 minEval = Math.min(minEval, eval);
                 beta = Math.min(beta, eval);
@@ -95,6 +108,10 @@ public class AlphaBetaBotEngine implements BotEngine {
             }
             return minEval;
         }
+    }
+
+    private boolean deadlineExceeded(long deadline) {
+        return System.nanoTime() > deadline;
     }
 
     private void orderMoves(List<Move> moves) {

@@ -18,6 +18,8 @@
   "turnLabel": "Lượt:",
   "rulesTitle": "Tóm tắt luật chơi",
   "creditTitle": "Tác giả trò chơi",
+  "rulesButton": "Luật chơi",
+  "closeButton": "Đóng",
   "statusLoading": "Đang tải...",
   "statusWaitingPlayer": "{player}, chọn một quân cờ.",
   "statusPlayerSelected": "{player}, đã chọn {pieceName}. Chọn điểm đến.",

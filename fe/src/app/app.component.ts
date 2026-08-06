@@ -19,7 +19,7 @@ import { BoardComponent } from './components/board/board.component';
 import { LeftPanelComponent } from './components/left-panel/left-panel.component';
 import { RightPanelComponent } from './components/right-panel/right-panel.component';
 import { WinChanceBarComponent } from './components/win-chance-bar/win-chance-bar.component';
-import { GameRulesComponent } from './components/game-rules/game-rules.component';
+import { GameRulesModalComponent } from './components/game-rules-modal/game-rules-modal.component';
 
 @Component({
   selector: 'app-root',
@@ -32,7 +32,7 @@ import { GameRulesComponent } from './components/game-rules/game-rules.component
     LeftPanelComponent,
     RightPanelComponent,
     WinChanceBarComponent,
-    GameRulesComponent
+    GameRulesModalComponent
   ],
   templateUrl: './app.component.html'
 })
@@ -55,6 +55,7 @@ export class AppComponent implements OnInit {
   statusMessage: string = '';
   isGameOver: boolean = false;
   isAiThinking: boolean = false;
+  isRulesModalOpen: boolean = false;
 
   constructor(
     public loc: LocalizationService,
@@ -88,6 +89,14 @@ export class AppComponent implements OnInit {
     if (this.gameMode === 'PVA' && this.currentTurn === 1) {
       this.triggerAiMove();
     }
+  }
+
+  public openRulesModal(): void {
+    this.isRulesModalOpen = true;
+  }
+
+  public closeRulesModal(): void {
+    this.isRulesModalOpen = false;
   }
 
   public onGameModeChange(mode: GameMode): void {

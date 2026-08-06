@@ -48,6 +48,9 @@ import { LocalizationService } from '../../core/services/localization.service';
         <button id="randomize-board-button" (click)="randomizeBoard.emit()">
           {{ loc.translate('randomizeBoardButton') }}
         </button>
+        <button id="rules-button" (click)="openRules.emit()" style="background-color: #e8f4fd; border-color: #3498db; color: #2980b9; font-weight: 600;">
+          📖 {{ loc.translate('rulesButton') }}
+        </button>
       </div>
     </div>
   `
@@ -59,6 +62,7 @@ export class LeftPanelComponent {
   @Output() resetGame = new EventEmitter<void>();
   @Output() undoMove = new EventEmitter<void>();
   @Output() randomizeBoard = new EventEmitter<void>();
+  @Output() openRules = new EventEmitter<void>();
 
   constructor(public loc: LocalizationService) {}
 }

@@ -18,6 +18,8 @@
   "turnLabel": "Turn:",
   "rulesTitle": "Game Rules Summary",
   "creditTitle": "Game Authors",
+  "rulesButton": "Game Rules",
+  "closeButton": "Close",
   "statusLoading": "Loading...",
   "statusWaitingPlayer": "{player}, select a piece.",
   "statusPlayerSelected": "{player}, selected {pieceName}. Choose destination.",

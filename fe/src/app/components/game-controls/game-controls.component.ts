@@ -53,6 +53,17 @@ import { LocalizationService } from '../../core/services/localization.service';
         </select>
       </div>
 
+      <!-- Rules Modal Trigger Button -->
+      <div>
+        <button
+          type="button"
+          (click)="openRulesModal.emit()"
+          style="padding: 6px 14px; font-size: 14px; font-weight: 600; background-color: #3498db; color: #fff; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.15s ease;"
+        >
+          📖 {{ loc.translate('rulesButton') }}
+        </button>
+      </div>
+
       <!-- AI Controls -->
       <div id="ai-controls" *ngIf="gameMode === 'PVA'">
         <div>
@@ -105,6 +116,8 @@ export class GameControlsComponent {
   @Output() aiTimeLimitChange = new EventEmitter<number>();
 
   @Input() actualAiDepth: number = 0;
+
+  @Output() openRulesModal = new EventEmitter<void>();
 
   depthOptions = [4, 5, 6, 7, 8, 9, 10, 11];
 

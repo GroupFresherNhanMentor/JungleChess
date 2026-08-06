@@ -10,20 +10,20 @@
 ## 1. GIỚI THIỆU
 
 ### 1.1 Mục đích
-Tài liệu này mô tả chi tiết các yêu cầu chức năng và phi chức năng cho dự án xây dựng game Cờ Thú (Đấu Thú Kỳ / Dou Shou Qi) trực tuyến, tuân theo **luật cờ thú quốc tế**, hỗ trợ 3 chế độ chơi: **PvP cùng máy**, **PvE (đấu với bot)**, **EvE (bot đấu bot)**. Tài liệu dùng làm cơ sở để đội ngũ phát triển (backend, frontend, AI/bot) thống nhất phạm vi, thiết kế và phân chia công việc.
+Tài liệu này mô tả chi tiết các yêu cầu chức năng và phi chức năng cho dự án xây dựng game Cờ Thú (Đấu Thú Kỳ / Dou Shou Qi) trực tuyến, tuân theo **luật cờ thú quốc tế**, hỗ trợ 3 chế độ chơi: **PvP Online (trực tuyến giữa 2 người chơi qua WebSocket/STOMP)**, **PvE (đấu với bot)**, **EvE (bot đấu bot)**. Tài liệu dùng làm cơ sở để đội ngũ phát triển (backend, frontend, AI/bot) thống nhất phạm vi, thiết kế và phân chia công việc.
 
 ### 1.2 Phạm vi dự án
 Sản phẩm là một web-app cho phép:
 - Người chơi tạo/tham gia phòng chơi qua kết nối thời gian thực (WebSocket).
 - Xác thực người dùng bằng access token/refresh token.
 - Chơi cờ thú theo đúng luật quốc tế (bàn cờ 9 hàng x 7 cột, bẫy, hang, sông, thứ bậc động vật, luật chuột-voi, luật nhảy sông của hổ/sư tử).
-- Ba chế độ chơi: PvP trên cùng một máy (2 người thay phiên trên 1 thiết bị), PvE (người chơi đấu với AI bot), EvE (2 bot tự đấu, người dùng xem/quan sát).
+- Ba chế độ chơi: PvP Online (2 người chơi kết nối qua mạng từ 2 thiết bị khác nhau bằng mã phòng/room code), PvE (người chơi đấu với AI bot), EvE (2 bot tự đấu, người dùng xem/quan sát).
 - Giao diện đẹp, mượt, có animation và âm thanh.
 
 ### 1.3 Định nghĩa, từ viết tắt
 | Thuật ngữ | Giải thích |
 |---|---|
-| PvP | Player vs Player |
+| PvP | Player vs Player (Online multiplayer) |
 | PvE | Player vs Environment (Bot) |
 | EvE | Environment vs Environment (Bot vs Bot) |
 | SRS | Software Requirements Specification |
@@ -49,11 +49,11 @@ Hệ thống gồm 2 phần chính:
 
 ### 2.2 Chức năng chính
 1. Đăng ký/Đăng nhập qua REST API, xác thực và quản lý phiên (access token + refresh token) cho kết nối WebSocket.
-2. Tạo phòng, tham gia phòng, rời phòng, mời chơi lại.
+2. Tạo phòng, tham gia phòng qua mã phòng (Room ID), rời phòng, yêu cầu chơi lại (rematch).
 3. Chơi cờ thú theo luật quốc tế, đồng bộ real-time giữa các client.
 4. Bot AI có khả năng tính nước đi (tối thiểu 1 mức độ khó, có thể mở rộng nhiều mức).
 5. Chế độ PvE: người chơi vs bot; EvE: bot vs bot (người xem).
-6. Chế độ PvP cùng máy: 2 người chơi luân phiên lượt trên cùng một trình duyệt/thiết bị (không cần 2 tài khoản kết nối qua mạng cho ván này).
+6. Chế độ PvP Online: 2 người chơi đăng nhập trên 2 trình duyệt/thiết bị khác nhau, tạo phòng/join phòng qua mã phòng, thi đấu trực tuyến thời gian thực.
 7. Giao diện: vẽ bàn cờ, quân cờ, hiệu ứng di chuyển/ăn quân, âm thanh, thông báo thắng/thua/hòa.
 
 ### 2.3 Đối tượng người dùng
@@ -99,8 +99,8 @@ Hệ thống gồm 2 phần chính:
 ### 4.2 Module Quản lý phòng & Logic WebSocket (Room/Game Session)
 | Mã | Yêu cầu |
 |---|---|
-| ROOM-01 | Người chơi có thể tạo phòng mới, chọn chế độ chơi (PvP cùng máy / PvE / EvE). |
-| ROOM-02 | Người chơi có thể tham gia (join) phòng đã tồn tại bằng mã phòng (hỗ trợ cho chế độ PvE/EvE hoặc mở rộng PvP online). |
+| ROOM-01 | Người chơi có thể tạo phòng mới, chọn chế độ chơi (PvP Online / PvE / EvE). |
+| ROOM-02 | Người chơi có thể tham gia (join) phòng đã tồn tại bằng mã phòng (Room ID) cho chế độ PvP Online. |
 | ROOM-03 | Hệ thống quản lý danh sách phòng đang hoạt động, trạng thái (đang chờ, đang chơi, đã kết thúc). |
 | ROOM-04 | Mỗi nước đi được gửi lên server qua WebSocket, server kiểm tra hợp lệ theo luật trước khi phát (broadcast) trạng thái mới tới các client trong phòng. |
 | ROOM-05 | Server là nguồn xác định duy nhất (source of truth) cho: lượt đi hiện tại, trạng thái bàn cờ, thắng/thua/hòa. |
@@ -135,8 +135,8 @@ Hệ thống gồm 2 phần chính:
 | UI-02 | Highlight ô có thể đi khi chọn 1 quân cờ. |
 | UI-03 | Animation di chuyển quân cờ mượt (drag/drop hoặc click-click), animation khi ăn quân, animation khi vào hang (thắng). |
 | UI-04 | Âm thanh: đi quân, ăn quân, thắng/thua, thông báo lượt đối phương. |
-| UI-05 | Giao diện sảnh chờ: tạo phòng, chọn chế độ chơi (PvP cùng máy/PvE/EvE), chọn mức độ bot (nếu có). |
-| UI-06 | Giao diện chế độ PvP cùng máy: hiển thị rõ lượt của bên nào, có thể xoay bàn cờ 180° khi đổi lượt (tuỳ chọn UX) để thuận tiện chơi trên 1 màn hình. |
+| UI-05 | Giao diện sảnh chờ: tạo phòng, nhập mã phòng join phòng, chọn chế độ chơi (PvP Online/PvE/EvE), chọn mức độ bot (nếu có). |
+| UI-06 | Giao diện chế độ PvP Online: hiển thị rõ thông tin 2 người chơi trong phòng, hiển thị lượt của bên nào, nút tạo/sao chép mã phòng để gửi cho bạn bè. |
 | UI-07 | Giao diện chế độ EvE: chỉ hiển thị, không cho tương tác chọn quân; có nút play/pause/tốc độ hiển thị (tuỳ chọn). |
 | UI-08 | Responsive tối thiểu trên desktop, tối ưu trải nghiệm mượt (60fps animation, không giật khi nhận dữ liệu từ WebSocket). |
 | UI-09 | Kết nối WebSocket phía frontend: quản lý kết nối, tự động reconnect, xử lý mất kết nối/hiển thị trạng thái mạng. |
@@ -194,7 +194,7 @@ Hệ thống gồm 2 phần chính:
 | Sơn | Game animation, sound |
 | Lộc | Game rule (áp dụng luật cờ thú phía client: highlight nước đi hợp lệ, validate tạm thời trước khi gửi server) |
 | Nguyên | WebSocket frontend (kết nối, subscribe/publish STOMP, reconnect, state sync) |
-| Mạnh | Chơi game (luồng chơi/game flow: điều phối UI theo trạng thái ván đấu, xử lý chế độ PvP cùng máy/PvE/EvE ở tầng trải nghiệm) |
+| Mạnh | Chơi game (luồng chơi/game flow: điều phối UI theo trạng thái ván đấu, xử lý chế độ PvP Online/PvE/EvE ở tầng trải nghiệm) |
 
 > **Lưu ý phối hợp:** Module "Game Rule" nên được thiết kế thống nhất về mặt đặc tả (toạ độ, luật) giữa backend (Thắng/Khôi dùng để validate & AI) và frontend (Lộc dùng để UX), tránh lệch luật giữa 2 phía.
 
@@ -215,7 +215,7 @@ Hệ thống gồm 2 phần chính:
 ## 9. TIÊU CHÍ NGHIỆM THU (Definition of Done – tổng quan)
 
 - Người chơi đăng nhập, kết nối WebSocket thành công với access token hợp lệ; refresh token hoạt động đúng khi access token hết hạn.
-- Có thể tạo/join phòng, chơi đầy đủ 1 ván cờ thú đúng luật quốc tế ở cả 3 chế độ PvP (cùng máy), PvE, EvE.
+- Có thể tạo/join phòng, chơi đầy đủ 1 ván cờ thú đúng luật quốc tế ở cả 3 chế độ PvP Online, PvE, EvE.
 - Server xác định đúng điều kiện thắng/thua/hòa trong mọi trường hợp luật đã liệt kê ở mục 3.
 - Bot đưa ra nước đi hợp lệ trong giới hạn thời gian quy định, không bao giờ đi nước phạm luật.
 - Giao diện hiển thị đúng animation, âm thanh tương ứng với từng hành động trong ván đấu.

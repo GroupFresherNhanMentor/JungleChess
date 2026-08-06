@@ -2,9 +2,12 @@ package fpt.qn.junglechess.game.rule;
 
 import fpt.qn.junglechess.game.model.*;
 
+import org.springframework.stereotype.Component;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Component
 public class DefaultGameRuleEngine implements GameRuleEngine {
 
     private static final int[][] DIRECTIONS = {

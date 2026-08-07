@@ -89,6 +89,26 @@ class GameRuleEngineTest {
     }
 
     @Test
+    @DisplayName("Piece on land cannot capture Rat in river")
+    void testLandPieceCannotCaptureRatInRiver() {
+        Board board = new Board();
+        Piece p1RatOnLand = new Piece(Side.PLAYER_1, PieceType.RAT);
+        Piece p2RatInRiver = new Piece(Side.PLAYER_2, PieceType.RAT);
+
+        Position landRatPos = new Position(2, 1); // Land cell
+        Position riverRatPos = new Position(3, 1); // River cell
+
+        board.setPiece(landRatPos, p1RatOnLand);
+        board.setPiece(riverRatPos, p2RatInRiver);
+
+        List<Move> moves = ruleEngine.getValidMoves(board, Side.PLAYER_1);
+        boolean canCapture = moves.stream()
+                .anyMatch(m -> m.to().equals(riverRatPos));
+
+        assertFalse(canCapture, "Land piece cannot capture a Rat inside the river");
+    }
+
+    @Test
     @DisplayName("Tiger can jump across river when unblocked")
     void testTigerRiverJumpUnblocked() {
         Board board = new Board();

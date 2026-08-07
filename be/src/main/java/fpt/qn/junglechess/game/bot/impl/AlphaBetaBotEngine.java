@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
@@ -28,7 +27,7 @@ public class AlphaBetaBotEngine implements BotEngine {
      * (in nanoseconds) is exceeded and the best move found so far is returned.
      */
     @Override
-    public Move nextMove(Board board, Side side, int depth, long timeoutMillis) {
+    public Move nextMove(Board board, Side side, int maxDepth, long timeoutMillis) {
         Board workingBoard = board.cloneBoard();
 
         List<Move> validMoves = gameRuleEngine.getValidMoves(workingBoard, side);
@@ -38,66 +37,81 @@ public class AlphaBetaBotEngine implements BotEngine {
 
         long deadline = System.nanoTime() + timeoutMillis * 1_000_000L;
 
-        // Sort moves: captures first for better alpha-beta pruning
-        orderMoves(validMoves);
+        Move bestMoveFound = null;
+        List<Move> tiedBestMoves = new ArrayList<>();
 
-        int bestValue = Integer.MIN_VALUE;
-        int alpha = Integer.MIN_VALUE;
-        int beta = Integer.MAX_VALUE;
-        List<Move> tiedBest = new ArrayList<>();
-
-        for (Move move : validMoves) {
+        // Iterative deepening search from depth 1 up to maxDepth
+        for (int currentDepth = 1; currentDepth <= maxDepth; currentDepth++) {
             if (deadlineExceeded(deadline)) {
-                // Time is up: stop expanding new root moves and return the best found so far.
                 break;
             }
 
-            workingBoard.makeMove(move);
-            int value = minimax(workingBoard, depth - 1, alpha, beta, false, side, deadline);
-            workingBoard.undoMove(move);
+            // Move ordering: put previous iteration's best move first, followed by captures
+            orderMoves(validMoves, bestMoveFound);
 
-            if (value > bestValue) {
-                bestValue = value;
-                tiedBest.clear();
-                tiedBest.add(move);
-            } else if (value == bestValue) {
-                // Another move evaluates to the same best score: record the tie so we can
-                // break it randomly below. This keeps each equal-best choice optimal while
-                // making EvE matches (and repeated queries) vary instead of always picking
-                // the first move in list order.
-                tiedBest.add(move);
+            int bestValue = Integer.MIN_VALUE;
+            int alpha = Integer.MIN_VALUE;
+            int beta = Integer.MAX_VALUE;
+            List<Move> currentTiedBest = new ArrayList<>();
+            boolean searchAborted = false;
+
+            for (Move move : validMoves) {
+                if (deadlineExceeded(deadline)) {
+                    searchAborted = true;
+                    break;
+                }
+
+                workingBoard.makeMove(move);
+                int value = minimax(workingBoard, currentDepth - 1, alpha, beta, false, side, deadline);
+                workingBoard.undoMove(move);
+
+                if (value > bestValue) {
+                    bestValue = value;
+                    currentTiedBest.clear();
+                    currentTiedBest.add(move);
+                } else if (value == bestValue) {
+                    currentTiedBest.add(move);
+                }
+                alpha = Math.max(alpha, bestValue);
             }
-            alpha = Math.max(alpha, bestValue);
-            if (beta <= alpha) {
-                break; // Alpha-beta cutoff
+
+            if (!currentTiedBest.isEmpty() && (!searchAborted || currentDepth == 1)) {
+                tiedBestMoves = currentTiedBest;
+                bestMoveFound = tiedBestMoves.get(random.nextInt(tiedBestMoves.size()));
+            }
+
+            // Stop early if a guaranteed winning move is found
+            if (bestValue >= BoardEvaluator.WIN_SCORE) {
+                break;
             }
         }
 
-        // tiedBest is never empty: it always contains at least the first evaluated move.
-        // Picking uniformly among the equal-best moves keeps play optimal while making
-        // EvE matches (and repeated queries) vary instead of always taking list order.
-        return tiedBest.get(random.nextInt(tiedBest.size()));
+        if (tiedBestMoves.isEmpty()) {
+            orderMoves(validMoves, null);
+            return validMoves.get(0);
+        }
+
+        return tiedBestMoves.get(random.nextInt(tiedBestMoves.size()));
     }
 
     private int minimax(Board board, int depth, int alpha, int beta, boolean isMaximizing, Side botSide, long deadline) {
         if (deadlineExceeded(deadline)) {
-            // Time is up: return a static evaluation of the position as-is.
             return boardEvaluator.evaluate(board, botSide);
         }
 
-        if (depth <= 0 || gameRuleEngine.isGameOver(board)) {
-            return boardEvaluator.evaluate(board, botSide);
+        int staticEval = boardEvaluator.evaluate(board, botSide);
+        if (depth <= 0 || Math.abs(staticEval) >= BoardEvaluator.WIN_SCORE) {
+            return staticEval;
         }
 
         Side currentTurn = isMaximizing ? botSide : botSide.getOpposite();
         List<Move> validMoves = gameRuleEngine.getValidMoves(board, currentTurn);
 
         if (validMoves.isEmpty()) {
-            // No moves available: if maximizing, bot lost (-100000); if minimizing, bot won (+100000)
             return isMaximizing ? BoardEvaluator.LOSS_SCORE : BoardEvaluator.WIN_SCORE;
         }
 
-        orderMoves(validMoves);
+        orderMoves(validMoves, null);
 
         if (isMaximizing) {
             int maxEval = Integer.MIN_VALUE;
@@ -132,8 +146,15 @@ public class AlphaBetaBotEngine implements BotEngine {
         return System.nanoTime() > deadline;
     }
 
-    private void orderMoves(List<Move> moves) {
-        // Move ordering heuristic: moves that capture a piece are evaluated first
-        moves.sort(Comparator.comparingInt((Move m) -> m.capturedPiece() != null ? m.capturedPiece().type().getRank() : 0).reversed());
+    private void orderMoves(List<Move> moves, Move primaryMove) {
+        moves.sort((m1, m2) -> {
+            if (primaryMove != null) {
+                if (m1.equals(primaryMove)) return -1;
+                if (m2.equals(primaryMove)) return 1;
+            }
+            int rank1 = m1.capturedPiece() != null ? m1.capturedPiece().type().getRank() : 0;
+            int rank2 = m2.capturedPiece() != null ? m2.capturedPiece().type().getRank() : 0;
+            return Integer.compare(rank2, rank1);
+        });
     }
 }

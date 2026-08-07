@@ -20,6 +20,9 @@ export interface Move {
   piece: Piece;
   capturedPiece?: Piece | null;
   notation?: string;
+  /** Equal-rank battle result. 'attacker' = attacker won the clash (normal capture);
+   *  'defender' = defender won (counter-attack, attacker is removed). */
+  battleOutcome?: 'attacker' | 'defender';
 }
 
 export interface ChatMessage {

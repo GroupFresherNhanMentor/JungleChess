@@ -2,3 +2,38 @@
 :host {
   display: block;
 }
+
+/* --- Ghost piece sliding across the board --- */
+/* The ghost also carries `.piece` (translate(-50%,-50%) centering); the px
+   coords here are already the piece's top-left, so cancel that transform. */
+.ghost-piece {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  left: var(--ghost-fx, 5px);
+  top: var(--ghost-fy, 5px);
+  transform: none;
+  z-index: 20;
+  pointer-events: none;
+}
+
+/* Slide: interpolate left/top from origin to destination via CSS variables. */
+@keyframes ghost-slide {
+  0%   { left: var(--ghost-fx, 5px); top: var(--ghost-fy, 5px); }
+  100% { left: var(--ghost-tx, 0px); top: var(--ghost-ty, 0px); }
+}
+.ghost-piece {
+  animation: ghost-slide 0.32s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Pounce: scale up sharply then settle — plays after the slide lands. */
+@keyframes pounce {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.45); }
+  70%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+.ghost-piece.pounce {
+  animation: ghost-slide 0.32s cubic-bezier(0.4, 0, 0.2, 1) forwards,
+             pounce 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.3s;
+}

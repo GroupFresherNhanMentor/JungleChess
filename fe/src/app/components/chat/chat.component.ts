@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   EventEmitter,
+  HostListener,
   Input,
   Output,
   ViewChild
@@ -27,6 +28,7 @@ export class ChatComponent implements AfterViewChecked {
   @ViewChild('chatContainer') private chatContainer!: ElementRef;
 
   newMessageText: string = '';
+  emojiPickerOpen = false;
 
   quickEmotes: string[] = [
     'Chơi hay lắm! 👍',
@@ -35,6 +37,49 @@ export class ChatComponent implements AfterViewChecked {
     'Tới luôn bạn ơi! 😎',
     'Gà thế! 🐔'
   ];
+
+  emojiList: string[] = [
+    '😀', '😄', '😁', '😆', '😂', '🤣',
+    '😊', '😇', '🙂', '😉', '😍', '🥰',
+    '😘', '😜', '🤪', '😎', '🤩', '🥳',
+    '😏', '😒', '😞', '😢', '😭', '😤',
+    '😡', '🤬', '😱', '😨', '😰', '🥵',
+    '🥶', '🤔', '🤫', '🤭', '😴', '🤯',
+    '❤️', '🧡', '💛', '💚', '💙', '💜',
+    '🖤', '💖', '💯', '🔥', '✨', '⭐',
+    '👍', '👎', '👏', '🙏', '🤝', '✌️',
+    '🤞', '💪', '👌', '🤙', '👊', '🙌',
+    '🎉', '🎊', '🥳', '🎈', '🎁', '🏆',
+    '⚔️', '🛡️', '🐀', '🐈', '🐕', '🐺',
+    '🐆', '🐯', '🦁', '🐘', '👑', '💰'
+  ];
+
+  toggleEmojiPicker(): void {
+    this.emojiPickerOpen = !this.emojiPickerOpen;
+  }
+
+  /** Close the emoji dropdown when clicking anywhere outside it. */
+  @HostListener('document:click', ['$event'])
+  onDocClick(event: MouseEvent): void {
+    const wrap = (event.target as HTMLElement | null)?.closest?.('.emoji-picker-wrap');
+    if (!wrap && this.emojiPickerOpen) {
+      this.emojiPickerOpen = false;
+    }
+  }
+
+  closeEmojiPicker(): void {
+    this.emojiPickerOpen = false;
+  }
+
+  pickEmoji(emoji: string): void {
+    // Append to input; if empty, send the emoji directly
+    if (!this.newMessageText.trim()) {
+      this.sendMessage.emit(emoji);
+    } else {
+      this.newMessageText += emoji;
+    }
+    this.emojiPickerOpen = false;
+  }
 
   constructor(public loc: LocalizationService) {}
 

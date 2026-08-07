@@ -14,7 +14,7 @@ body {
   align-items: center;
   min-height: 100vh;
   box-sizing: border-box;
-  background-image: url('/assets/background.png');
+  background-image: url('/assets/images/background/Final_background_biggerView_upscaled.png');
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
@@ -355,42 +355,52 @@ h1, #game-title {
   position: absolute; top: 20px; left: 20px;
   box-shadow: 0 0 10px rgba(0,0,0,0.3);
   margin-bottom: 0;
-  background-color: #8bc34a;
+  /* Whole-board background art (7:9), stretched to fill the grid.
+     Per-cell overlays (water/trap/den/bridge/piece) sit on top via z-index. */
+  background-image: url('/assets/images/background/Final_background.png');
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #8bc34a; /* Fallback while image loads */
 }
 
 /* --- Square Base and Terrain --- */
 .square {
   width: 60px; height: 60px;
-  border: 1px solid #7cb342;
+  border: 1px solid transparent;
   box-sizing: border-box;
   display: flex; justify-content: center; align-items: center;
   cursor: pointer; position: relative; overflow: hidden;
-  background-image: url('/assets/tiles/land_1.png');
-  background-size: cover;
-  background-position: center;
+  background-color: transparent; /* whole-board art shows through */
+  background-image: none;
 }
 
+/* Terrain cells are transparent so the whole-board art shows through.
+   Their textures (land/water/trap/den) are rendered as overlay layers inside
+   the square (water.gif, trap.gif, chest.png) on top of the board background. */
 .terrain-water {
-  background-image: url('/assets/tiles/water.gif') !important;
-  background-size: cover !important;
-  border-color: #29b6f6 !important;
+  background-image: none !important;
+  border-color: transparent !important;
+}
+/* Animated water overlay image — fill the cell on top of board art */
+img.terrain-water {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
 }
 
 .terrain-trap {
-  background-image: url('/assets/tiles/land_3.png') !important;
-  background-size: cover !important;
-  border-color: #8d6e63 !important;
+  background-image: none !important;
+  border-color: transparent !important;
 }
 
 .terrain-player0-den {
-  background-image: url('/assets/tiles/land_3.png') !important;
-  background-size: cover !important;
+  background-image: none !important;
   border: 2px dashed blue !important;
 }
 
 .terrain-player1-den {
-  background-image: url('/assets/tiles/land_3.png') !important;
-  background-size: cover !important;
+  background-image: none !important;
   border: 2px dashed red !important;
 }
 
@@ -613,6 +623,44 @@ h1, #game-title {
 .turn-info {
   font-size: 0.9em; font-weight: bold; text-align: center; margin-top: 10px; padding: 5px;
   background-color: rgba(233, 233, 233, 0.9); border-radius: 4px; color: #333;
+}
+
+/* --- Announcement Banner --- */
+.announce-banner {
+  position: fixed;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1500;
+  background-color: rgba(15, 23, 42, 0.85);
+  border: 4px solid #ffffff;
+  border-radius: 16px;
+  padding: 22px 46px;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+  animation: banner-pop 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+.announce-banner.blue { border-color: #3b82f6; }
+.announce-banner.red  { border-color: #ef4444; }
+.announce-banner.neutral { border-color: #ffd54f; }
+.announce-title {
+  font-size: 44px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  letter-spacing: 1px;
+}
+.announce-banner.blue .announce-title { color: #93c5fd; }
+.announce-banner.red .announce-title { color: #fca5a5; }
+.announce-subtitle {
+  font-size: 18px;
+  color: #cbd5e1;
+  margin-top: 6px;
+}
+@keyframes banner-pop {
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
 
 /* --- Win Chance Bar --- */

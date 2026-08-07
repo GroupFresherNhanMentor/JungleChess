@@ -80,5 +80,16 @@
   "ruleDens": "<b>Hang (kho báu):</b> Thắng bằng cách vào Hang của đối phương. Không được vào Hang của mình.",
   "ruleWinCondition": "Thắng bằng cách: vào Hang đối phương, HOẶC bắt hết quân của đối phương.",
   "undoButton": "Hoàn Tác",
-  "randomizeBoardButton": "Sắp Ngẫu Nhiên"
+  "randomizeBoardButton": "Sắp Ngẫu Nhiên",
+  "battleTitle": "TRẬN CHIẾN!",
+  "battleSubtitle": "Nhấn phím liên tục để giành chiến thắng!",
+  "battleTapBlue": "Giữ A (Xanh)",
+  "battleTapRed": "Giữ L (Đỏ)",
+  "battleAiAuto": "Máy đang chiến đấu...",
+  "battleHint": "Nhấn A / L thật nhanh. Bên nào đầy thanh trước sẽ thắng!",
+  "battleIntro": "Cùng cấp! Trận chiến quyết định ai bị ăn!",
+  "battleWin": "{winner} thắng cuộc đối đầu!",
+  "battleCounter": "Phản công! Quân phòng thủ đã đẩy lùi đòn tấn công!",
+  "bannerFirstMove": "{player} đi trước!",
+  "bannerWin": "{winner} thắng!"
 }

@@ -1,5 +1,43 @@
 /* css/style.css - Jungle Chess UI styles */
 
+/* --- Warm Wood & Forest Theme Palette --- */
+:root {
+  /* Surfaces (warm wood panels — semi-opaque so jungle bleeds subtly) */
+  --wood-panel:        rgba(120, 78, 42, 0.88);   /* dark warm walnut panel */
+  --wood-panel-light:  rgba(146, 98, 54, 0.92);   /* lighter oak panel */
+  --wood-inset:        rgba(66, 43, 24, 0.55);    /* inset wells (search box, move list) */
+  --wood-panel-solid:  #7c4f2d;                    /* solid fallback / modal card */
+
+  /* Borders */
+  --wood-border:       #5a3a22;                    /* dark wood grain border */
+  --wood-border-soft:  #8a6138;                    /* lighter border */
+  --gold-accent:       #e9b45c;                    /* royal gold accent */
+  --gold-accent-bright:#ffd97a;                     /* bright gold hover */
+
+  /* Text ink (warm dark brown — readable on amber panels) */
+  --ink:               #3a2410;
+  --ink-muted:         #6b4a28;
+  --ink-strong:        #2a1808;
+
+  /* Clan accents */
+  --clan-blue:         #2563eb;
+  --clan-blue-bright:  #3b82f6;
+  --clan-blue-bg:      rgba(37, 99, 235, 0.15);
+  --clan-red:          #dc2626;
+  --clan-red-bright:   #ef4444;
+  --clan-red-bg:       rgba(220, 38, 38, 0.15);
+
+  /* Buttons */
+  --btn-gold:     linear-gradient(180deg, #f0c268, #d99a3f);
+  --btn-gold-hot: linear-gradient(180deg, #ffd97a, #e6a84c);
+  --btn-wood:     linear-gradient(180deg, #9c6b3c, #7a4d26);
+  --btn-wood-hot: linear-gradient(180deg, #ab7a48, #8a5a30);
+
+  /* Shadows */
+  --shadow-soft: 0 2px 8px rgba(30, 15, 5, 0.35);
+  --shadow-lift: 0 6px 18px rgba(30, 15, 5, 0.45);
+}
+
 app-root {
   display: flex;
   flex-direction: column;
@@ -21,7 +59,7 @@ body {
   background-attachment: fixed;
   background-color: #cccccc; /* Fallback */
   margin: 0;
-  padding: 15px 10px;
+  padding: 8px 10px;
 }
 
 /* --- Global Top Header & Language Switcher --- */
@@ -39,11 +77,12 @@ h1, #game-title {
   display: block;
   margin: 0;
   text-align: center;
-  color: #333;
-  background-color: rgba(255, 255, 255, 0.85);
+  color: var(--ink-strong);
+  background-color: var(--wood-panel);
+  border: 2px solid var(--wood-border);
+  box-shadow: var(--shadow-soft);
   padding: 8px 36px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  border-radius: 10px;
   font-size: 1.8em;
   width: fit-content;
 }
@@ -63,17 +102,17 @@ h1, #game-title {
   font-weight: bold;
   padding: 6px 14px;
   border-radius: 20px;
-  background-color: rgba(255, 255, 255, 0.95);
-  color: #1e293b;
-  border: 1px solid #cbd5e1;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  background-color: var(--wood-panel);
+  color: var(--ink-strong);
+  border: 2px solid var(--gold-accent);
+  box-shadow: var(--shadow-soft);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .lang-toggle-btn:hover {
-  background-color: #ffffff;
-  border-color: #3b82f6;
+  background-color: var(--wood-panel-solid);
+  border-color: var(--gold-accent-bright);
   transform: scale(1.04);
 }
 
@@ -83,7 +122,7 @@ h1, #game-title {
 
 .lang-code {
   font-weight: bold;
-  color: #2563eb;
+  color: var(--gold-accent-bright);
 }
 
 /* --- Active Room Banner Header in Game View --- */
@@ -91,32 +130,32 @@ h1, #game-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: rgba(255, 255, 255, 0.92);
-  padding: 10px 18px;
-  border-radius: 8px;
-  margin: 0 auto 12px auto;
+  background-color: var(--wood-panel);
+  border: 2px solid var(--wood-border);
+  padding: 8px 16px;
+  border-radius: 10px;
+  margin: 0 auto 8px auto;
   width: 98%;
-  max-width: 850px;
+  max-width: 1000px;
   box-sizing: border-box;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-soft);
 }
 
 .back-lobby-header-btn {
   font-size: 14px;
   font-weight: bold;
   padding: 8px 16px;
-  background-color: #2563eb;
-  color: #ffffff;
-  border: none;
+  background: var(--btn-gold);
+  color: var(--ink-strong);
+  border: 2px solid var(--gold-accent);
   border-radius: 6px;
   cursor: pointer;
-  box-shadow: 0 2px 5px rgba(37, 99, 235, 0.3);
-  transition: background-color 0.15s ease, transform 0.1s ease;
+  box-shadow: var(--shadow-soft);
+  transition: background 0.15s ease, transform 0.1s ease;
 }
 
 .back-lobby-header-btn:hover {
-  background-color: #1d4ed8;
+  background: var(--btn-gold-hot);
 }
 
 .back-lobby-header-btn:active {
@@ -134,8 +173,8 @@ h1, #game-title {
   font-weight: bold;
   padding: 2px 8px;
   border-radius: 10px;
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--clan-blue-bg);
+  color: var(--clan-blue-bright);
   text-transform: uppercase;
 }
 
@@ -143,17 +182,17 @@ h1, #game-title {
   font-family: monospace;
   font-size: 14px;
   font-weight: bold;
-  color: #1d4ed8;
-  background-color: #eff6ff;
+  color: var(--gold-accent-bright);
+  background-color: var(--wood-inset);
   padding: 2px 8px;
   border-radius: 4px;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--wood-border-soft);
 }
 
 .room-title-text {
   font-size: 15px;
   font-weight: bold;
-  color: #0f172a;
+  color: var(--ink-strong);
 }
 
 #game-controls {
@@ -161,16 +200,16 @@ h1, #game-title {
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  background-color: rgba(248, 249, 250, 0.9);
+  background-color: var(--wood-panel);
+  border: 2px solid var(--wood-border);
   padding: 12px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin: 0 auto 15px auto;
   width: 98%;
-  max-width: 850px;
+  max-width: 1000px;
   box-sizing: border-box;
   gap: 10px 24px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-soft);
 }
 
 #game-controls > div:not(#ai-controls):not(#action-buttons-group) {
@@ -186,9 +225,9 @@ h1, #game-title {
   align-items: center;
   justify-content: center;
   padding: 6px 16px;
-  border: 1px solid #d1d1d1;
+  border: 1px solid var(--wood-border-soft);
   border-radius: 6px;
-  background-color: rgba(235, 238, 241, 0.9);
+  background-color: var(--wood-inset);
 }
 #ai-controls > div {
   display: flex;
@@ -200,7 +239,7 @@ h1, #game-title {
 #game-controls .ai-info {
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--ink-strong);
 }
 
 #game-controls .ai-info {
@@ -213,29 +252,30 @@ h1, #game-title {
 #game-controls input[type="number"],
 #game-controls #ai-depth-achieved {
   font-size: 14px;
-  color: #222;
+  color: var(--ink-strong);
   padding: 6px 10px;
-  border: 1px solid #b8c0c8;
+  border: 1px solid var(--wood-border-soft);
   border-radius: 4px;
-  background-color: #fff;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+  background-color: var(--wood-panel-light);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.25);
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
 #game-controls select:hover,
 #game-controls input[type="number"]:hover {
-  border-color: #939fab;
+  border-color: var(--gold-accent);
 }
 
 #game-controls select:focus,
 #game-controls input[type="number"]:focus {
-  border-color: #007bff;
+  border-color: var(--gold-accent-bright);
   outline: 0;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.06), 0 0 0 0.2rem rgba(0,123,255,.25);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.25), 0 0 0 0.2rem rgba(233, 180, 92, 0.3);
 }
 
 #game-controls #ai-depth-achieved {
-  background-color: #e9ecef;
+  background-color: var(--wood-inset);
+  color: var(--gold-accent-bright);
   min-width: 2.5em;
   text-align: center;
   font-weight: 600;
@@ -256,7 +296,7 @@ h1, #game-title {
 #game-page-wrapper {
   position: relative;
   width: 100%;
-  max-width: 1480px;
+  max-width: 1700px;
   margin: 0 auto;
   display: flex;
   justify-content: center;
@@ -267,12 +307,13 @@ h1, #game-title {
   justify-content: center;
   align-items: flex-start;
   width: 98%;
-  max-width: 850px;
-  gap: 15px;
-  background-color: rgba(255, 255, 255, 0.7);
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  max-width: 1000px;
+  gap: 14px;
+  background-color: var(--wood-panel);
+  border: 2px solid var(--wood-border);
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-soft);
   margin: 0 auto;
 }
 
@@ -280,7 +321,7 @@ h1, #game-title {
   position: absolute;
   right: 0;
   top: 0;
-  width: 290px;
+  width: 320px;
   flex-shrink: 0;
 }
 
@@ -289,7 +330,7 @@ h1, #game-title {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-width: 180px;
+  min-width: 220px;
   flex-grow: 0;
   flex-shrink: 0;
 }
@@ -303,8 +344,8 @@ h1, #game-title {
 /* --- Board and Coordinates --- */
 #board-container {
   position: relative;
-  width: calc(420px + 2 * 20px);
-  height: calc(540px + 2 * 20px);
+  width: calc(476px + 2 * 24px);
+  height: calc(612px + 2 * 24px);
   padding: 3px;
   box-sizing: content-box;
 }
@@ -315,10 +356,10 @@ h1, #game-title {
   justify-content: center;
   align-items: center;
   font-size: 0.75em;
-  color: #333;
+  color: var(--ink-strong);
   font-weight: bold;
   pointer-events: none;
-  background-color: rgba(255, 255, 255, 0.5);
+  background-color: var(--wood-panel);
   border-radius: 3px;
 }
 .coord-labels span {
@@ -328,16 +369,16 @@ h1, #game-title {
 }
 
 .col-labels {
-  left: 20px; right: 20px; height: 20px;
+  left: 24px; right: 24px; height: 24px;
 }
 #col-labels-top { top: 0; }
 #col-labels-bottom { bottom: 0; }
 .col-labels span {
-   width: 60px; flex-grow: 0; line-height: 20px;
+   width: 68px; flex-grow: 0; line-height: 24px;
 }
 
 .row-labels {
-  top: 20px; bottom: 20px; width: 20px;
+  top: 24px; bottom: 24px; width: 24px;
   flex-direction: column;
 }
 #row-labels-left { left: 0; }
@@ -348,12 +389,12 @@ h1, #game-title {
 
 #board {
   display: grid;
-  grid-template-columns: repeat(7, 60px);
-  grid-template-rows: repeat(9, 60px);
-  border: 3px solid #444;
-  width: 420px; height: 540px;
-  position: absolute; top: 20px; left: 20px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  grid-template-columns: repeat(7, 68px);
+  grid-template-rows: repeat(9, 68px);
+  border: 4px solid var(--wood-border);
+  width: 476px; height: 612px;
+  position: absolute; top: 24px; left: 24px;
+  box-shadow: 0 0 0 2px var(--gold-accent), 0 4px 16px rgba(30, 15, 5, 0.5);
   margin-bottom: 0;
   /* Whole-board background art (7:9), stretched to fill the grid.
      Per-cell overlays (water/trap/den/bridge/piece) sit on top via z-index. */
@@ -366,7 +407,7 @@ h1, #game-title {
 
 /* --- Square Base and Terrain --- */
 .square {
-  width: 60px; height: 60px;
+  width: 68px; height: 68px;
   border: 1px solid transparent;
   box-sizing: border-box;
   display: flex; justify-content: center; align-items: center;
@@ -442,14 +483,14 @@ img.terrain-water {
 /* --- Decoration Styling --- */
 .decoration {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 20px; height: 20px; object-fit: contain;
+  width: 24px; height: 24px; object-fit: contain;
   pointer-events: none; z-index: 1; opacity: 0.9;
 }
 
 /* --- Piece Styling --- */
 .piece {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 50px; height: 50px; border-radius: 50%;
+  width: 60px; height: 60px; border-radius: 50%;
   z-index: 10; cursor: pointer; user-select: none;
   box-sizing: border-box; display: flex; justify-content: center; align-items: center;
   padding: 2px; border: 2px solid transparent;
@@ -470,37 +511,37 @@ img.terrain-water {
 
 /* --- Side Panels General --- */
 .captured-panel, #move-history {
-  background-color: rgba(255, 255, 255, 0.9); border: 1px solid #ccc; border-radius: 5px;
-  padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); box-sizing: border-box;
+  background-color: var(--wood-panel); border: 2px solid var(--wood-border); border-radius: 8px;
+  padding: 10px; box-shadow: var(--shadow-soft); box-sizing: border-box;
 }
 
 .captured-panel h2, #move-history h2 {
-  font-size: 1em; margin-top: 0; margin-bottom: 8px; text-align: center; color: #444;
+  font-size: 1em; margin-top: 0; margin-bottom: 8px; text-align: center; color: var(--ink-strong);
 }
 .pieces-container {
   display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start;
-  max-width: 160px; min-height: 92px; margin-left: auto; margin-right: auto; box-sizing: border-box;
+  max-width: 200px; min-height: 92px; margin-left: auto; margin-right: auto; box-sizing: border-box;
 }
 .captured-piece {
-  width: 28px; height: 28px; border-radius: 4px; box-sizing: border-box;
-  background-color: rgba(255, 255, 255, 0.7); border: 1px solid #bbb;
+  width: 32px; height: 32px; border-radius: 4px; box-sizing: border-box;
+  background-color: var(--wood-inset); border: 1px solid var(--wood-border-soft);
   display: flex; justify-content: center; align-items: center; padding: 1px;
 }
-.captured-piece.player0 { border-color: blue !important;}
-.captured-piece.player1 { border-color: red !important;}
+.captured-piece.player0 { border-color: var(--clan-blue) !important;}
+.captured-piece.player1 { border-color: var(--clan-red) !important;}
 .captured-piece img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
 #move-history {
-  min-height: 150px; max-height: 350px; display: flex; flex-direction: column; overflow: hidden;
+  min-height: 170px; max-height: 380px; display: flex; flex-direction: column; overflow: hidden;
 }
 #move-list {
   list-style: decimal; margin: 0; padding: 0 0 0 25px; font-size: 0.9em;
-  flex-grow: 1; overflow-y: auto; background-color: rgba(253, 253, 253, 0.9);
-  border: 1px solid #eee; border-radius: 3px;
+  flex-grow: 1; overflow-y: auto; background-color: var(--wood-inset);
+  border: 1px solid var(--wood-border-soft); border-radius: 3px;
 }
 #move-list li {
   padding: 3px 5px;
-  border-bottom: 1px solid #f0f0f0; line-height: 1.4; color: #333;
+  border-bottom: 1px solid var(--wood-border); line-height: 1.4; color: var(--ink-strong);
   display: flex; align-items: center;
 }
 #move-list li:last-child { border-bottom: none; }
@@ -509,10 +550,10 @@ img.terrain-water {
   display: inline-flex; justify-content: center; align-items: center; vertical-align: middle;
   width: 1.3em; height: 1.3em; margin-right: 4px; position: relative; top: -1px;
   border: 1px solid transparent; box-sizing: border-box; border-radius: 2px;
-  background-color: rgba(255, 255, 255, 0.5); padding: 1px;
+  background-color: var(--wood-inset); padding: 1px;
 }
-.piece-hist.player0 { border-color: blue !important; }
-.piece-hist.player1 { border-color: red !important; }
+.piece-hist.player0 { border-color: var(--clan-blue) !important; }
+.piece-hist.player1 { border-color: var(--clan-red) !important; }
 .piece-hist img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
 /* --- Buttons in Left Panel --- */
@@ -540,40 +581,40 @@ img.terrain-water {
 #left-panel-actions .panel-button-group > button {
   font-size: 14px;
   padding: 7px 15px;
-  border-radius: 4px;
+  border-radius: 6px;
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, color 0.15s ease-in-out, transform 0.1s ease, box-shadow 0.15s ease;
-  background-color: #f0f0f0;
-  color: #333;
-  border: 1px solid #ccc;
-  box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+  background: var(--btn-wood);
+  color: var(--ink-strong);
+  border: 1px solid var(--wood-border-soft);
+  box-shadow: var(--shadow-soft);
   width: 90%;
-  max-width: 160px;
-  min-width: 120px;
+  max-width: 200px;
+  min-width: 150px;
   box-sizing: border-box;
   text-align: center;
 }
 
 #left-panel-actions > button:hover,
 #left-panel-actions .panel-button-group > button:hover {
-  background-color: #e0e0e0;
-  border-color: #bbb;
+  background: var(--btn-wood-hot);
+  border-color: var(--gold-accent);
 }
 
 #left-panel-actions > button:active,
 #left-panel-actions .panel-button-group > button:active {
-  background-color: #d5d5d5;
-  border-color: #aaa;
+  background: var(--btn-wood);
+  border-color: var(--gold-accent);
   transform: translateY(1px);
   box-shadow: none;
 }
 
 #left-panel-actions > button:disabled,
 #left-panel-actions .panel-button-group > button:disabled {
-  background-color: #e9ecef;
-  color: #6c757d;
-  border-color: #ced4da;
+  background-color: var(--wood-inset);
+  color: var(--ink-muted);
+  border-color: var(--wood-border);
   opacity: 0.65;
   cursor: not-allowed;
   box-shadow: none;
@@ -582,29 +623,29 @@ img.terrain-water {
 
 /* Styled Back to Lobby button in Left Panel */
 #left-panel-actions .back-lobby-btn {
-  background-color: #2563eb !important;
-  color: #ffffff !important;
+  background: var(--btn-gold) !important;
+  color: var(--ink-strong) !important;
   font-weight: bold !important;
-  box-shadow: 0 2px 5px rgba(37, 99, 235, 0.3) !important;
-  border: none !important;
+  box-shadow: var(--shadow-soft) !important;
+  border: 2px solid var(--gold-accent) !important;
 }
 
 #left-panel-actions .back-lobby-btn:hover {
-  background-color: #1d4ed8 !important;
+  background: var(--btn-gold-hot) !important;
 }
 
 /* --- Game Rules Panel --- */
 #game-rules {
-  background-color: rgba(255, 255, 255, 0.85); border: 1px solid #ccc; border-radius: 5px;
-  padding: 15px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); box-sizing: border-box;
-  width: 98%; max-width: 850px; margin: 20px auto 0 auto; font-size: 0.9em;
+  background-color: var(--wood-panel); border: 2px solid var(--wood-border); border-radius: 8px;
+  padding: 15px 20px; box-shadow: var(--shadow-soft); box-sizing: border-box;
+  width: 98%; max-width: 1000px; margin: 20px auto 0 auto; font-size: 0.9em;
   max-height: 400px; overflow-y: auto; line-height: 1.5;
 }
-#game-rules h2 { font-size: 1.1em; margin-top: 0; margin-bottom: 12px; text-align: center; color: #333; }
+#game-rules h2 { font-size: 1.1em; margin-top: 0; margin-bottom: 12px; text-align: center; color: var(--ink-strong); }
 #game-rules ul { margin: 0; padding-left: 20px; list-style-position: outside; }
 #game-rules ul ul { padding-left: 15px; margin-top: 4px; margin-bottom: 8px; }
-#game-rules li { margin-bottom: 8px; color: #444; }
-#game-rules strong { color: #111; }
+#game-rules li { margin-bottom: 8px; color: var(--ink); }
+#game-rules strong { color: var(--ink-strong); }
 .rank-piece, .rule-piece {
     display: inline-block; vertical-align: middle;
     margin: 0 2px; height: 1.2em; line-height: 1.2em;
@@ -612,17 +653,19 @@ img.terrain-water {
 .rank-piece-icon, .rule-piece-icon {
     width: auto; height: 100%; object-fit: contain; vertical-align: middle;
 }
-.rank-separator { display: inline-block; vertical-align: middle; margin: 0 3px; font-weight: bold; color: #555; line-height: 1; }
+.rank-separator { display: inline-block; vertical-align: middle; margin: 0 3px; font-weight: bold; color: var(--ink-muted); line-height: 1; }
 
 /* Status and Turn styling */
 #status {
-  font-size: 1em; font-weight: bold; background-color: rgba(255, 255, 255, 0.9); color: #111;
-  text-align: center; min-height: 1.2em; width: 95%; max-width: calc(420px + 2 * 20px);
-  padding: 6px 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); margin: 8px auto 0 auto;
+  font-size: 1em; font-weight: bold; background-color: var(--wood-panel); color: var(--ink-strong);
+  text-align: center; min-height: 1.2em; width: 95%; max-width: calc(476px + 2 * 24px);
+  padding: 6px 10px; border-radius: 6px; border: 2px solid var(--wood-border);
+  box-shadow: var(--shadow-soft); margin: 8px auto 0 auto;
 }
 .turn-info {
   font-size: 0.9em; font-weight: bold; text-align: center; margin-top: 10px; padding: 5px;
-  background-color: rgba(233, 233, 233, 0.9); border-radius: 4px; color: #333;
+  background-color: var(--wood-inset); border: 1px solid var(--wood-border-soft);
+  border-radius: 6px; color: var(--ink-strong);
 }
 
 /* --- Announcement Banner --- */
@@ -632,8 +675,8 @@ img.terrain-water {
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 1500;
-  background-color: rgba(15, 23, 42, 0.85);
-  border: 4px solid #ffffff;
+  background-color: rgba(30, 22, 12, 0.9);
+  border: 4px solid var(--gold-accent);
   border-radius: 16px;
   padding: 22px 46px;
   text-align: center;
@@ -641,9 +684,9 @@ img.terrain-water {
   animation: banner-pop 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
 }
-.announce-banner.blue { border-color: #3b82f6; }
-.announce-banner.red  { border-color: #ef4444; }
-.announce-banner.neutral { border-color: #ffd54f; }
+.announce-banner.blue { border-color: var(--clan-blue-bright); }
+.announce-banner.red  { border-color: var(--clan-red-bright); }
+.announce-banner.neutral { border-color: var(--gold-accent-bright); }
 .announce-title {
   font-size: 44px;
   font-weight: 900;
@@ -666,22 +709,113 @@ img.terrain-water {
 /* --- Win Chance Bar --- */
 #win-chance-bar-container {
     display: flex; align-items: center; justify-content: center; gap: 8px; width: 95%;
-    max-width: calc(420px + 2 * 20px); box-sizing: border-box;
-    padding: 4px 8px; background-color: rgba(230, 230, 230, 0.7); border-radius: 4px; min-height: 1.1em;
-    margin-top: 6px;
+    max-width: calc(476px + 2 * 24px); box-sizing: border-box;
+    padding: 4px 8px; background-color: var(--wood-inset); border: 1px solid var(--wood-border-soft);
+    border-radius: 6px; min-height: 1.1em; margin-top: 6px;
 }
 #win-chance-bar {
-    width: 100%; height: 18px; border: 1px solid #999; border-radius: 9px;
-    background-color: #d0d0d0; display: flex; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+    width: 100%; height: 18px; border: 1px solid var(--wood-border); border-radius: 9px;
+    background-color: var(--wood-inset); display: flex; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
 }
 #win-chance-bar-blue, #win-chance-bar-red { height: 100%; transition: width 0.4s ease-out; }
-#win-chance-bar-blue { background-color: #3498db; border-radius: 9px 0 0 9px; }
-#win-chance-bar-red { background-color: #e74c3c; flex-grow: 1; border-radius: 0 9px 9px 0; }
+#win-chance-bar-blue { background-color: var(--clan-blue); border-radius: 9px 0 0 9px; }
+#win-chance-bar-red { background-color: var(--clan-red); flex-grow: 1; border-radius: 0 9px 9px 0; }
 #win-chance-bar-blue[style*="width: 100%"] { border-radius: 9px; }
 #win-chance-bar-blue[style*="width: 0%"] + #win-chance-bar-red { border-radius: 9px; }
 
+/* --- Victory Fireworks Overlay --- */
+.fireworks-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  overflow: hidden;
+  pointer-events: none;
+}
+.fireworks-overlay.blue { --fw-accent: #3b82f6; --fw-glow: #60a5fa; }
+.fireworks-overlay.red  { --fw-accent: #ef4444; --fw-glow: #f97316; }
+
+.fireworks-congrats {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  animation: congrats-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.fireworks-title {
+  font-size: clamp(40px, 8vw, 84px);
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 0 24px var(--fw-glow, #fff), 0 3px 10px rgba(0, 0, 0, 0.8);
+  letter-spacing: 2px;
+}
+.fireworks-subtitle {
+  margin-top: 8px;
+  font-size: clamp(16px, 2.6vw, 28px);
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.firework-burst {
+  position: absolute;
+}
+.firework-particle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--size, 6px);
+  height: var(--size, 6px);
+  border-radius: 50%;
+  background: var(--pcolor, #ffffff);
+  box-shadow: 0 0 6px 2px var(--pcolor, #ffffff);
+  opacity: 1;
+  animation: firework-fly 1.6s cubic-bezier(0.15, 0.8, 0.35, 1) var(--delay, 0ms) forwards;
+}
+@keyframes firework-fly {
+  0%   { transform: translate(0, 0) scale(1);    opacity: 1; }
+  60%  { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+@keyframes congrats-pop {
+  0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+}
+
+/* --- Defeat Clown Overlay --- */
+.clown-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1600;
+  pointer-events: none;
+  animation: clown-fade-out 0.8s ease-in 1.7s forwards;
+}
+.clown-face {
+  font-size: clamp(200px, 40vw, 400px);
+  line-height: 1;
+  animation: clown-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) 0.05s backwards,
+             clown-wobble 0.9s ease-in-out 0.5s 1;
+}
+@keyframes clown-pop {
+  0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
+  60%  { transform: scale(1.25) rotate(8deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes clown-wobble {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25%      { transform: rotate(-12deg) scale(1.08); }
+  50%      { transform: rotate(10deg) scale(1.15); }
+  75%      { transform: rotate(-6deg) scale(1.05); }
+}
+@keyframes clown-fade-out {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.55); }
+}
+
 /* --- Responsive adjustments --- */
-@media (max-width: 1450px) {
+@media (max-width: 1620px) {
   #game-page-wrapper {
     flex-direction: column;
     align-items: center;
@@ -689,7 +823,7 @@ img.terrain-water {
   #side-chat-wrapper {
     position: static;
     width: 98%;
-    max-width: 850px;
+    max-width: 1000px;
     margin-top: 15px;
   }
 }
@@ -699,8 +833,8 @@ img.terrain-water {
   #game-layout { flex-direction: column; align-items: center; gap: 10px; }
   #left-panel, #right-panel { 
     flex-direction: row; flex-wrap: wrap; justify-content: center; 
-    min-width: 95%; width: 95%; max-width: calc(420px + 2 * 20px); 
-    gap: 10px; align-items: flex-start; 
+    min-width: 95%; width: 95%; max-width: calc(476px + 2 * 24px);
+    gap: 10px; align-items: flex-start;
   }
   .captured-panel, #move-history, #left-panel-actions { 
     flex-basis: calc(50% - 10px); flex-grow: 1; 
@@ -720,7 +854,7 @@ img.terrain-water {
    #move-list { font-size: 0.8em; }
    .piece-hist { width: 1.2em; height: 1.2em; }
    h1 { font-size: 1.5em; }
-   #status, #win-chance-bar-container { max-width: calc(420px + 2 * 20px); width: 95%; }
+   #status, #win-chance-bar-container { max-width: calc(476px + 2 * 24px); width: 95%; }
    #win-chance-bar-container { padding: 3px 6px; gap: 0;}
    #win-chance-bar { height: 16px; }
    .rank-piece-icon, .rule-piece-icon { height: 1em; }

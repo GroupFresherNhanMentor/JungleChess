@@ -8,10 +8,10 @@
    coords here are already the piece's top-left, so cancel that transform. */
 .ghost-piece {
   position: absolute;
-  width: 50px;
-  height: 50px;
-  left: var(--ghost-fx, 5px);
-  top: var(--ghost-fy, 5px);
+  width: 60px;
+  height: 60px;
+  left: var(--ghost-fx, 4px);
+  top: var(--ghost-fy, 4px);
   transform: none;
   z-index: 20;
   pointer-events: none;
@@ -19,7 +19,7 @@
 
 /* Slide: interpolate left/top from origin to destination via CSS variables. */
 @keyframes ghost-slide {
-  0%   { left: var(--ghost-fx, 5px); top: var(--ghost-fy, 5px); }
+  0%   { left: var(--ghost-fx, 4px); top: var(--ghost-fy, 4px); }
   100% { left: var(--ghost-tx, 0px); top: var(--ghost-ty, 0px); }
 }
 .ghost-piece {

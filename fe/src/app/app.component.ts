@@ -27,6 +27,24 @@ import { GameRulesModalComponent } from './components/game-rules-modal/game-rule
 import { ChatComponent } from './components/chat/chat.component';
 import { LobbyComponent } from './components/lobby/lobby.component';
 
+/** A single firework particle; dx/dy precomputed in px (no CSS trig). */
+interface FireworkParticle {
+  dx: number;
+  dy: number;
+  size: number;
+  delay: number;
+  color: string;
+}
+
+/** One radially-symmetric explosion anchored at a viewport %. */
+interface FireworkBurst {
+  id: number;
+  x: number; // vw %
+  y: number; // vh %
+  hue: 'blue' | 'red' | 'gold';
+  particles: FireworkParticle[];
+}
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -74,6 +92,16 @@ export class AppComponent implements OnInit {
   /** Big center-screen announcement (turn start / win). */
   banner: { title: string; subtitle?: string; side?: PieceSide } | null = null;
   private bannerTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // --- Victory fireworks + defeat clown effect state ---
+  fireworkBursts: FireworkBurst[] = [];
+  fireworkSide: PieceSide | null = null;
+  fireworkTitle: string = '';
+  fireworkSubtitle: string = '';
+  showClown: boolean = false;
+  private fireworkTimer: ReturnType<typeof setTimeout> | null = null;
+  private fireworkSeq = 0;
+  private clownTimer: ReturnType<typeof setTimeout> | null = null;
 
   // --- Move animation + equal-rank battle state ---
   /** Ghost currently sliding on the board (null when idle). */
@@ -154,6 +182,17 @@ export class AppComponent implements OnInit {
     this.isAnimating = false;
     this.battle = null;
     this.pendingFinalize = null;
+
+    // Clear any running victory/defeat effects.
+    this.fireworkBursts = [];
+    this.fireworkSide = null;
+    this.fireworkTitle = '';
+    this.fireworkSubtitle = '';
+    this.showClown = false;
+    if (this.fireworkTimer) clearTimeout(this.fireworkTimer);
+    if (this.clownTimer) clearTimeout(this.clownTimer);
+    this.fireworkTimer = null;
+    this.clownTimer = null;
 
     const timeStr = new Date().toLocaleTimeString([], {
       hour: '2-digit',
@@ -502,11 +541,14 @@ export class AppComponent implements OnInit {
             undefined,
             0
           );
+          this.launchVictoryFireworks(0);
         } else if (winCheck.winner === 1) {
           if (this.gameMode === 'PVA') {
             this.audioService.playDefeat();
+            this.playLossClown();
           } else {
             this.audioService.playVictory();
+            this.launchVictoryFireworks(1);
           }
           this.statusMessage = this.loc.translate('statusWin', {
             winner: this.loc.translate('playerStartsRed')
@@ -579,6 +621,7 @@ export class AppComponent implements OnInit {
           this.isAiThinking = false;
           this.audioService.playVictory();
           this.statusMessage = this.loc.translate('errorAINoMoves');
+          this.launchVictoryFireworks(0);
           this.cdr.detectChanges();
         }
       });
@@ -711,5 +754,101 @@ export class AppComponent implements OnInit {
     return this.moveHistory.length > 0
       ? this.moveHistory[this.moveHistory.length - 1]
       : null;
+  }
+
+  // --- Victory / Defeat Effects ---
+
+  private static readonly FIREWORK_COLORS: Record<'blue' | 'red' | 'gold', string[]> = {
+    blue: ['#3b82f6', '#60a5fa', '#93c5fd', '#ffffff'],
+    red:  ['#ef4444', '#f97316', '#fbbf24', '#ffd97a'],
+    gold: ['#ffd97a', '#f0c268', '#ff9f43', '#ffffff']
+  };
+
+  /** Launch a sequence of fireworks in the winner's color scheme. */
+  private launchVictoryFireworks(winner: PieceSide): void {
+    this.fireworkSide = winner;
+    const winnerName = this.loc.translate(
+      winner === 0 ? 'playerStartsBlue' : 'playerStartsRed'
+    );
+    this.fireworkTitle = this.loc.translate('victoryCongratsTitle', {
+      winner: winnerName
+    });
+    this.fireworkSubtitle =
+      winner === 0
+        ? this.loc.translate('victoryCongratsSub')
+        : this.loc.translate('victoryCongratsSubRed');
+
+    const colors: ('blue' | 'red' | 'gold')[] =
+      winner === 0 ? ['blue', 'blue', 'gold'] : ['red', 'red', 'gold'];
+
+    for (let i = 0; i < 6; i++) {
+      const delay = i * 550 + Math.random() * 150; // 0 → ~3.3s window
+      const cx = 12 + Math.random() * 76;          // vw %
+      const cy = 15 + Math.random() * 55;          // vh %
+      const hue = colors[i % colors.length];
+
+      setTimeout(() => {
+        this.ngZone.run(() => {
+          const burst = this.makeFirework(hue, cx, cy, ++this.fireworkSeq);
+          this.fireworkBursts = [...this.fireworkBursts, burst];
+          this.cdr.detectChanges();
+          // Drop this burst once its last particle animation ends (~1.9s).
+          setTimeout(() => {
+            this.fireworkBursts = this.fireworkBursts.filter(
+              (b) => b.id !== burst.id
+            );
+            this.cdr.detectChanges();
+          }, 1900);
+        });
+      }, delay);
+    }
+
+    this.fireworkTimer = setTimeout(() => {
+      this.ngZone.run(() => {
+        this.fireworkBursts = [];
+        this.cdr.detectChanges();
+      });
+    }, 5000);
+  }
+
+  /** Build one radially-symmetric burst; particle vectors precomputed in TS. */
+  private makeFirework(
+    hue: 'blue' | 'red' | 'gold',
+    cx: number,
+    cy: number,
+    id: number
+  ): FireworkBurst {
+    const colors = AppComponent.FIREWORK_COLORS[hue];
+    const particles: FireworkParticle[] = [];
+    const arms = 8 + Math.floor(Math.random() * 5);      // 8–12 arms
+    const tiers = 2 + Math.floor(Math.random() * 3);     // 2–4 particles per arm
+    for (let a = 0; a < arms; a++) {
+      const angle = (Math.PI * 2 * a) / arms + Math.random() * 0.25;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      for (let t = 1; t <= tiers; t++) {
+        const dist = 45 + t * (28 + Math.random() * 30); // 70–190 px radius
+        particles.push({
+          dx: +(cos * dist).toFixed(1),
+          dy: +(sin * dist).toFixed(1),
+          size: 4 + Math.random() * 4,
+          delay: t === 1 ? 0 : 40 + Math.random() * 70,
+          color: colors[Math.floor(Math.random() * colors.length)]
+        });
+      }
+    }
+    return { id, x: cx, y: cy, hue, particles };
+  }
+
+  /** Pop a giant clown face on a PVA loss; fades/shrinks away ~2.5s. */
+  private playLossClown(): void {
+    this.showClown = true;
+    this.cdr.detectChanges();
+    this.clownTimer = setTimeout(() => {
+      this.ngZone.run(() => {
+        this.showClown = false;
+        this.cdr.detectChanges();
+      });
+    }, 2500);
   }
 }

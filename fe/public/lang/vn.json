@@ -35,6 +35,7 @@
   "rulesTitle": "Tóm tắt luật chơi",
   "creditTitle": "Tác giả trò chơi",
   "rulesButton": "Luật chơi",
+  "settingsButton": "Cài đặt",
   "closeButton": "Đóng",
   "chatTitle": "Trò chuyện trong trận",
   "chatPlaceholder": "Nhập tin nhắn...",
@@ -91,5 +92,9 @@
   "battleWin": "{winner} thắng cuộc đối đầu!",
   "battleCounter": "Phản công! Quân phòng thủ đã đẩy lùi đòn tấn công!",
   "bannerFirstMove": "{player} đi trước!",
-  "bannerWin": "{winner} thắng!"
+  "bannerWin": "{winner} thắng!",
+  "victoryCongratsTitle": "🏆 {winner} Thắng!",
+  "victoryCongratsSub": "Chúc mừng chiến thắng!",
+  "victoryCongratsSubRed": "Đội Đỏ giành chiến thắng!",
+  "defeatTitle": "Thua cuộc!"
 }

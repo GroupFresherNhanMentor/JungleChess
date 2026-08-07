@@ -31,9 +31,9 @@ interface GhostState {
   isCapture: boolean;
 }
 
-const CELL = 60;
-const PIECE = 50;
-const OFFSET = (CELL - PIECE) / 2; // 5px
+const CELL = 68;
+const PIECE = 60;
+const OFFSET = (CELL - PIECE) / 2; // 4px
 const SLIDE_MS = 320;
 const POUNCE_DELAY_MS = 300;
 const POUNCE_MS = 400;

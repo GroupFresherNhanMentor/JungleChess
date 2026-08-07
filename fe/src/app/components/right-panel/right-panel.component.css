@@ -5,7 +5,7 @@
 
 .captured-none-text {
   font-size: 0.85em;
-  color: #777777;
+  color: var(--ink-muted);
   width: 100%;
   text-align: center;
 }

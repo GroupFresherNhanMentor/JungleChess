@@ -33,7 +33,25 @@ export class GameControlsComponent {
 
   depthOptions = [4, 5, 6, 7, 8, 9, 10, 11];
 
+  /** Whether the Settings modal is currently open. */
+  settingsOpen = false;
+
   constructor(public loc: LocalizationService) {}
+
+  openSettings(): void {
+    this.settingsOpen = true;
+  }
+
+  closeSettings(): void {
+    this.settingsOpen = false;
+  }
+
+  /** Close when clicking the dark backdrop (but not inside the card). */
+  onBackdropClick(event: MouseEvent): void {
+    if ((event.target as HTMLElement).classList.contains('settings-backdrop')) {
+      this.settingsOpen = false;
+    }
+  }
 
   onLangChange(lang: Language) {
     this.loc.setLanguage(lang);

@@ -4,11 +4,11 @@
 }
 
 .chat-container {
-  background-color: rgba(255, 255, 255, 0.92);
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  background-color: var(--wood-panel);
+  border: 2px solid var(--wood-border);
+  border-radius: 10px;
   padding: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-soft);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -20,15 +20,15 @@
   margin-top: 0;
   margin-bottom: 10px;
   text-align: center;
-  color: #333;
+  color: var(--ink-strong);
 }
 
 .chat-messages-list {
   height: 250px;
   max-height: 320px;
   overflow-y: auto;
-  background-color: rgba(250, 250, 250, 0.98);
-  border: 1px solid #e0e0e0;
+  background-color: var(--wood-inset);
+  border: 1px solid var(--wood-border-soft);
   border-radius: 6px;
   padding: 8px 10px;
   display: flex;
@@ -39,7 +39,7 @@
 
 .chat-empty {
   font-size: 0.85em;
-  color: #999;
+  color: var(--ink-muted);
   text-align: center;
   margin: auto;
 }
@@ -54,8 +54,8 @@
 .system-msg {
   text-align: center;
   font-style: italic;
-  color: #7f8c8d;
-  background-color: #f2f4f4;
+  color: var(--ink-muted);
+  background-color: var(--wood-inset);
   padding: 4px 8px;
   border-radius: 4px;
   margin: 2px 0;
@@ -76,22 +76,22 @@
 }
 
 .sender-badge.player0 {
-  color: #2980b9;
-  background-color: #ebf5fb;
+  color: var(--clan-blue-bright);
+  background-color: var(--clan-blue-bg);
 }
 
 .sender-badge.player1 {
-  color: #c0392b;
-  background-color: #fdedec;
+  color: var(--clan-red-bright);
+  background-color: var(--clan-red-bg);
 }
 
 .msg-time {
   font-size: 0.8em;
-  color: #aaa;
+  color: var(--ink-muted);
 }
 
 .msg-body {
-  color: #333;
+  color: var(--ink-strong);
   word-break: break-word;
   padding-left: 2px;
 }
@@ -108,16 +108,16 @@
   font-size: 12px;
   padding: 3px 8px;
   border-radius: 12px;
-  border: 1px solid #ccc;
-  background-color: #f8f9fa;
+  border: 1px solid var(--wood-border-soft);
+  background-color: var(--wood-panel-solid);
   cursor: pointer;
   white-space: nowrap;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .emote-btn:hover {
-  background-color: #e9ecef;
-  border-color: #b0b0b0;
+  background-color: var(--wood-panel-light);
+  border-color: var(--gold-accent);
 }
 
 .chat-input-form {
@@ -130,35 +130,38 @@
   flex-grow: 1;
   font-size: 13px;
   padding: 7px 10px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--wood-border-soft);
   border-radius: 5px;
   box-sizing: border-box;
+  background-color: var(--wood-panel-light);
+  color: var(--ink-strong);
 }
 
 .chat-input:focus {
   outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  border-color: var(--gold-accent);
+  box-shadow: 0 0 0 2px rgba(233, 180, 92, 0.25);
 }
 
 .send-btn {
   font-size: 13px;
   padding: 7px 14px;
-  background-color: #3498db;
-  color: #ffffff;
-  border: none;
+  background: var(--btn-gold);
+  color: var(--ink-strong);
+  border: 2px solid var(--gold-accent);
   border-radius: 5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .send-btn:hover:not(:disabled) {
-  background-color: #2980b9;
+  background: var(--btn-gold-hot);
 }
 
 .send-btn:disabled {
-  background-color: #bdc3c7;
+  background-color: var(--wood-inset);
+  color: var(--ink-muted);
   cursor: not-allowed;
 }
 
@@ -173,9 +176,9 @@
   font-size: 16px;
   width: 36px;
   height: 36px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--wood-border-soft);
   border-radius: 5px;
-  background-color: #f8f9fa;
+  background-color: var(--wood-panel-solid);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -184,8 +187,8 @@
 }
 
 .emoji-toggle-btn:hover {
-  background-color: #e9ecef;
-  border-color: #b0b0b0;
+  background-color: var(--wood-panel-light);
+  border-color: var(--gold-accent);
 }
 
 .emoji-dropdown {
@@ -195,10 +198,10 @@
   width: 250px;
   max-height: 220px;
   overflow-y: auto;
-  background-color: #ffffff;
-  border: 1px solid #ccc;
+  background-color: var(--wood-panel-solid);
+  border: 2px solid var(--wood-border);
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lift);
   padding: 8px;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
@@ -218,6 +221,6 @@
 }
 
 .emoji-item:hover {
-  background-color: #e9ecef;
+  background-color: var(--wood-inset);
   transform: scale(1.2);
 }

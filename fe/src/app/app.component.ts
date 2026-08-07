@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -82,7 +82,8 @@ export class AppComponent implements OnInit {
     private ruleService: GameRuleService,
     private audioService: AudioService,
     private aiBotService: AiBotService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -180,20 +181,22 @@ export class AppComponent implements OnInit {
     // In PVA mode, AI bot occasionally replies with a taunt
     if (this.gameMode === 'PVA' || this.detailedGameMode === 'PVE') {
       setTimeout(() => {
-        const randomTaunt =
-          this.botTaunts[Math.floor(Math.random() * this.botTaunts.length)];
-        const botMsg: ChatMessage = {
-          id: `bot-msg-${Date.now()}`,
-          sender: 'Máy (Red AI)',
-          side: 1,
-          text: randomTaunt,
-          timestamp: new Date().toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit'
-          })
-        };
-        this.chatMessages = [...this.chatMessages, botMsg];
-        this.cdr.detectChanges();
+        this.ngZone.run(() => {
+          const randomTaunt =
+            this.botTaunts[Math.floor(Math.random() * this.botTaunts.length)];
+          const botMsg: ChatMessage = {
+            id: `bot-msg-${Date.now()}`,
+            sender: 'Máy (Red AI)',
+            side: 1,
+            text: randomTaunt,
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+          };
+          this.chatMessages = [...this.chatMessages, botMsg];
+          this.cdr.detectChanges();
+        });
       }, 1000);
     }
   }
@@ -291,92 +294,94 @@ export class AppComponent implements OnInit {
   }
 
   public executeMove(from: Position, to: Position): void {
-    const piece = this.ruleService.getPieceAt(this.pieces, from.col, from.row);
-    if (!piece) return;
+    this.ngZone.run(() => {
+      const piece = this.ruleService.getPieceAt(this.pieces, from.col, from.row);
+      if (!piece) return;
 
-    const targetPiece = this.ruleService.getPieceAt(this.pieces, to.col, to.row);
-    const targetTile = this.ruleService.getTileInfo(to.col, to.row);
+      const targetPiece = this.ruleService.getPieceAt(this.pieces, to.col, to.row);
+      const targetTile = this.ruleService.getTileInfo(to.col, to.row);
 
-    // Audio effect
-    if (targetTile.type === 'den') {
-      this.audioService.playDenCapture();
-    } else if (targetPiece) {
-      this.audioService.playCapture(targetPiece.type);
-    } else if (this.ruleService.isWaterTile(to.col, to.row)) {
-      this.audioService.playSwim();
-    } else {
-      this.audioService.playMove();
-    }
-
-    // Capture piece logic
-    if (targetPiece) {
-      if (piece.side === 0) {
-        this.capturedByBlue = [...this.capturedByBlue, targetPiece];
+      // Audio effect
+      if (targetTile.type === 'den') {
+        this.audioService.playDenCapture();
+      } else if (targetPiece) {
+        this.audioService.playCapture(targetPiece.type);
+      } else if (this.ruleService.isWaterTile(to.col, to.row)) {
+        this.audioService.playSwim();
       } else {
-        this.capturedByRed = [...this.capturedByRed, targetPiece];
+        this.audioService.playMove();
       }
-    }
 
-    // Update pieces array immutably
-    this.pieces = this.pieces
-      .filter((p) => !(targetPiece && p.id === targetPiece.id))
-      .map((p) => {
-        if (p.id === piece.id) {
-          return {
-            ...p,
-            position: { col: to.col, row: to.row }
-          };
-        }
-        return p;
-      });
-
-    const moveRecord: Move = {
-      from,
-      to,
-      piece: { ...piece, position: { col: to.col, row: to.row } },
-      capturedPiece: targetPiece ? { ...targetPiece } : null
-    };
-    this.moveHistory = [...this.moveHistory, moveRecord];
-
-    // Check Win Condition
-    const winCheck = this.ruleService.checkWinCondition(
-      this.pieces,
-      (1 - this.currentTurn) as PieceSide
-    );
-
-    if (winCheck.gameOver) {
-      this.isGameOver = true;
-      if (winCheck.winner === 0) {
-        this.audioService.playVictory();
-        this.statusMessage = this.loc.translate('statusWin', {
-          winner: this.loc.translate('playerStartsBlue')
-        });
-      } else if (winCheck.winner === 1) {
-        if (this.gameMode === 'PVA') {
-          this.audioService.playDefeat();
+      // Capture piece logic
+      if (targetPiece) {
+        if (piece.side === 0) {
+          this.capturedByBlue = [...this.capturedByBlue, targetPiece];
         } else {
-          this.audioService.playVictory();
+          this.capturedByRed = [...this.capturedByRed, targetPiece];
         }
-        this.statusMessage = this.loc.translate('statusWin', {
-          winner: this.loc.translate('playerStartsRed')
-        });
-      } else {
-        this.audioService.playDraw();
-        this.statusMessage = this.loc.translate('statusDraw');
       }
+
+      // Update pieces array immutably
+      this.pieces = this.pieces
+        .filter((p) => !(targetPiece && p.id === targetPiece.id))
+        .map((p) => {
+          if (p.id === piece.id) {
+            return {
+              ...p,
+              position: { col: to.col, row: to.row }
+            };
+          }
+          return p;
+        });
+
+      const moveRecord: Move = {
+        from,
+        to,
+        piece: { ...piece, position: { col: to.col, row: to.row } },
+        capturedPiece: targetPiece ? { ...targetPiece } : null
+      };
+      this.moveHistory = [...this.moveHistory, moveRecord];
+
+      // Check Win Condition
+      const winCheck = this.ruleService.checkWinCondition(
+        this.pieces,
+        (1 - this.currentTurn) as PieceSide
+      );
+
+      if (winCheck.gameOver) {
+        this.isGameOver = true;
+        if (winCheck.winner === 0) {
+          this.audioService.playVictory();
+          this.statusMessage = this.loc.translate('statusWin', {
+            winner: this.loc.translate('playerStartsBlue')
+          });
+        } else if (winCheck.winner === 1) {
+          if (this.gameMode === 'PVA') {
+            this.audioService.playDefeat();
+          } else {
+            this.audioService.playVictory();
+          }
+          this.statusMessage = this.loc.translate('statusWin', {
+            winner: this.loc.translate('playerStartsRed')
+          });
+        } else {
+          this.audioService.playDraw();
+          this.statusMessage = this.loc.translate('statusDraw');
+        }
+        this.cdr.detectChanges();
+        return;
+      }
+
+      // Toggle turn
+      this.currentTurn = (1 - this.currentTurn) as PieceSide;
+      this.updateStatusMessage();
       this.cdr.detectChanges();
-      return;
-    }
 
-    // Toggle turn
-    this.currentTurn = (1 - this.currentTurn) as PieceSide;
-    this.updateStatusMessage();
-    this.cdr.detectChanges();
-
-    // Trigger AI if PVA mode and AI turn
-    if (this.gameMode === 'PVA' && this.currentTurn === 1 && !this.isGameOver) {
-      this.triggerAiMove();
-    }
+      // Trigger AI if PVA mode and AI turn
+      if (this.gameMode === 'PVA' && this.currentTurn === 1 && !this.isGameOver) {
+        this.triggerAiMove();
+      }
+    });
   }
 
   private triggerAiMove(): void {
@@ -394,29 +399,33 @@ export class AppComponent implements OnInit {
         this.aiTimeLimit
       );
 
-      this.isAiThinking = false;
+      this.ngZone.run(() => {
+        this.isAiThinking = false;
 
-      if (aiMove) {
-        this.actualAiDepth = aiMove.depthAchieved;
-        // Step 1: Highlight AI's selected piece & target move square
-        this.selectedPos = { ...aiMove.from };
-        this.validMoves = [{ ...aiMove.to }];
-        this.cdr.detectChanges();
-
-        // Step 2: Brief delay so user visually sees AI selecting & moving piece
-        setTimeout(() => {
-          this.selectedPos = null;
-          this.validMoves = [];
-          this.executeMove(aiMove.from, aiMove.to);
+        if (aiMove) {
+          this.actualAiDepth = aiMove.depthAchieved;
+          // Step 1: Highlight AI's selected piece & target move square
+          this.selectedPos = { ...aiMove.from };
+          this.validMoves = [{ ...aiMove.to }];
           this.cdr.detectChanges();
-        }, 350);
-      } else {
-        // AI has no moves -> Player wins
-        this.isGameOver = true;
-        this.audioService.playVictory();
-        this.statusMessage = this.loc.translate('errorAINoMoves');
-        this.cdr.detectChanges();
-      }
+
+          // Step 2: Brief delay so user visually sees AI selecting & moving piece
+          setTimeout(() => {
+            this.ngZone.run(() => {
+              this.selectedPos = null;
+              this.validMoves = [];
+              this.executeMove(aiMove.from, aiMove.to);
+              this.cdr.detectChanges();
+            });
+          }, 350);
+        } else {
+          // AI has no moves -> Player wins
+          this.isGameOver = true;
+          this.audioService.playVictory();
+          this.statusMessage = this.loc.translate('errorAINoMoves');
+          this.cdr.detectChanges();
+        }
+      });
     }, 400);
   }
 

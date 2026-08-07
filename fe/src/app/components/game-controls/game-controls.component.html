@@ -1,88 +1,92 @@
-<div id="game-controls">
-  <!-- Language Selection -->
-  <div>
-    <label id="lang-select-label" for="lang-select">
-      {{ loc.translate('languageLabel') }}
-    </label>
-    <select
-      id="lang-select"
-      [ngModel]="currentLang"
-      (ngModelChange)="onLangChange($event)"
-    >
-      <option value="en">English</option>
-      <option value="vn">Tiếng Việt</option>
-    </select>
-  </div>
+<div class="game-controls-bar">
+  <button type="button" class="settings-toggle-btn" (click)="openSettings()" title="{{ loc.translate('settingsButton') }}">
+    ⚙️ <span>{{ loc.translate('settingsButton') }}</span>
+  </button>
+  <button type="button" class="rules-modal-btn" (click)="openRulesModal.emit()" title="{{ loc.translate('rulesButton') }}">
+    📖 <span>{{ loc.translate('rulesButton') }}</span>
+  </button>
+</div>
 
-  <!-- Game Mode -->
-  <div>
-    <label for="game-mode">{{ loc.translate('gameModeLabel') }}</label>
-    <select
-      id="game-mode"
-      [ngModel]="gameMode"
-      (ngModelChange)="gameModeChange.emit($event)"
-    >
-      <option value="PVA">{{ loc.translate('modePVA') }}</option>
-      <option value="PVP">{{ loc.translate('modePVP') }}</option>
-    </select>
-  </div>
-
-  <!-- Player Starts -->
-  <div>
-    <label for="player-starts-select">
-      {{ loc.translate('playerStartsLabel') }}
-    </label>
-    <select
-      id="player-starts-select"
-      [ngModel]="firstMoveSide"
-      (ngModelChange)="firstMoveSideChange.emit(+$event === 1 ? 1 : 0)"
-    >
-      <option [value]="0">{{ loc.translate('playerStartsBlue') }}</option>
-      <option [value]="1">{{ loc.translate('playerStartsRed') }}</option>
-    </select>
-  </div>
-
-  <!-- Rules Modal Trigger Button -->
-  <div>
-    <button
-      type="button"
-      (click)="openRulesModal.emit()"
-      class="rules-modal-btn"
-    >
-      📖 {{ loc.translate('rulesButton') }}
-    </button>
-  </div>
-
-  <!-- AI Controls -->
-  <div id="ai-controls" *ngIf="gameMode === 'PVA'">
-    <div>
-      <label for="difficulty">
-        {{ loc.translate('aiDifficultyLabel') }}
-      </label>
-      <select
-        id="difficulty"
-        [ngModel]="aiDepth"
-        (ngModelChange)="aiDepthChange.emit(+$event)"
-      >
-        <option *ngFor="let d of depthOptions" [value]="d">{{ d }}</option>
-      </select>
+<!-- Settings Modal: holds all game configuration -->
+<div *ngIf="settingsOpen" class="settings-backdrop" (click)="onBackdropClick($event)">
+  <div class="settings-card" role="dialog" aria-modal="true" aria-label="{{ loc.translate('settingsButton') }}">
+    <div class="settings-header">
+      <h2>{{ loc.translate('settingsButton') }}</h2>
+      <button type="button" class="settings-close-btn" (click)="closeSettings()" aria-label="{{ loc.translate('closeButton') }}">✕</button>
     </div>
-    <div>
-      <label for="time-limit">
-        {{ loc.translate('aiTimeLimitLabel') }}
-      </label>
-      <input
-        type="number"
-        id="time-limit"
-        [ngModel]="aiTimeLimit"
-        (ngModelChange)="aiTimeLimitChange.emit(+$event)"
-        min="100"
-        step="100"
-      />
+
+    <div class="settings-body">
+      <!-- Language Selection -->
+      <div class="settings-item">
+        <label for="lang-select">{{ loc.translate('languageLabel') }}</label>
+        <select
+          id="lang-select"
+          [ngModel]="currentLang"
+          (ngModelChange)="onLangChange($event)"
+        >
+          <option value="en">English</option>
+          <option value="vn">Tiếng Việt</option>
+        </select>
+      </div>
+
+      <!-- Game Mode -->
+      <div class="settings-item">
+        <label for="game-mode">{{ loc.translate('gameModeLabel') }}</label>
+        <select
+          id="game-mode"
+          [ngModel]="gameMode"
+          (ngModelChange)="gameModeChange.emit($event)"
+        >
+          <option value="PVA">{{ loc.translate('modePVA') }}</option>
+          <option value="PVP">{{ loc.translate('modePVP') }}</option>
+        </select>
+      </div>
+
+      <!-- Player Starts -->
+      <div class="settings-item">
+        <label for="player-starts-select">{{ loc.translate('playerStartsLabel') }}</label>
+        <select
+          id="player-starts-select"
+          [ngModel]="firstMoveSide"
+          (ngModelChange)="firstMoveSideChange.emit(+$event === 1 ? 1 : 0)"
+        >
+          <option [value]="0">{{ loc.translate('playerStartsBlue') }}</option>
+          <option [value]="1">{{ loc.translate('playerStartsRed') }}</option>
+        </select>
+      </div>
+
+      <!-- AI Controls -->
+      <div id="ai-controls" *ngIf="gameMode === 'PVA'">
+        <div class="settings-item">
+          <label for="difficulty">{{ loc.translate('aiDifficultyLabel') }}</label>
+          <select
+            id="difficulty"
+            [ngModel]="aiDepth"
+            (ngModelChange)="aiDepthChange.emit(+$event)"
+          >
+            <option *ngFor="let d of depthOptions" [value]="d">{{ d }}</option>
+          </select>
+        </div>
+        <div class="settings-item">
+          <label for="time-limit">{{ loc.translate('aiTimeLimitLabel') }}</label>
+          <input
+            type="number"
+            id="time-limit"
+            [ngModel]="aiTimeLimit"
+            (ngModelChange)="aiTimeLimitChange.emit(+$event)"
+            min="100"
+            step="100"
+          />
+        </div>
+        <div class="ai-actual-depth-group">
+          <span class="ai-info">{{ loc.translate('aiDepthInfo') }}</span>
+          <span id="ai-depth-achieved">{{ actualAiDepth }}</span>
+        </div>
+      </div>
     </div>
-    <div class="ai-actual-depth-group">
-      <span class="ai-info">{{ loc.translate('aiDepthInfo') }}</span>
-      <span id="ai-depth-achieved">{{ actualAiDepth }}</span>
+
+    <div class="settings-footer">
+      <button type="button" class="modal-action-btn" (click)="closeSettings()">{{ loc.translate('closeButton') }}</button>
     </div>
   </div>
 </div>

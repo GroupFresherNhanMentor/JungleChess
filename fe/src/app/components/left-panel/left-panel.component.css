@@ -5,14 +5,14 @@
 
 .captured-none-text {
   font-size: 0.85em;
-  color: #777777;
+  color: var(--ink-muted);
   width: 100%;
   text-align: center;
 }
 
 .rules-btn {
-  background-color: #e8f4fd !important;
-  border-color: #3498db !important;
-  color: #2980b9 !important;
+  background-color: var(--clan-blue-bg) !important;
+  border-color: var(--clan-blue) !important;
+  color: var(--clan-blue-bright) !important;
   font-weight: 600 !important;
 }

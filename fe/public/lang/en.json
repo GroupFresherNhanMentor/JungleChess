@@ -35,6 +35,7 @@
   "rulesTitle": "Game Rules Summary",
   "creditTitle": "Game Authors",
   "rulesButton": "Game Rules",
+  "settingsButton": "Settings",
   "closeButton": "Close",
   "chatTitle": "In-Game Chat",
   "chatPlaceholder": "Type a message...",
@@ -91,5 +92,9 @@
   "battleWin": "{winner} wins the clash!",
   "battleCounter": "Counter-attack! The defender repelled the attack!",
   "bannerFirstMove": "{player} moves first!",
-  "bannerWin": "{winner} wins!"
+  "bannerWin": "{winner} wins!",
+  "victoryCongratsTitle": "🏆 {winner} Wins!",
+  "victoryCongratsSub": "Congratulations on your victory!",
+  "victoryCongratsSubRed": "Red clan takes the victory!",
+  "defeatTitle": "Defeated!"
 }

@@ -18,6 +18,7 @@ export class LeftPanelComponent {
   @Output() undoMove = new EventEmitter<void>();
   @Output() randomizeBoard = new EventEmitter<void>();
   @Output() openRules = new EventEmitter<void>();
+  @Output() backToLobby = new EventEmitter<void>();
 
   constructor(public loc: LocalizationService) {}
 }

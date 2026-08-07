@@ -21,25 +21,32 @@
     </div>
   </div>
 
-  <!-- Action buttons -->
+  <!-- Left Panel Buttons -->
   <div id="left-panel-actions">
-    <div id="action-buttons-group" class="panel-button-group">
-      <button id="reset-button" (click)="resetGame.emit()">
+    <div class="panel-button-group">
+      <button (click)="backToLobby.emit()" class="panel-btn back-lobby-btn">
+        {{ loc.translate('backToLobbyBtn') }}
+      </button>
+
+      <button (click)="openRules.emit()" class="panel-btn rules-btn">
+        📖 {{ loc.translate('rulesButton') }}
+      </button>
+
+      <button (click)="resetGame.emit()" class="panel-btn reset-btn">
         {{ loc.translate('resetButton') }}
       </button>
+
       <button
-        id="undo-button"
-        [disabled]="!canUndo"
         (click)="undoMove.emit()"
+        [disabled]="!canUndo"
+        class="panel-btn undo-btn"
       >
-        {{ loc.translate('undoButton') }}
+        Hoàn nước
+      </button>
+
+      <button (click)="randomizeBoard.emit()" class="panel-btn random-btn">
+        Bàn cờ ngẫu nhiên
       </button>
     </div>
-    <button id="randomize-board-button" (click)="randomizeBoard.emit()">
-      {{ loc.translate('randomizeBoardButton') }}
-    </button>
-    <button id="rules-button" (click)="openRules.emit()" class="rules-btn">
-      📖 {{ loc.translate('rulesButton') }}
-    </button>
   </div>
 </div>

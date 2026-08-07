@@ -3,12 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   ChatMessage,
+  DetailedGameMode,
   GameMode,
   Language,
   Move,
   Piece,
   PieceSide,
-  Position
+  Position,
+  RoomInfo
 } from './core/models/game.models';
 import { LocalizationService } from './core/services/localization.service';
 import { GameRuleService } from './core/services/game-rule.service';
@@ -22,6 +24,7 @@ import { RightPanelComponent } from './components/right-panel/right-panel.compon
 import { WinChanceBarComponent } from './components/win-chance-bar/win-chance-bar.component';
 import { GameRulesModalComponent } from './components/game-rules-modal/game-rules-modal.component';
 import { ChatComponent } from './components/chat/chat.component';
+import { LobbyComponent } from './components/lobby/lobby.component';
 
 @Component({
   selector: 'app-root',
@@ -35,13 +38,18 @@ import { ChatComponent } from './components/chat/chat.component';
     RightPanelComponent,
     WinChanceBarComponent,
     GameRulesModalComponent,
-    ChatComponent
+    ChatComponent,
+    LobbyComponent
   ],
   templateUrl: './app.component.html'
 })
 export class AppComponent implements OnInit {
+  activeView: 'LOBBY' | 'GAME' = 'LOBBY';
+  currentRoom: RoomInfo | null = null;
+
   currentLang: Language = 'vn';
   gameMode: GameMode = 'PVA';
+  detailedGameMode: DetailedGameMode = 'PVP_ONLINE';
   firstMoveSide: PieceSide = 0; // 0: Blue, 1: Red
   aiDepth: number = 9;
   aiTimeLimit: number = 5000;
@@ -82,7 +90,23 @@ export class AppComponent implements OnInit {
       this.updateStatusMessage();
       this.cdr.markForCheck();
     });
+  }
+
+  public onSelectRoomFromLobby(data: { room: RoomInfo; side: PieceSide }): void {
+    this.currentRoom = data.room;
+    this.detailedGameMode = data.room.mode;
+    this.gameMode = data.room.mode === 'PVE' ? 'PVA' : 'PVP';
+    this.firstMoveSide = data.side;
+    if (data.room.aiDepth) {
+      this.aiDepth = data.room.aiDepth;
+    }
+    this.activeView = 'GAME';
     this.initGame();
+  }
+
+  public onBackToLobby(): void {
+    this.activeView = 'LOBBY';
+    this.cdr.detectChanges();
   }
 
   public initGame(): void {
@@ -102,14 +126,13 @@ export class AppComponent implements OnInit {
       minute: '2-digit'
     });
 
+    const roomTitle = this.currentRoom ? `[${this.currentRoom.roomId}] ${this.currentRoom.roomName}` : 'Trận đấu mới';
+
     this.chatMessages = [
       {
         id: 'sys-start',
         sender: 'Hệ thống',
-        text:
-          this.currentLang === 'vn'
-            ? 'Chào mừng bạn đến với Cờ Thú Online!'
-            : 'Welcome to Jungle Chess Online!',
+        text: `${this.currentLang === 'vn' ? 'Chào mừng bạn vào phòng' : 'Welcome to room'} ${roomTitle}!`,
         timestamp: timeStr,
         isSystem: true
       }
@@ -119,7 +142,7 @@ export class AppComponent implements OnInit {
     this.cdr.detectChanges();
 
     // If PvA mode and AI (Red = 1) moves first
-    if (this.gameMode === 'PVA' && this.currentTurn === 1) {
+    if ((this.gameMode === 'PVA' || this.detailedGameMode === 'EVE') && this.currentTurn === 1) {
       this.triggerAiMove();
     }
   }
@@ -148,7 +171,7 @@ export class AppComponent implements OnInit {
     this.cdr.detectChanges();
 
     // In PVA mode, AI bot occasionally replies with a taunt
-    if (this.gameMode === 'PVA') {
+    if (this.gameMode === 'PVA' || this.detailedGameMode === 'PVE') {
       setTimeout(() => {
         const randomTaunt =
           this.botTaunts[Math.floor(Math.random() * this.botTaunts.length)];

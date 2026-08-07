@@ -86,10 +86,17 @@ export class AppComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loc.currentLang$.subscribe(() => {
+    this.loc.currentLang$.subscribe((lang) => {
+      this.currentLang = lang;
       this.updateStatusMessage();
       this.cdr.markForCheck();
     });
+  }
+
+  public toggleLanguage(): void {
+    const newLang: Language = this.currentLang === 'vn' ? 'en' : 'vn';
+    this.loc.setLanguage(newLang);
+    this.cdr.detectChanges();
   }
 
   public onSelectRoomFromLobby(data: { room: RoomInfo; side: PieceSide }): void {

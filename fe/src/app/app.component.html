@@ -1,4 +1,18 @@
-<h1 id="game-title">{{ loc.translate('gameTitle') }}</h1>
+<!-- Global Top Header with Title and Fixed Language Selector -->
+<header id="global-header">
+  <h1 id="game-title">{{ loc.translate('gameTitle') }}</h1>
+
+  <div id="global-lang-switcher">
+    <button
+      (click)="toggleLanguage()"
+      class="lang-toggle-btn"
+      [title]="currentLang === 'vn' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'"
+    >
+      <span class="lang-flag">{{ currentLang === 'vn' ? '🇻🇳' : '🇬🇧' }}</span>
+      <span class="lang-code">{{ currentLang === 'vn' ? 'VN' : 'EN' }}</span>
+    </button>
+  </div>
+</header>
 
 <!-- View 1: Lobby Screen -->
 <ng-container *ngIf="activeView === 'LOBBY'">
@@ -7,6 +21,18 @@
 
 <!-- View 2: Active Game Room Screen -->
 <ng-container *ngIf="activeView === 'GAME'">
+  <!-- Active Room Banner Header -->
+  <div id="active-room-banner" *ngIf="currentRoom">
+    <button (click)="onBackToLobby()" class="back-lobby-header-btn">
+      {{ loc.translate('backToLobbyBtn') }}
+    </button>
+    <div class="room-banner-details">
+      <span class="room-badge">{{ currentRoom.mode }}</span>
+      <span class="room-code-tag">[{{ currentRoom.roomId }}]</span>
+      <span class="room-title-text">{{ currentRoom.roomName }}</span>
+    </div>
+  </div>
+
   <!-- Game Controls Bar -->
   <app-game-controls
     [currentLang]="currentLang"

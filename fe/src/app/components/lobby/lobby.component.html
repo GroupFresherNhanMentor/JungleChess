@@ -1,34 +1,23 @@
 <div id="lobby-container">
-  <!-- Lobby Header Banner -->
-  <div class="lobby-header">
-    <div class="lobby-title-group">
-      <h1>🏆 {{ loc.translate('lobbyTitle') }}</h1>
-      <p class="lobby-subtitle">Tham gia hoặc tạo phòng chơi Cờ Thú trực tuyến</p>
-    </div>
-    <div class="lobby-user-badge">
-      <div class="user-avatar">👤</div>
-      <div class="user-info">
-        <span class="user-name">Player_Guest</span>
-        <span class="user-status">🟢 Online</span>
-      </div>
-    </div>
+  <!-- Clean Title Header -->
+  <div class="lobby-title-bar">
+    <h2>🏆 {{ loc.translate('lobbyTitle') }}</h2>
   </div>
 
-  <!-- Action Bar: Search, Filters, Create & Join Buttons -->
+  <!-- Modern Single-Row Toolbar -->
   <div class="lobby-toolbar">
-    <!-- Search Bar -->
-    <div class="search-box">
-      <span class="search-icon">🔍</span>
-      <input
-        type="text"
-        [(ngModel)]="searchQuery"
-        [placeholder]="loc.translate('searchRoomPlaceholder')"
-        class="search-input"
-      />
-    </div>
+    <!-- Left Section: Search & Filters on 1 Line -->
+    <div class="toolbar-left">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          [placeholder]="loc.translate('searchRoomPlaceholder')"
+          class="search-input"
+        />
+      </div>
 
-    <!-- Filter Buttons -->
-    <div class="filter-group">
       <select [(ngModel)]="selectedFilterMode" class="filter-select">
         <option value="ALL">Tất cả chế độ</option>
         <option value="PVP_ONLINE">PvP Online</option>
@@ -38,21 +27,21 @@
 
       <select [(ngModel)]="selectedFilterStatus" class="filter-select">
         <option value="ALL">Tất cả trạng thái</option>
-        <option value="WAITING">Đang chờ (Waiting)</option>
-        <option value="PLAYING">Đang chơi (In Game)</option>
+        <option value="WAITING">Đang chờ</option>
+        <option value="PLAYING">Đang chơi</option>
       </select>
 
-      <button (click)="refreshRooms()" class="icon-btn refresh-btn" title="Làm mới">
+      <button (click)="refreshRooms()" class="refresh-btn" title="Làm mới">
         🔄
       </button>
     </div>
 
-    <!-- Main Action Buttons -->
-    <div class="action-btn-group">
-      <button (click)="openCreateRoomModal()" class="primary-btn create-btn">
+    <!-- Right Section: Action Buttons -->
+    <div class="toolbar-right">
+      <button (click)="openCreateRoomModal()" class="create-btn">
         {{ loc.translate('createRoomBtn') }}
       </button>
-      <button (click)="openJoinCodeModal()" class="secondary-btn join-code-btn">
+      <button (click)="openJoinCodeModal()" class="join-code-btn">
         {{ loc.translate('joinRoomCodeBtn') }}
       </button>
     </div>
@@ -64,7 +53,7 @@
       <span class="empty-icon">🎲</span>
       <h3>Không tìm thấy phòng nào</h3>
       <p>Bấm <strong>"Tạo Phòng Mới"</strong> để bắt đầu trận đấu đầu tiên!</p>
-      <button (click)="openCreateRoomModal()" class="primary-btn">Tạo Phòng Ngay</button>
+      <button (click)="openCreateRoomModal()" class="create-btn">Tạo Phòng Ngay</button>
     </div>
 
     <div *ngFor="let room of filteredRooms" class="room-card" [ngClass]="'status-' + room.status.toLowerCase()">
@@ -84,7 +73,7 @@
         <div class="room-code-row">
           <span class="code-label">Mã phòng:</span>
           <code class="code-value">{{ room.roomId }}</code>
-          <button (click)="copyRoomCode(room.roomId)" class="copy-code-btn" title="Sao chép mã">
+          <button (click)="copyRoomCode(room.roomId)" class="copy-code-btn" title="Sao chép mã phòng">
             📋
           </button>
         </div>
@@ -190,7 +179,7 @@
           <button type="button" (click)="closeCreateRoomModal()" class="secondary-btn">
             Hủy
           </button>
-          <button type="submit" [disabled]="!newRoomName.trim()" class="primary-btn">
+          <button type="submit" [disabled]="!newRoomName.trim()" class="create-btn">
             Tạo & Vào Phòng
           </button>
         </div>
@@ -224,7 +213,7 @@
           <button type="button" (click)="closeJoinCodeModal()" class="secondary-btn">
             Hủy
           </button>
-          <button type="submit" [disabled]="!joinCodeInput.trim()" class="primary-btn">
+          <button type="submit" [disabled]="!joinCodeInput.trim()" class="create-btn">
             Vào Phòng ngay
           </button>
         </div>

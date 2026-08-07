@@ -36,6 +36,9 @@ spring:
 
 # ─── JWT (Application Custom Configs) ─────────────────────────
 app:
+  auth:
+    guest-retention: 7d
+    guest-cleanup-cron: "0 0 3 * * *"
   eve:
     bot-image: ${EVE_BOT_IMAGE:junglechess-bot:latest}
     server-url: ${EVE_SERVER_URL:ws://localhost:7070/rsocket}

@@ -84,8 +84,11 @@
 | is_guest | BOOLEAN | NOT NULL, default `false` | Tài khoản khách (không cần mật khẩu) |
 | created_at | TIMESTAMPTZ | NOT NULL, default `now()` | Ngày tạo |
 | updated_at | TIMESTAMPTZ | NOT NULL, default `now()` | Ngày cập nhật gần nhất |
+| last_activity_at | TIMESTAMPTZ | NOT NULL, default `now()` | Hoạt động hợp lệ gần nhất; guest hết hạn sau 7 ngày không hoạt động |
 
 **Index:** `UNIQUE (username)`
+
+Guest users are eligible for cleanup when `last_activity_at` is older than 7 days. Cleanup removes the `users` row and cascades guest roles/tokens, but match history remains through `match_players.player_name_snapshot` and `ON DELETE SET NULL` on `match_players.user_id`.
 
 ---
 
@@ -146,12 +149,13 @@ INSERT INTO bots (id, name, difficulty, search_depth, description) VALUES
 |---|---|---|---|
 | id | UUID | PK | Định danh dòng |
 | match_id | UUID | FK → `matches.id`, NOT NULL | Ván đấu liên quan |
-| user_id | UUID | FK → `users.id`, NULL | Người chơi (null nếu `is_bot = true`) |
+| user_id | UUID | FK → `users.id`, NULL, `ON DELETE SET NULL` | Người chơi; có thể null nếu guest đã bị dọn hoặc dòng là bot |
 | bot_id | UUID | FK → `bots.id`, NULL | Bot (null nếu là người chơi thật) |
+| player_name_snapshot | VARCHAR(100) | NULL | Username/display name tại thời điểm tham gia, dùng để giữ lịch sử sau khi guest bị xóa |
 | side | VARCHAR(20) | NOT NULL | `PLAYER_1` \| `PLAYER_2` |
 | is_bot | BOOLEAN | NOT NULL, default `false` | Đánh dấu bên này là bot |
 
-**Ràng buộc kiểm tra (CHECK):** `(user_id IS NOT NULL AND bot_id IS NULL) OR (user_id IS NULL AND bot_id IS NOT NULL)` — đảm bảo mỗi dòng chỉ gắn với **một trong hai**: người chơi hoặc bot.
+**Ràng buộc kiểm tra (CHECK):** bot phải có `bot_id` và không có `user_id`/snapshot; người chơi phải có snapshot, còn `user_id` có thể null sau cleanup guest.
 
 **Index:** `INDEX (match_id)`, `INDEX (user_id)`
 
@@ -173,7 +177,7 @@ INSERT INTO bots (id, name, difficulty, search_depth, description) VALUES
 
 **Index:** `UNIQUE (match_id, move_number)`, `INDEX (match_id)`
 
-> Bảng này ánh xạ trực tiếp 1-1 với field `lastMove` trong message `/topic/room/{roomId}/state` (xem API_Spec_Co_Thu_Online.md mục 3.3.3) — mỗi lần server broadcast state mới kèm `lastMove` khác `null`, tầng persistence có thể async ghi thêm 1 dòng vào `match_moves`.
+> Bảng này ánh xạ trực tiếp 1-1 với field `lastMove` trong event `STATE_UPDATED` của RSocket stream `room.events` (xem API_Spec_Co_Thu_Online.md mục 3.3.3) — mỗi lần server phát state mới kèm `lastMove` khác `null`, tầng persistence có thể async ghi thêm 1 dòng vào `match_moves`.
 
 ---
 
@@ -190,7 +194,8 @@ CREATE TABLE users (
     display_name    VARCHAR(100),
     is_guest        BOOLEAN NOT NULL DEFAULT false,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_activity_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE refresh_tokens (
@@ -231,13 +236,14 @@ CREATE INDEX idx_matches_started_at ON matches(started_at);
 CREATE TABLE match_players (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     match_id    UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-    user_id     UUID REFERENCES users(id),
+    user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
     bot_id      UUID REFERENCES bots(id),
+    player_name_snapshot VARCHAR(100),
     side        VARCHAR(20) NOT NULL CHECK (side IN ('PLAYER_1','PLAYER_2')),
     is_bot      BOOLEAN NOT NULL DEFAULT false,
     CONSTRAINT chk_player_or_bot CHECK (
-        (user_id IS NOT NULL AND bot_id IS NULL) OR
-        (user_id IS NULL AND bot_id IS NOT NULL)
+        (bot_id IS NOT NULL AND user_id IS NULL AND player_name_snapshot IS NULL) OR
+        (bot_id IS NULL AND player_name_snapshot IS NOT NULL)
     )
 );
 CREATE INDEX idx_match_players_match_id ON match_players(match_id);
@@ -263,7 +269,7 @@ CREATE INDEX idx_match_moves_match_id ON match_moves(match_id);
 
 ## 5. QUAN HỆ VỚI CÁC BẢNG KHÁC / DÙNG CHUNG THÔNG TIN VỚI API SPEC
 
-| Field trong DB | Field tương ứng trong WebSocket message | File tham chiếu |
+| Field trong DB | Field tương ứng trong RSocket event | File tham chiếu |
 |---|---|---|
 | `matches.room_id` | `roomId` | API_Spec mục 3.3.1 |
 | `matches.mode` | `mode` | API_Spec mục 3.3.1 |
@@ -293,7 +299,7 @@ CREATE INDEX idx_match_moves_match_id ON match_moves(match_id);
 | Thành viên | Liên quan |
 |---|---|
 | Nghĩa (Auth BE) | Bảng `users`, `refresh_tokens` (mục 3.1, 3.2) |
-| Thắng (Logic WebSocket BE) | Bảng `matches`, `match_players`, `match_moves` — đặc biệt thời điểm ghi dữ liệu (khi kết thúc ván / theo từng nước đi) |
+| Thắng (Logic RSocket BE) | Bảng `matches`, `match_players`, `match_moves` — đặc biệt thời điểm ghi dữ liệu (khi kết thúc ván / theo từng nước đi) |
 | Khôi (Bot BE) | Bảng `bots` — cấu hình độ khó, `search_depth` map với `botDifficulty` trong API Spec |
 
 ---

@@ -3,6 +3,7 @@ package fpt.qn.junglechess.user.repository;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
+import java.time.OffsetDateTime;
 
 import fpt.qn.junglechess.common.dto.PaginationResult;
 import fpt.qn.junglechess.common.repository.Repository;
@@ -29,4 +30,8 @@ public interface UserRepository extends Repository<UsersRecord> {
     Flux<String> findRolesByUserId(UUID userId);
 
     Mono<Void> assignRole(UUID userId, SysRole role);
+
+    Mono<Void> touchGuestActivity(UUID userId);
+
+    Mono<Void> deleteExpiredGuests(OffsetDateTime cutoff);
 }

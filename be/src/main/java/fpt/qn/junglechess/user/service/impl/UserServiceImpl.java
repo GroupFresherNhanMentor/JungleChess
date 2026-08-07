@@ -190,7 +190,9 @@ public class UserServiceImpl implements UserService {
     private Mono<UsersRecord> getCurrentUserRecord() {
         return getCurrentPrincipalUsername()
                 .flatMap(username -> userRepository.findByUsername(username)
-                        .switchIfEmpty(Mono.error(new UserNotFoundException())));
+                        .switchIfEmpty(Mono.error(new UserNotFoundException()))
+                        .flatMap(record -> userRepository.touchGuestActivity(record.getId())
+                                .thenReturn(record)));
     }
 
     private Mono<String> getCurrentPrincipalUsername() {

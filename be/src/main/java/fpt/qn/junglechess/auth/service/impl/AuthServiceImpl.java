@@ -1,14 +1,20 @@
 package fpt.qn.junglechess.auth.service.impl;
 
+import java.security.SecureRandom;
+import java.util.List;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DataAccessException;
 
 import fpt.qn.junglechess.auth.dto.request.LoginRequest;
 import fpt.qn.junglechess.auth.dto.request.RefreshTokenRequest;
+import fpt.qn.junglechess.auth.dto.request.RegisterRequest;
 import fpt.qn.junglechess.auth.dto.response.LoginResponse;
 import fpt.qn.junglechess.auth.dto.response.RefreshTokenResponse;
+import fpt.qn.junglechess.auth.dto.response.RegisterResponse;
 import fpt.qn.junglechess.auth.exception.AccountLockedException;
 import fpt.qn.junglechess.auth.exception.InvalidCredentialsException;
 import fpt.qn.junglechess.auth.service.AuthService;
@@ -16,17 +22,25 @@ import fpt.qn.junglechess.jooq.enums.UserStatus;
 import fpt.qn.junglechess.security.JwtTokenProvider;
 import fpt.qn.junglechess.security.RedisTokenBlacklistService;
 import fpt.qn.junglechess.user.exception.UserNotFoundException;
+import fpt.qn.junglechess.user.exception.UsernameAlreadyExistsException;
+import fpt.qn.junglechess.user.dto.response.UserDto;
 import fpt.qn.junglechess.user.mapper.UserMapper;
 import fpt.qn.junglechess.user.repository.UserRepository;
+import fpt.qn.junglechess.user.helper.UserCreationTransactionHelper;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuthServiceImpl implements AuthService {
+
+    static final char[] GUEST_USERNAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
+    static final int GUEST_USERNAME_SUFFIX_LENGTH = 10;
+    static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     UserRepository userRepository;
     PasswordEncoder passwordEncoder;
@@ -34,6 +48,30 @@ public class AuthServiceImpl implements AuthService {
     ReactiveJwtDecoder jwtDecoder;
     UserMapper userMapper;
     RedisTokenBlacklistService redisTokenBlacklistService;
+    UserCreationTransactionHelper userCreationTransactionHelper;
+
+    @Override
+    public Mono<RegisterResponse> register(RegisterRequest request) {
+        return userRepository.existsByUsername(request.getUsername())
+                .flatMap(exists -> {
+                    if (exists) return Mono.error(new UsernameAlreadyExistsException());
+
+                    return userCreationTransactionHelper
+                            .executeRegistration(request.getUsername(), request.getPassword())
+                            .map(this::toRegisterResponse);
+                })
+                .onErrorMap(this::isDuplicateUsernameConstraint,
+                        error -> new UsernameAlreadyExistsException());
+    }
+
+    @Override
+    public Mono<LoginResponse> guest() {
+        return Mono.defer(() -> userCreationTransactionHelper.executeGuestRegistration(generateGuestUsername()))
+                .flatMap(user -> userRepository.findRolesByUserId(user.getId())
+                        .collectList()
+                        .map(roles -> createLoginResponse(user, roles)))
+                .retryWhen(Retry.max(4).filter(this::isDuplicateUsernameConstraint));
+    }
 
     @Override
     public Mono<LoginResponse> login(LoginRequest request) {
@@ -43,16 +81,13 @@ public class AuthServiceImpl implements AuthService {
                     if (user.getStatus() == UserStatus.LOCKED) {
                         return Mono.error(new AccountLockedException());
                     }
-                    if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                    if (user.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
                         return Mono.error(new InvalidCredentialsException());
                     }
-                    return userRepository.findRolesByUserId(user.getId())
+                    return userRepository.touchGuestActivity(user.getId())
+                            .thenMany(userRepository.findRolesByUserId(user.getId()))
                             .collectList()
-                            .map(roles -> LoginResponse.builder()
-                                    .accessToken(jwtTokenProvider.generateAccessToken(user.getUsername(), roles, user.getId()))
-                                    .refreshToken(jwtTokenProvider.generateRefreshToken(user.getUsername()))
-                                    .user(userMapper.toDto(user))
-                                    .build());
+                            .map(roles -> createLoginResponse(userMapper.toDto(user), roles));
                 });
     }
 
@@ -122,5 +157,36 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return Mono.when(blacklistAccess, blacklistRefresh);
+    }
+
+    private RegisterResponse toRegisterResponse(UserDto user) {
+        return RegisterResponse.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build();
+    }
+
+    private LoginResponse createLoginResponse(UserDto user, List<String> roles) {
+        return LoginResponse.builder()
+                .accessToken(jwtTokenProvider.generateAccessToken(user.getUsername(), roles, user.getId()))
+                .refreshToken(jwtTokenProvider.generateRefreshToken(user.getUsername()))
+                .user(user)
+                .build();
+    }
+
+    private String generateGuestUsername() {
+        StringBuilder username = new StringBuilder("guest_");
+        for (int index = 0; index < GUEST_USERNAME_SUFFIX_LENGTH; index++) {
+            username.append(GUEST_USERNAME_ALPHABET[SECURE_RANDOM.nextInt(GUEST_USERNAME_ALPHABET.length)]);
+        }
+        return username.toString();
+    }
+
+    private boolean isDuplicateUsernameConstraint(Throwable error) {
+        if (!(error instanceof DataAccessException dataAccessException)) return false;
+        Throwable rootCause = dataAccessException.getRootCause();
+        return rootCause != null
+                && rootCause.getMessage() != null
+                && rootCause.getMessage().contains("users_username_key");
     }
 }

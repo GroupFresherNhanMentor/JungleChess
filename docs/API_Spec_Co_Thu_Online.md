@@ -5,7 +5,7 @@
 **Ngày:** 05/08/2026
 **Liên quan:** SRS_Co_Thu_Online.md (v1.0), Architecture_Co_Thu_Online.md (v1.0)
 
-> Tài liệu này là **hợp đồng (contract)** giữa Backend và Frontend, gồm 2 phần: REST API (auth, các thao tác không realtime) và WebSocket/STOMP API (toàn bộ luồng chơi game realtime). Mọi thay đổi field/kiểu dữ liệu phải cập nhật đồng bộ tài liệu này trước khi code.
+> Tài liệu này là **hợp đồng (contract)** giữa Backend và Frontend, gồm 2 phần: REST API (auth, các thao tác không realtime) và RSocket API (toàn bộ luồng chơi game realtime). Mọi thay đổi field/kiểu dữ liệu, route hoặc interaction model phải cập nhật đồng bộ tài liệu này trước khi code.
 
 ---
 
@@ -15,8 +15,7 @@
 | Loại | Giá trị mẫu |
 |---|---|
 | REST base URL | `https://api.cothu.online/api` |
-| WebSocket endpoint (SockJS) | `https://api.cothu.online/ws` |
-| STOMP over WebSocket thuần | `wss://api.cothu.online/ws` |
+| RSocket over WebSocket | `wss://api.cothu.online/rsocket` |
 
 ### 1.2 Định dạng chung
 - Toàn bộ payload: `application/json`, encoding UTF-8.
@@ -67,10 +66,16 @@
 **Response `201 Created`**
 ```json
 {
-  "userId": "u-0001",
-  "username": "nghia123"
+  "data": {
+    "userId": "u-0001",
+    "username": "nghia123"
+  },
+  "message": "Registration successful",
+  "isSuccess": true
 }
 ```
+
+> Tài khoản tự đăng ký được tạo với role `USER` và trạng thái `ACTIVE`. Password được lưu dưới dạng hash; endpoint không trả access token hoặc password.
 
 **Lỗi:** `USERNAME_ALREADY_EXISTS` (409), `VALIDATION_ERROR` (400)
 
@@ -109,7 +114,24 @@
 ### 2.3 Đăng nhập khách (Guest — tuỳ chọn)
 `POST /api/auth/guest`
 
-**Response `200 OK`** — cấu trúc giống mục 2.2, `username` được server tự sinh (VD `guest_8213`).
+**Response `200 OK`**
+```json
+{
+  "data": {
+    "accessToken": "eyJhbGciOi...",
+    "refreshToken": "eyJhbGciOi...",
+    "tokenType": "Bearer",
+    "user": {
+      "id": "u-0001",
+      "username": "guest_a1b2c3d4e5"
+    }
+  },
+  "message": "Guest login successful",
+  "isSuccess": true
+}
+```
+
+> Guest account được lưu với `is_guest=true` và bị dọn sau 7 ngày kể từ `last_activity_at` nếu không có hoạt động hợp lệ. Lịch sử trận đấu vẫn giữ username snapshot của guest.
 
 ---
 
@@ -151,45 +173,39 @@
 
 ---
 
-## 3. WEBSOCKET / STOMP API
+## 3. RSOCKET API
 
 ### 3.1 Kết nối & xác thực
 
-- Client kết nối tới endpoint `/ws` (SockJS) hoặc `wss://.../ws` (thuần WebSocket).
-- Gửi kèm `accessToken` trong STOMP CONNECT header:
+- Client kết nối RSocket over WebSocket tới endpoint `/rsocket`.
+- Gửi `accessToken` trong authentication metadata của RSocket SETUP/payload. Metadata dùng Bearer JWT:
 
 ```
-CONNECT
-Authorization:Bearer eyJhbGciOi...
-accept-version:1.2
-heart-beat:10000,10000
+Authorization: Bearer eyJhbGciOi...
 ```
 
-- Server xác thực trong `HandshakeInterceptor` (kiểm tra tồn tại token) và `ChannelInterceptor` (verify chữ ký + hạn dùng ở mỗi frame `SEND`/`SUBSCRIBE`).
-- Nếu token không hợp lệ/hết hạn → server gửi frame `ERROR` và đóng kết nối. Client cần refresh access token qua REST rồi CONNECT lại.
+- Server xác thực JWT metadata trước khi xử lý route và tạo `Principal` gồm `userId`, username và roles.
+- Command dùng interaction model `request-response`; event phòng dùng `request-stream`.
+- Nếu token không hợp lệ/hết hạn → server từ chối payload/stream. Client cần refresh access token qua REST rồi reconnect RSocket bằng token mới.
 
-### 3.2 Danh sách kênh (Destination)
+### 3.2 Danh sách route và interaction model
 
-| # | Hướng | Destination | Mô tả |
-|---|---|---|---|
-| 1 | C → S | `/app/room/create` | Tạo phòng mới |
-| 2 | C → S | `/app/room/{roomId}/join` | Tham gia phòng đã tồn tại |
-| 3 | C → S | `/app/room/{roomId}/move` | Gửi nước đi |
-| 4 | C → S | `/app/room/{roomId}/leave` | Rời phòng |
-| 5 | C → S | `/app/room/{roomId}/rematch` | Yêu cầu chơi lại |
-| 6 | S → C | `/topic/room/{roomId}/state` | Broadcast trạng thái bàn cờ mới nhất |
-| 7 | S → C | `/topic/room/{roomId}/result` | Thông báo kết quả ván đấu |
-| 8 | S → C | `/topic/room/{roomId}/players` | Cập nhật danh sách người chơi trong phòng |
-| 9 | S → C | `/user/queue/room-created` | Trả kết quả tạo phòng riêng cho người gửi request |
-| 10 | S → C | `/user/queue/errors` | Gửi lỗi riêng cho từng client |
+| # | Hướng | Route | Interaction | Mô tả |
+|---|---|---|---|---|
+| 1 | C → S | `room.create` | request-response | Tạo phòng mới |
+| 2 | C → S | `room.join` | request-response | Tham gia phòng đã tồn tại |
+| 3 | C → S | `room.move` | request-response | Gửi nước đi và nhận kết quả xử lý |
+| 4 | C → S | `room.leave` | request-response | Rời phòng |
+| 5 | C → S | `room.rematch` | request-response | Yêu cầu chơi lại |
+| 6 | S → C | `room.events` | request-stream | Stream state, result, players và error event của phòng |
 
-> Quy ước: client phải `SUBSCRIBE` vào các topic số 6, 7, 8 **ngay sau khi** nhận được `roomId` (từ kênh 9 hoặc từ response `join`), trước khi bắt đầu gửi `move`.
+> Quy ước: client phải mở request-stream `room.events` **ngay sau khi** nhận được `roomId` (từ response `room.create` hoặc `room.join`), trước khi bắt đầu gửi `room.move`.
 
 ---
 
 ### 3.3 Chi tiết từng message
 
-#### 3.3.1 Tạo phòng — `/app/room/create`
+#### 3.3.1 Tạo phòng — `room.create` (request-response)
 
 **Payload gửi lên**
 ```json
@@ -203,7 +219,7 @@ heart-beat:10000,10000
 | mode | enum | ✔ | `PVP_ONLINE` \| `PVE` \| `EVE` |
 | botDifficulty | enum | chỉ khi mode = PVE/EVE | `EASY` \| `MEDIUM` \| `HARD` |
 
-**Phản hồi** — server gửi tới `/user/queue/room-created`:
+**Phản hồi** — server trả trực tiếp cho request `room.create`:
 ```json
 {
   "roomId": "room-8f21",
@@ -215,7 +231,7 @@ heart-beat:10000,10000
 
 ---
 
-#### 3.3.2 Tham gia phòng — `/app/room/{roomId}/join`
+#### 3.3.2 Tham gia phòng — `room.join` (request-response)
 
 **Payload gửi lên**
 ```json
@@ -223,7 +239,7 @@ heart-beat:10000,10000
 ```
 *(roomId đã nằm trong destination; body có thể để trống hoặc mở rộng sau, VD mật khẩu phòng)*
 
-**Phản hồi** — broadcast tới `/topic/room/{roomId}/players`:
+**Phản hồi** — server trả trực tiếp cho request `room.join`; các client trong phòng nhận event `PLAYERS_UPDATED` qua `room.events`:
 ```json
 {
   "roomId": "room-8f21",
@@ -239,7 +255,7 @@ heart-beat:10000,10000
 
 ---
 
-#### 3.3.3 Gửi nước đi — `/app/room/{roomId}/move`
+#### 3.3.3 Gửi nước đi — `room.move` (request-response)
 
 **Payload gửi lên**
 ```json
@@ -253,7 +269,7 @@ heart-beat:10000,10000
 | from | `[row, col]` | ✔ | Vị trí quân đang chọn |
 | to | `[row, col]` | ✔ | Vị trí muốn di chuyển tới |
 
-**Broadcast phản hồi** tới `/topic/room/{roomId}/state`:
+**Phản hồi** — server trả kết quả xử lý cho request; các client trong phòng nhận event `STATE_UPDATED` qua `room.events`:
 ```json
 {
   "roomId": "room-8f21",
@@ -281,7 +297,7 @@ heart-beat:10000,10000
 | lastMove.specialEvent | enum/null | `RIVER_JUMP` \| `TRAP_NEUTRALIZED` \| `null` — phục vụ frontend chọn đúng animation/âm thanh |
 | moveNumber | int | Số thứ tự nước đi, dùng để client bỏ qua message đến trễ/trùng |
 
-**Lỗi (gửi riêng tới `/user/queue/errors` cho người gửi nước đi sai):**
+**Lỗi** — server trả lỗi cho request `room.move`; client trong phòng chỉ nhận các error event liên quan qua `room.events`:
 ```json
 {
   "errorCode": "INVALID_MOVE",
@@ -292,7 +308,7 @@ heart-beat:10000,10000
 
 ---
 
-#### 3.3.4 Kết quả ván đấu — `/topic/room/{roomId}/result`
+#### 3.3.4 Kết quả ván đấu — event `GAME_RESULT` trong `room.events`
 
 ```json
 {
@@ -310,19 +326,19 @@ heart-beat:10000,10000
 
 ---
 
-#### 3.3.5 Rời phòng — `/app/room/{roomId}/leave`
+#### 3.3.5 Rời phòng — `room.leave` (request-response)
 
 **Payload gửi lên:** `{}`
 
-**Broadcast:** cập nhật lại `/topic/room/{roomId}/players` (loại bỏ người chơi đó), nếu phòng còn 1 người và mode cần 2 người → `status` chuyển về `WAITING` hoặc `ENDED` tuỳ luật xử lý nhóm chọn.
+**Event:** cập nhật `PLAYERS_UPDATED` trong `room.events` (loại bỏ người chơi đó), nếu phòng còn 1 người và mode cần 2 người → `status` chuyển về `WAITING` hoặc `ENDED` tuỳ luật xử lý nhóm chọn.
 
 ---
 
-#### 3.3.6 Yêu cầu chơi lại — `/app/room/{roomId}/rematch`
+#### 3.3.6 Yêu cầu chơi lại — `room.rematch` (request-response)
 
 **Payload gửi lên:** `{}`
 
-**Broadcast** tới `/topic/room/{roomId}/state` (trạng thái reset):
+**Event:** `STATE_UPDATED` trong `room.events` (trạng thái reset):
 ```json
 {
   "roomId": "room-8f21",
@@ -339,20 +355,20 @@ heart-beat:10000,10000
 
 ### 3.4 Bảng mã lỗi (Error Codes) dùng chung
 
-| errorCode | Ngữ cảnh | HTTP/STOMP |
+| errorCode | Ngữ cảnh | HTTP/RSocket |
 |---|---|---|
 | VALIDATION_ERROR | Dữ liệu request không hợp lệ | REST 400 |
 | USERNAME_ALREADY_EXISTS | Đăng ký trùng username | REST 409 |
 | INVALID_CREDENTIALS | Sai tài khoản/mật khẩu | REST 401 |
 | REFRESH_TOKEN_INVALID | Refresh token sai/không tồn tại | REST 401 |
 | REFRESH_TOKEN_EXPIRED | Refresh token hết hạn | REST 401 |
-| UNAUTHORIZED_WS | Access token không hợp lệ khi kết nối WS | STOMP ERROR frame |
-| ROOM_NOT_FOUND | roomId không tồn tại | `/user/queue/errors` |
-| ROOM_FULL | Phòng đã đủ người chơi | `/user/queue/errors` |
-| NOT_YOUR_TURN | Gửi move không đúng lượt | `/user/queue/errors` |
-| INVALID_MOVE | Nước đi phạm luật cờ thú | `/user/queue/errors` |
-| ACTION_NOT_ALLOWED | Thực hiện hành động không được phép (VD: client gửi move ở chế độ EvE/spectator) | `/user/queue/errors` |
-| GAME_ALREADY_ENDED | Gửi move sau khi ván đã kết thúc | `/user/queue/errors` |
+| UNAUTHORIZED_RSOCKET | Access token không hợp lệ khi kết nối hoặc gửi payload RSocket | RSocket rejected payload/stream |
+| ROOM_NOT_FOUND | roomId không tồn tại | RSocket error response |
+| ROOM_FULL | Phòng đã đủ người chơi | RSocket error response |
+| NOT_YOUR_TURN | Gửi move không đúng lượt | RSocket error response |
+| INVALID_MOVE | Nước đi phạm luật cờ thú | RSocket error response |
+| ACTION_NOT_ALLOWED | Thực hiện hành động không được phép (VD: client gửi move ở chế độ EvE/spectator) | RSocket error response |
+| GAME_ALREADY_ENDED | Gửi move sau khi ván đã kết thúc | RSocket error response |
 
 ---
 
@@ -360,10 +376,10 @@ heart-beat:10000,10000
 
 | Thành viên | Phần liên quan trực tiếp |
 |---|---|
-| Nghĩa (Auth BE) | Mục 2 (REST Auth), mục 3.1 (xác thực WebSocket) |
-| Thắng (Logic WebSocket BE) | Toàn bộ mục 3.2 – 3.4 |
+| Nghĩa (Auth BE) | Mục 2 (REST Auth), mục 3.1 (xác thực RSocket) |
+| Thắng (Logic RSocket BE) | Toàn bộ mục 3.2 – 3.4 |
 | Khôi (Bot BE) | Payload `board`/`move` ở mục 3.3.3 dùng chung định dạng, `botDifficulty` ở mục 3.3.1 |
-| Nguyên (WebSocket FE) | Toàn bộ mục 3 — implement STOMP client theo đúng destination & payload |
+| Nguyên (RSocket FE) | Toàn bộ mục 3 — implement RSocket client theo đúng route, interaction model và payload |
 | Lộc (Game rule FE) | Định dạng `board`, `pieceCode`, toạ độ `[row, col]` ở mục 1.2 và 3.3.3 |
 | Sơn (Animation/Sound FE) | Field `lastMove.specialEvent`, `lastMove.capturedPiece` ở mục 3.3.3 để chọn đúng hiệu ứng |
 | Mạnh (Game flow FE) | Mục 3.3.4 (result), trạng thái `status`/`roomStatus` để điều phối chuyển màn hình |

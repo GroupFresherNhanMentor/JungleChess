@@ -9,7 +9,7 @@
 
 ## 1. MỤC TIÊU TÀI LIỆU
 
-Tài liệu này mô tả kiến trúc kỹ thuật chi tiết của hệ thống: các thành phần, luồng dữ liệu, giao thức giao tiếp (WebSocket/STOMP), cấu trúc thư mục, thiết kế message, mô hình dữ liệu, và các quyết định kiến trúc (architecture decisions) làm cơ sở để backend và frontend triển khai đồng bộ.
+Tài liệu này mô tả kiến trúc kỹ thuật chi tiết của hệ thống: các thành phần, luồng dữ liệu, giao thức giao tiếp (RSocket over WebSocket), cấu trúc thư mục, thiết kế message, mô hình dữ liệu, và các quyết định kiến trúc (architecture decisions) làm cơ sở để backend và frontend triển khai đồng bộ.
 
 ---
 
@@ -28,19 +28,19 @@ Tài liệu này mô tả kiến trúc kỹ thuật chi tiết của hệ thốn
                          │                    │                        │
                          │        ┌───────────┴───────────┐            │
                          │        │  Auth Service (Token)  │            │
-                         │        │  WebSocket Service      │           │
-                         │        │  (STOMP Client)          │          │
+                          │        │  RSocket Service         │           │
+                          │        │  (RSocket Client)        │           │
                          │        └───────────┬───────────┘            │
                          └────────────────────┼────────────────────────┘
-                                               │ WSS (STOMP over WebSocket)
+                                                │ WSS (RSocket over WebSocket)
                                                │ HTTPS (REST: login, refresh)
                          ┌────────────────────┼────────────────────────┐
                          │                SERVER (Spring Boot)         │
                          │                    │                        │
                          │   ┌────────────────┴─────────────────┐      │
-                         │   │     WebSocket Gateway (STOMP)     │      │
-                         │   │  - Handshake Interceptor (JWT)    │      │
-                         │   │  - Channel Interceptor (Auth)     │      │
+                          │   │       RSocket Gateway             │      │
+                          │   │  - Metadata Authentication (JWT)  │      │
+                          │   │  - Route Authorization             │      │
                          │   └───────────────┬───────────────────┘      │
                          │                    │                         │
                          │   ┌────────────────┼────────────────────┐    │
@@ -74,12 +74,12 @@ Tài liệu này mô tả kiến trúc kỹ thuật chi tiết của hệ thốn
 | Thành phần | Công nghệ đề xuất |
 |---|---|
 | Frontend framework | Angular (chuẩn mới nhất tại thời điểm dự án) |
-| Realtime client | `@stomp/stompjs` + `sockjs-client` (fallback) |
+| Realtime client | RSocket JavaScript client over WebSocket |
 | State management | RxJS Services (BehaviorSubject) hoặc NgRx nếu độ phức tạp tăng |
 | UI rendering bàn cờ | SVG hoặc Canvas (khuyến nghị SVG để dễ animation bằng CSS/GSAP, dễ style theo Angular) |
 | Animation | CSS transitions/Angular Animations, hoặc GSAP nếu cần hiệu ứng phức tạp |
-| Backend framework | Spring Boot (Web, WebSocket, Security, Data JPA) |
-| Realtime server | Spring WebSocket + STOMP broker (SimpleBroker cho MVP, có thể nâng cấp RabbitMQ/ActiveMQ relay khi scale) |
+| Backend framework | Spring Boot (WebFlux, RSocket, Security, jOOQ) |
+| Realtime server | Spring RSocket over WebSocket (request-response và request-stream) |
 | Auth | Spring Security + JWT (access token) + Refresh token lưu DB/Redis |
 | Database | PostgreSQL hoặc MySQL |
 | Cache/Session realtime | Redis (tuỳ chọn, cần khi scale nhiều instance backend) |
@@ -93,14 +93,14 @@ Tài liệu này mô tả kiến trúc kỹ thuật chi tiết của hệ thốn
 
 ```
 com.cothu.backend
-├── config/                # WebSocket config, Security config, CORS
+├── config/                # RSocket config, Security config, CORS
 ├── auth/
 │   ├── controller/        # REST: /api/auth/login, /api/auth/refresh
 │   ├── service/           # AuthService: sinh/verify JWT, refresh token
-│   ├── interceptor/       # WebSocket Handshake & Channel Interceptor (kiểm tra token)
+│   ├── interceptor/       # RSocket metadata/auth interceptor (kiểm tra token)
 │   └── model/              # User, RefreshToken entity
 ├── room/
-│   ├── controller/        # STOMP @MessageMapping: /app/room/**
+│   ├── controller/        # RSocket route handlers: room.*
 │   ├── service/           # RoomService, SessionManager
 │   └── model/              # Room, Player, GameSession (in-memory hoặc Redis)
 ├── game/
@@ -111,7 +111,7 @@ com.cothu.backend
 │   ├── service/             # Lưu lịch sử ván đấu (tuỳ chọn mở rộng)
 │   └── model/
 └── common/
-    ├── dto/                  # Message DTO dùng chung WebSocket
+    ├── dto/                  # Message DTO dùng chung RSocket
     └── exception/            # Xử lý lỗi tập trung
 ```
 
@@ -123,28 +123,25 @@ com.cothu.backend
 - **RoomService/SessionManager** giữ trạng thái từng phòng (bàn cờ hiện tại, lượt đi, người chơi, chế độ chơi). Với MVP một instance backend, có thể lưu trong `ConcurrentHashMap`; nếu cần scale nhiều instance, chuyển sang Redis.
 - **Server luôn là nguồn xác định duy nhất (single source of truth):** mọi nước đi client gửi lên chỉ là "đề xuất", server validate qua Game Rule Engine rồi mới broadcast trạng thái chính thức.
 
-### 4.3 Luồng xác thực qua WebSocket (Auth)
+### 4.3 Luồng xác thực qua RSocket (Auth)
 
 1. Client đăng nhập qua REST `POST /api/auth/login` → nhận `accessToken` (ngắn hạn, VD 15 phút) + `refreshToken` (dài hạn, VD 7 ngày, lưu DB/Redis, có thể thu hồi).
-2. Client mở kết nối WebSocket, gửi `accessToken` trong STOMP CONNECT header (`Authorization: Bearer <token>`).
-3. `HandshakeInterceptor`/`ChannelInterceptor` phía server verify JWT trước khi cho phép SUBSCRIBE/SEND.
-4. Khi `accessToken` sắp hết hạn, client gọi `POST /api/auth/refresh` bằng `refreshToken` để lấy `accessToken` mới **mà không cần đóng kết nối WebSocket hiện tại** (kết nối WebSocket vẫn dùng token cũ cho tới khi hết hạn thật sự; với action mới, client dùng access token mới nếu cần re-authenticate theo thiết kế cụ thể).
-5. Nếu `refreshToken` hết hạn/không hợp lệ → buộc đăng nhập lại, đóng kết nối WebSocket.
+2. Client mở RSocket connection tới `/rsocket`, gửi access token trong RSocket authentication metadata.
+3. RSocket security phía server verify JWT metadata trước khi xử lý route và tạo `Principal` cho Room module.
+4. Khi `accessToken` hết hạn, client gọi `POST /api/auth/refresh` bằng `refreshToken`, đóng connection cũ rồi reconnect RSocket bằng token mới.
+5. Nếu `refreshToken` hết hạn/không hợp lệ → buộc đăng nhập lại, không reconnect RSocket.
 
-### 4.4 Thiết kế kênh WebSocket (STOMP Destination)
+### 4.4 Thiết kế route RSocket
 
-| Hướng | Destination | Mục đích |
+| Hướng | Route / interaction model | Mục đích |
 |---|---|---|
-| Client → Server | `/app/room/create` | Tạo phòng mới (kèm mode: PVP_ONLINE / PVE / EVE) |
-| Client → Server | `/app/room/{roomId}/join` | Tham gia phòng (dùng trong PVP_ONLINE) |
-| Client → Server | `/app/room/{roomId}/move` | Gửi nước đi (from, to) |
-| Client → Server | `/app/room/{roomId}/leave` | Rời phòng |
-| Client → Server | `/app/room/{roomId}/rematch` | Yêu cầu chơi lại |
-| Server → Client | `/topic/room/{roomId}/state` | Broadcast trạng thái bàn cờ mới nhất sau mỗi nước đi |
-| Server → Client | `/topic/room/{roomId}/result` | Thông báo thắng/thua/hòa |
-| Server → Client | `/topic/room/{roomId}/players` | Broadcast cập nhật danh sách người chơi trong phòng |
-| Server → Client | `/user/queue/room-created` | Trả kết quả tạo phòng riêng cho người gửi request |
-| Server → Client | `/user/queue/errors` | Gửi lỗi riêng cho từng client (VD: nước đi không hợp lệ, hết hạn phiên) |
+| Hướng | Route / interaction model | Mục đích |
+| Client → Server | `room.create` (request-response) | Tạo phòng mới (kèm mode: PVP_LOCAL / PVE / EVE) |
+| Client → Server | `room.join` (request-response) | Tham gia phòng |
+| Client → Server | `room.move` (request-response) | Gửi nước đi (from, to) và nhận kết quả xử lý |
+| Client → Server | `room.leave` (request-response) | Rời phòng |
+| Client → Server | `room.rematch` (request-response) | Yêu cầu chơi lại |
+| Server → Client | `room.events` (request-stream) | Stream state, result, players và error event của phòng |
 
 ### 4.5 Kiến trúc Bot AI
 
@@ -168,7 +165,7 @@ com.cothu.backend
 src/app
 ├── core/
 │   ├── auth/                # AuthService, TokenStorage, AuthInterceptor (refresh tự động)
-│   ├── websocket/            # WebSocketService (STOMP client wrapper), reconnect logic
+│   ├── websocket/            # RSocketService client wrapper, reconnect logic
 │   └── guards/                # AuthGuard, RoomGuard
 ├── features/
 │   ├── lobby/                 # Màn hình tạo/chọn phòng, chọn chế độ chơi
@@ -187,9 +184,9 @@ src/app
 ```
 
 ### 5.2 Nguyên tắc thiết kế Frontend
-- **WebSocketService** là điểm duy nhất giao tiếp STOMP: cung cấp API `connect()`, `subscribeRoom(roomId)`, `sendMove(move)`, tự động `reconnect` khi mất kết nối, phát sự kiện trạng thái kết nối cho UI hiển thị.
+- **RSocketService** là điểm duy nhất giao tiếp RSocket: cung cấp API `connect()`, `requestRoomEvents(roomId)`, `sendMove(move)`, tự động `reconnect` khi mất kết nối, phát sự kiện trạng thái kết nối cho UI hiển thị.
 - **Game State Service** (RxJS `BehaviorSubject`) giữ trạng thái bàn cờ hiện tại nhận từ server, các component chỉ subscribe để render — **không tự tính toán thắng/thua ở client**, chỉ tính toán tạm thời để highlight nước đi hợp lệ (UX), quyết định cuối cùng luôn chờ server xác nhận.
-- **Game Flow Service** điều phối chuyển màn hình theo trạng thái phòng (WAITING → PLAYING → ENDED) và theo chế độ chơi (PVP_ONLINE / PVE / EVE) để hiển thị đúng luồng tương tác (VD: PvP Online chỉ cho phép di chuyển quân khi `currentTurn` trùng với `yourSide` của client).
+- **Game Flow Service** điều phối chuyển màn hình theo trạng thái phòng (WAITING → PLAYING → ENDED) và theo chế độ chơi (PVP_LOCAL / PVE / EVE) để hiển thị đúng luồng tương tác (VD: PvP cùng máy cho phép cả 2 bên thao tác luân phiên trên cùng UI; EvE chỉ hiển thị, không cho tương tác).
 - **Animation & Sound** tách thành service riêng, lắng nghe sự kiện từ Game State Service (move, capture, win) để trigger hiệu ứng, không xen logic nghiệp vụ vào trong.
 
 ---
@@ -223,7 +220,7 @@ src/app
 |---|---|
 | id | UUID/Long |
 | roomId | String |
-| mode | Enum(PVP_ONLINE, PVE, EVE) |
+| mode | Enum(PVP_LOCAL, PVE, EVE) |
 | result | String |
 | moves | JSON (danh sách nước đi) |
 | playedAt | Timestamp |
@@ -234,13 +231,12 @@ src/app
 ```json
 {
   "roomId": "string",
-  "mode": "PVP_ONLINE | PVE | EVE",
+  "mode": "PVP_LOCAL | PVE | EVE",
   "status": "WAITING | PLAYING | ENDED",
   "board": [[ "piece_code|null", ... ]],
   "currentTurn": "PLAYER_1 | PLAYER_2",
   "players": [
-    { "sessionId": "string", "side": "PLAYER_1", "isBot": false, "username": "nghia123" },
-    { "sessionId": "string", "side": "PLAYER_2", "isBot": false, "username": "khoi88" }
+    { "sessionId": "string", "side": "PLAYER_1", "isBot": false }
   ],
   "history": [ { "from": [x,y], "to": [x,y], "captured": "piece_code|null" } ]
 }
@@ -252,24 +248,22 @@ src/app
 
 ### 7.1 Luồng chơi PvE (người chơi vs bot)
 1. Client tạo phòng mode `PVE` → server tạo `RoomState`, gán bot vào side còn lại.
-2. Client gửi nước đi qua `/app/room/{id}/move`.
+2. Client gửi nước đi qua route `room.move`.
 3. Server: `RoomService` → `GameRuleEngine.validate(move)` → nếu hợp lệ, cập nhật board, kiểm tra thắng/thua.
 4. Nếu chưa kết thúc và tới lượt bot: `RoomService` gọi `BotEngine.nextMove(board)` → validate lại qua `GameRuleEngine` → cập nhật board.
-5. Server broadcast `RoomState` mới qua `/topic/room/{id}/state` (có thể broadcast 2 lần: sau nước người chơi và sau nước bot, hoặc gộp lại tuỳ UX mong muốn cho animation).
-6. Nếu có điều kiện thắng/thua → gửi thêm `/topic/room/{id}/result`.
+5. Server phát `RoomState` mới qua stream `room.events` (có thể phát 2 event: sau nước người chơi và sau nước bot, hoặc gộp lại tuỳ UX mong muốn cho animation).
+6. Nếu có điều kiện thắng/thua → phát event `GAME_RESULT` trong `room.events`.
 
 ### 7.2 Luồng chơi EvE (bot vs bot)
 1. Client tạo phòng mode `EVE` → server gán bot cho cả 2 side.
 2. Server tự chạy vòng lặp: `BotEngine` tính nước đi bên hiện tại → validate → cập nhật board → broadcast → delay (VD 1-2s) → lượt bên kia.
-3. Client chỉ subscribe `/topic/room/{id}/state` để hiển thị, không có quyền gửi `move`.
-4. Kết thúc khi có kết quả, server gửi `/topic/room/{id}/result`.
+3. Client chỉ request stream `room.events` để hiển thị, không có quyền gửi `room.move`.
+4. Kết thúc khi có kết quả, server phát event `GAME_RESULT` trong `room.events`.
 
-### 7.3 Luồng PvP Online (2 người chơi / 2 thiết bị)
-1. **Khởi tạo phòng**: Player 1 bấm "Tạo phòng PvP Online" → gửi STOMP `/app/room/create` (mode `PVP_ONLINE`). Server tạo `RoomState` với status `WAITING`, gán Player 1 làm `PLAYER_1`, trả `roomId` về cho Player 1 qua `/user/queue/room-created`.
-2. **Tham gia phòng**: Player 1 gửi mã `roomId` cho Player 2. Player 2 bấm "Join phòng" → gửi STOMP `/app/room/{roomId}/join`. Server gán Player 2 làm `PLAYER_2`, đổi status sang `PLAYING`, broadcast danh sách players tới `/topic/room/{roomId}/players` và khởi tạo ván đấu.
-3. **Thao tác nước đi**: Mỗi lượt đi, chỉ người chơi tương ứng với `currentTurn` mới được phép gửi nước đi qua `/app/room/{roomId}/move`. Server validate nước đi bằng `GameRuleEngine`.
-4. **Đồng bộ trạng thái**: Nếu nước đi hợp lệ, server cập nhật bàn cờ và đổi `currentTurn`, broadcast `RoomState` mới tới `/topic/room/{roomId}/state` cho cả 2 client render animation.
-5. **Kết thúc ván**: Khi một bên thắng (vào hang/đối phương hết nước đi) hoặc ngắt kết nối/timeout, server broadcast kết quả qua `/topic/room/{roomId}/result`.
+### 7.3 Luồng PvP cùng máy (1 thiết bị)
+1. Client tạo phòng mode `PVP_LOCAL` → server tạo `RoomState` với 2 side đều gán cho cùng 1 `sessionId` (chỉ 1 kết nối RSocket).
+2. Mỗi lượt, UI xác định bên nào đang được phép thao tác dựa vào `currentTurn` nhận từ server (không tự suy luận).
+3. Nước đi vẫn gửi qua route `room.move`, server vẫn validate như bình thường, đảm bảo tính nhất quán luật dù chơi cùng máy.
 
 ---
 
@@ -278,15 +272,15 @@ src/app
 - Toàn bộ giao tiếp qua HTTPS/WSS (không dùng HTTP/WS thuần ở môi trường production).
 - Access token JWT ký bằng secret/private key phía server, thời hạn ngắn.
 - Refresh token lưu ở DB (hoặc Redis) kèm trạng thái `revoked` để có thể thu hồi khi logout hoặc phát hiện bất thường.
-- Channel Interceptor kiểm tra token ở mọi `SEND`/`SUBSCRIBE`, không chỉ ở bước handshake ban đầu, để chặn trường hợp token hết hạn giữa phiên.
-- Validate mọi input từ client ở server (không tin tưởng dữ liệu nước đi từ client), tránh cheat qua việc gửi thẳng message giả vào STOMP endpoint.
+- RSocket security kiểm tra metadata JWT ở các payload/route được bảo vệ, không chỉ ở bước thiết lập connection, để chặn trường hợp token hết hạn giữa phiên.
+- Validate mọi input từ client ở server (không tin tưởng dữ liệu nước đi từ client), tránh cheat qua việc gửi trực tiếp payload giả vào RSocket route.
 
 ---
 
 ## 9. KHẢ NĂNG MỞ RỘNG (SCALABILITY – ĐỊNH HƯỚNG TƯƠNG LAI)
 
-- MVP: 1 instance Spring Boot, `RoomState` lưu in-memory, `SimpleBroker` cho STOMP.
-- Khi cần nhiều instance (scale ngang): chuyển `RoomState` sang Redis (hoặc cơ chế sticky session ở load balancer), dùng STOMP relay qua RabbitMQ/ActiveMQ để broadcast xuyên instance.
+- MVP: 1 instance Spring Boot, `RoomState` lưu in-memory, RSocket request-stream cho event realtime.
+- Khi cần nhiều instance (scale ngang): chuyển `RoomState` sang Redis; có thể dùng RSocket broker/gateway phù hợp để phân phối stream xuyên instance.
 - Có thể tách `BotEngine` thành service riêng nếu tải tính toán AI lớn (đặc biệt khi tăng độ sâu tìm kiếm hoặc nhiều phòng EvE chạy song song).
 
 ---
@@ -296,11 +290,11 @@ src/app
 | Nội dung | Người liên quan | Ghi chú |
 |---|---|---|
 | Format toạ độ bàn cờ (VD: `[row, col]` 0-index) | Thắng, Khôi, Lộc | Phải giống nhau tuyệt đối giữa Rule Engine (BE) và Rule helper (FE) |
-| DTO message WebSocket (move, state, result, error) | Thắng, Nguyên | Thống nhất field name, kiểu dữ liệu, để tránh parse sai |
-| Cơ chế refresh token không ngắt WebSocket | Nghĩa, Nguyên | Cần thống nhất client xử lý ra sao khi access token hết hạn giữa ván |
+| DTO message RSocket (move, state, result, error) | Thắng, Nguyên | Thống nhất field name, kiểu dữ liệu, để tránh parse sai |
+| Cơ chế refresh token và reconnect RSocket | Nghĩa, Nguyên | Cần thống nhất client xử lý ra sao khi access token hết hạn giữa ván |
 | Tốc độ delay giữa các nước đi ở chế độ EvE | Thắng, Sơn, Mạnh | Ảnh hưởng trực tiếp tới animation timing phía FE |
 | Danh sách mã lỗi (error code) | Thắng, Nghĩa, Nguyên | Dùng chung để FE hiển thị thông báo phù hợp |
 
 ---
 
-*Tài liệu kiến trúc v1.0 — cần rà soát cùng team trước khi code, đặc biệt là mục 4.4 (thiết kế message WebSocket) và mục 6 (mô hình dữ liệu) vì đây là hợp đồng (contract) giữa Backend và Frontend.*
+*Tài liệu kiến trúc v1.0 — cần rà soát cùng team trước khi code, đặc biệt là mục 4.4 (thiết kế route/message RSocket) và mục 6 (mô hình dữ liệu) vì đây là hợp đồng (contract) giữa Backend và Frontend.*

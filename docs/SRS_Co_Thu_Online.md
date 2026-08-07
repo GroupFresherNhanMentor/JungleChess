@@ -3,7 +3,7 @@
 
 **Phiên bản:** 1.0
 **Ngày:** 05/08/2026
-**Công nghệ:** Angular (Frontend) + Spring Boot (Backend) + WebSocket (STOMP/SockJS)
+**Công nghệ:** Angular (Frontend) + Spring Boot (Backend) + RSocket over WebSocket
 
 ---
 
@@ -14,7 +14,7 @@ Tài liệu này mô tả chi tiết các yêu cầu chức năng và phi chức
 
 ### 1.2 Phạm vi dự án
 Sản phẩm là một web-app cho phép:
-- Người chơi tạo/tham gia phòng chơi qua kết nối thời gian thực (WebSocket).
+- Người chơi tạo/tham gia phòng chơi qua kết nối thời gian thực (RSocket over WebSocket).
 - Xác thực người dùng bằng access token/refresh token.
 - Chơi cờ thú theo đúng luật quốc tế (bàn cờ 9 hàng x 7 cột, bẫy, hang, sông, thứ bậc động vật, luật chuột-voi, luật nhảy sông của hổ/sư tử).
 - Ba chế độ chơi: PvP Online (2 người chơi kết nối qua mạng từ 2 thiết bị khác nhau bằng mã phòng/room code), PvE (người chơi đấu với AI bot), EvE (2 bot tự đấu, người dùng xem/quan sát).
@@ -28,14 +28,14 @@ Sản phẩm là một web-app cho phép:
 | EvE | Environment vs Environment (Bot vs Bot) |
 | SRS | Software Requirements Specification |
 | JWT | JSON Web Token |
-| STOMP | Simple Text Oriented Messaging Protocol (chạy trên WebSocket) |
+| RSocket | Giao thức reactive request/response và streaming chạy trên WebSocket |
 | Den (Hang) | Ô đích, thắng khi vào được hang đối phương |
 | Trap (Bẫy) | Ô làm mất hiệu lực thứ bậc quân cờ đối phương |
 | River (Sông) | Vùng chỉ Chuột và Hổ/Sư Tử (khi nhảy) đi qua được |
 
 ### 1.4 Tài liệu tham khảo
 - Luật chơi Dou Shou Qi (Animal Chess) quốc tế – Jungle Chess.
-- Tài liệu đặc tả WebSocket/STOMP của Spring Framework.
+- Tài liệu Spring RSocket và RSocket JavaScript client.
 - Angular Style Guide chính thức.
 
 ---
@@ -44,11 +44,11 @@ Sản phẩm là một web-app cho phép:
 
 ### 2.1 Bối cảnh sản phẩm
 Hệ thống gồm 2 phần chính:
-- **Backend (Spring Boot):** xử lý xác thực, quản lý phòng chơi, logic luật chơi, đồng bộ trạng thái ván đấu qua WebSocket, engine AI (bot).
-- **Frontend (Angular):** giao diện bàn cờ, animation quân cờ, âm thanh, quản lý kết nối WebSocket, hiển thị phòng/sảnh chờ, xử lý luồng chơi cho cả 3 chế độ.
+- **Backend (Spring Boot):** xử lý xác thực, quản lý phòng chơi, logic luật chơi, đồng bộ trạng thái ván đấu qua RSocket, engine AI (bot).
+- **Frontend (Angular):** giao diện bàn cờ, animation quân cờ, âm thanh, quản lý kết nối RSocket, hiển thị phòng/sảnh chờ, xử lý luồng chơi cho cả 3 chế độ.
 
 ### 2.2 Chức năng chính
-1. Đăng ký/Đăng nhập qua REST API, xác thực và quản lý phiên (access token + refresh token) cho kết nối WebSocket.
+1. Đăng ký/Đăng nhập qua REST API, xác thực và quản lý phiên (access token + refresh token) cho kết nối RSocket.
 2. Tạo phòng, tham gia phòng qua mã phòng (Room ID), rời phòng, yêu cầu chơi lại (rematch).
 3. Chơi cờ thú theo luật quốc tế, đồng bộ real-time giữa các client.
 4. Bot AI có khả năng tính nước đi (tối thiểu 1 mức độ khó, có thể mở rộng nhiều mức).
@@ -62,7 +62,7 @@ Hệ thống gồm 2 phần chính:
 - **Quản trị viên (tuỳ chọn mở rộng):** quản lý tài khoản, theo dõi phòng.
 
 ### 2.4 Ràng buộc chung
-- Giao tiếp thời gian thực phải dùng WebSocket (không dùng polling).
+- Giao tiếp thời gian thực phải dùng RSocket over WebSocket (không dùng polling).
 - Giao diện phải responsive, mượt trên desktop (ưu tiên), animation không giật lag.
 - Backend đảm bảo tính nhất quán trạng thái ván đấu (single source of truth ở server, client không tự ý cập nhật trạng thái thắng/thua).
 
@@ -85,24 +85,24 @@ Hệ thống gồm 2 phần chính:
 
 ## 4. YÊU CẦU CHỨC NĂNG
 
-### 4.1 Module Xác thực (Auth) – Backend qua WebSocket
+### 4.1 Module Xác thực (Auth) – Backend qua RSocket
 | Mã | Yêu cầu |
 |---|---|
 | AUTH-01 | Hệ thống cho phép đăng ký tài khoản (username/password hoặc guest). |
 | AUTH-02 | Hệ thống cấp Access Token (thời hạn ngắn) và Refresh Token (thời hạn dài) khi đăng nhập thành công. |
-| AUTH-03 | Kết nối WebSocket phải xác thực bằng Access Token (qua STOMP CONNECT header hoặc handshake interceptor). |
-| AUTH-04 | Hệ thống cung cấp cơ chế làm mới Access Token bằng Refresh Token khi hết hạn, không làm gián đoạn kết nối WebSocket đang mở. |
+| AUTH-03 | Kết nối RSocket phải xác thực bằng Access Token trong metadata của RSocket SETUP/payload. |
+| AUTH-04 | Hệ thống cung cấp cơ chế làm mới Access Token bằng Refresh Token; client refresh qua REST rồi reconnect RSocket bằng token mới khi token hiện tại hết hạn. |
 | AUTH-05 | Phân quyền (Authorization): phân biệt người chơi thường và admin (nếu có), giới hạn hành động theo vai trò (VD: chỉ chủ phòng được bắt đầu ván). |
-| AUTH-06 | Hệ thống từ chối/đóng kết nối WebSocket nếu token không hợp lệ hoặc hết hạn mà không refresh được. |
+| AUTH-06 | Hệ thống từ chối payload hoặc đóng kết nối RSocket nếu token không hợp lệ hoặc hết hạn mà không refresh được. |
 | AUTH-07 | Frontend lưu trữ token an toàn (không lưu access token nhạy cảm ở nơi dễ bị XSS), tự động gọi refresh khi access token gần hết hạn. |
 
-### 4.2 Module Quản lý phòng & Logic WebSocket (Room/Game Session)
+### 4.2 Module Quản lý phòng & Logic RSocket (Room/Game Session)
 | Mã | Yêu cầu |
 |---|---|
 | ROOM-01 | Người chơi có thể tạo phòng mới, chọn chế độ chơi (PvP Online / PvE / EvE). |
 | ROOM-02 | Người chơi có thể tham gia (join) phòng đã tồn tại bằng mã phòng (Room ID) cho chế độ PvP Online. |
 | ROOM-03 | Hệ thống quản lý danh sách phòng đang hoạt động, trạng thái (đang chờ, đang chơi, đã kết thúc). |
-| ROOM-04 | Mỗi nước đi được gửi lên server qua WebSocket, server kiểm tra hợp lệ theo luật trước khi phát (broadcast) trạng thái mới tới các client trong phòng. |
+| ROOM-04 | Mỗi nước đi được gửi lên server qua RSocket, server kiểm tra hợp lệ theo luật trước khi phát trạng thái mới tới stream realtime của các client trong phòng. |
 | ROOM-05 | Server là nguồn xác định duy nhất (source of truth) cho: lượt đi hiện tại, trạng thái bàn cờ, thắng/thua/hòa. |
 | ROOM-06 | Hệ thống phát hiện và thông báo điều kiện kết thúc ván (vào hang, hết nước đi, hoặc người chơi ngắt kết nối/timeout). |
 | ROOM-07 | Hệ thống hỗ trợ chơi lại (rematch) hoặc rời phòng sau khi kết thúc ván. |
@@ -138,8 +138,8 @@ Hệ thống gồm 2 phần chính:
 | UI-05 | Giao diện sảnh chờ: tạo phòng, nhập mã phòng join phòng, chọn chế độ chơi (PvP Online/PvE/EvE), chọn mức độ bot (nếu có). |
 | UI-06 | Giao diện chế độ PvP Online: hiển thị rõ thông tin 2 người chơi trong phòng, hiển thị lượt của bên nào, nút tạo/sao chép mã phòng để gửi cho bạn bè. |
 | UI-07 | Giao diện chế độ EvE: chỉ hiển thị, không cho tương tác chọn quân; có nút play/pause/tốc độ hiển thị (tuỳ chọn). |
-| UI-08 | Responsive tối thiểu trên desktop, tối ưu trải nghiệm mượt (60fps animation, không giật khi nhận dữ liệu từ WebSocket). |
-| UI-09 | Kết nối WebSocket phía frontend: quản lý kết nối, tự động reconnect, xử lý mất kết nối/hiển thị trạng thái mạng. |
+| UI-08 | Responsive tối thiểu trên desktop, tối ưu trải nghiệm mượt (60fps animation, không giật khi nhận dữ liệu từ RSocket stream). |
+| UI-09 | Kết nối RSocket phía frontend: quản lý connection và stream, tự động reconnect, xử lý mất kết nối/hiển thị trạng thái mạng. |
 | UI-10 | Xử lý luồng chơi game tổng thể (Game Flow): điều phối giữa các màn hình sảnh chờ → phòng chờ → bàn cờ → kết thúc ván → rematch/thoát.|
 
 ---
@@ -148,7 +148,7 @@ Hệ thống gồm 2 phần chính:
 
 | Mã | Hạng mục | Mô tả |
 |---|---|---|
-| NFR-01 | Hiệu năng | Độ trễ đồng bộ nước đi qua WebSocket < 200ms trong điều kiện mạng bình thường. |
+| NFR-01 | Hiệu năng | Độ trễ đồng bộ nước đi qua RSocket < 200ms trong điều kiện mạng bình thường. |
 | NFR-02 | Bảo mật | Access token có thời hạn ngắn (VD 15 phút), refresh token thời hạn dài hơn (VD 7 ngày), lưu trữ và truyền tải an toàn (HTTPS/WSS). |
 | NFR-03 | Khả năng mở rộng | Kiến trúc backend cho phép mở rộng nhiều phòng chơi đồng thời (session theo phòng độc lập). |
 | NFR-04 | Tính nhất quán | Trạng thái ván đấu luôn đồng nhất giữa các client nhờ server là nguồn xác định duy nhất. |
@@ -161,19 +161,19 @@ Hệ thống gồm 2 phần chính:
 ## 6. KIẾN TRÚC HỆ THỐNG (đề xuất)
 
 ```
-┌─────────────────────────┐        WebSocket (STOMP/SockJS)        ┌──────────────────────────┐
+┌─────────────────────────┐        RSocket over WebSocket         ┌──────────────────────────┐
 │   Angular Frontend       │ <-------------------------------------> │   Spring Boot Backend    │
 │  - Room/Lobby UI         │                                         │  - Auth (JWT + Refresh)  │
-│  - Game Board (Canvas/   │                                         │  - WebSocket Gateway      │
+│  - Game Board (Canvas/   │                                         │  - RSocket Gateway        │
 │    SVG/DOM + animation)  │                                         │  - Room/Session Manager  │
-│  - WebSocket Client      │                                         │  - Game Rule Engine       │
+│  - RSocket Client        │                                         │  - Game Rule Engine       │
 │  - State Management      │                                         │  - Bot AI Engine          │
 │    (NgRx/Service+RxJS)   │                                         │  - Persistence (DB)      │
 └─────────────────────────┘                                         └──────────────────────────┘
 ```
 
-- **Giao thức:** STOMP over WebSocket (SockJS fallback nếu cần) cho realtime; REST cho các thao tác không realtime (login, refresh token, lấy lịch sử...).
-- **Cấu trúc message WebSocket đề xuất:** topic theo phòng (`/topic/room/{roomId}`), điểm gửi nước đi (`/app/room/{roomId}/move`), kênh riêng cho lỗi/xác thực.
+- **Giao thức:** RSocket over WebSocket tại endpoint `/rsocket` cho realtime; REST cho các thao tác không realtime (login, refresh token, lấy lịch sử...).
+- **RSocket route đề xuất:** command dùng request-response (`room.create`, `room.join`, `room.move`, `room.leave`, `room.rematch`); event phòng dùng request-stream (`room.events`).
 - **Lưu trữ:** DB quan hệ (VD: PostgreSQL/MySQL) cho tài khoản, lịch sử ván đấu; có thể dùng in-memory (Map/Redis) để quản lý trạng thái phòng đang hoạt động cho tốc độ cao.
 
 ---
@@ -183,9 +183,9 @@ Hệ thống gồm 2 phần chính:
 ### Backend
 | Thành viên | Công việc |
 |---|---|
-| Nghĩa | Auth qua WebSocket: access token, refresh token, authentication, authorization; phối hợp định nghĩa hợp đồng auth cho Frontend |
+| Nghĩa | Auth qua RSocket: access token, refresh token, authentication, authorization; phối hợp định nghĩa hợp đồng auth cho Frontend |
 | Khôi | Bot chơi game (AI engine: minimax/alpha-beta, tích hợp luật chơi, phục vụ PvE và EvE) |
-| Thắng | Logic WebSocket: tạo phòng, join phòng, xử lý nước đi, xác định thắng/thua, điều phối luồng ván đấu |
+| Thắng | Logic RSocket: tạo phòng, join phòng, xử lý nước đi, xác định thắng/thua, điều phối luồng ván đấu |
 
 ### Frontend
 | Thành viên | Công việc |
@@ -193,7 +193,7 @@ Hệ thống gồm 2 phần chính:
 | Tín | Game asset, vẽ UI (bàn cờ, quân cờ, sảnh chờ, các màn hình) |
 | Sơn | Game animation, sound |
 | Lộc | Game rule (áp dụng luật cờ thú phía client: highlight nước đi hợp lệ, validate tạm thời trước khi gửi server) |
-| Nguyên | WebSocket frontend (kết nối, subscribe/publish STOMP, reconnect, state sync) |
+| Nguyên | RSocket frontend (kết nối, request/stream, reconnect, state sync) |
 | Mạnh | Chơi game (luồng chơi/game flow: điều phối UI theo trạng thái ván đấu, xử lý chế độ PvP Online/PvE/EvE ở tầng trải nghiệm) |
 
 > **Lưu ý phối hợp:** Module "Game Rule" nên được thiết kế thống nhất về mặt đặc tả (toạ độ, luật) giữa backend (Thắng/Khôi dùng để validate & AI) và frontend (Lộc dùng để UX), tránh lệch luật giữa 2 phía.
@@ -205,16 +205,16 @@ Hệ thống gồm 2 phần chính:
 | Rủi ro | Ảnh hưởng | Đề xuất giảm thiểu |
 |---|---|---|
 | Luật cờ thú có nhiều biến thể (luật địa phương khác nhau) | Sai lệch trải nghiệm | Thống nhất áp dụng đúng 1 bộ luật quốc tế chuẩn ngay từ đầu, viết test-case rõ ràng |
-| Đồng bộ trạng thái giữa nhiều client qua WebSocket | Trạng thái lệch, bug khó tái hiện | Server luôn là nguồn xác định duy nhất, client không tự suy luận thắng/thua |
+| Đồng bộ trạng thái giữa nhiều client qua RSocket stream | Trạng thái lệch, bug khó tái hiện | Server luôn là nguồn xác định duy nhất, client không tự suy luận thắng/thua |
 | Bot tính toán chậm ảnh hưởng trải nghiệm | Người chơi chờ lâu | Giới hạn độ sâu tìm kiếm, giới hạn thời gian tính nước đi |
-| Mất kết nối WebSocket giữa ván | Gián đoạn trải nghiệm | Cơ chế reconnect + timeout hợp lý, lưu trạng thái phòng tạm thời |
-| Token hết hạn giữa ván đang chơi | Bị văng khỏi phòng | Cơ chế refresh token tự động không làm gián đoạn kết nối WebSocket |
+| Mất kết nối RSocket giữa ván | Gián đoạn trải nghiệm | Cơ chế reconnect + timeout hợp lý, lưu trạng thái phòng tạm thời |
+| Token hết hạn giữa ván đang chơi | Bị văng khỏi phòng | Client refresh qua REST rồi reconnect RSocket bằng access token mới |
 
 ---
 
 ## 9. TIÊU CHÍ NGHIỆM THU (Definition of Done – tổng quan)
 
-- Người chơi đăng nhập, kết nối WebSocket thành công với access token hợp lệ; refresh token hoạt động đúng khi access token hết hạn.
+- Người chơi đăng nhập, kết nối RSocket thành công với access token hợp lệ; refresh token hoạt động đúng khi access token hết hạn và client reconnect.
 - Có thể tạo/join phòng, chơi đầy đủ 1 ván cờ thú đúng luật quốc tế ở cả 3 chế độ PvP Online, PvE, EvE.
 - Server xác định đúng điều kiện thắng/thua/hòa trong mọi trường hợp luật đã liệt kê ở mục 3.
 - Bot đưa ra nước đi hợp lệ trong giới hạn thời gian quy định, không bao giờ đi nước phạm luật.
@@ -223,4 +223,4 @@ Hệ thống gồm 2 phần chính:
 
 ---
 
-*Tài liệu này là bản nháp v1.0, cần được rà soát cùng cả team trước khi bắt đầu triển khai chi tiết (thiết kế DB, thiết kế API/message contract WebSocket, wireframe UI).*
+*Tài liệu này là bản nháp v1.0, cần được rà soát cùng cả team trước khi bắt đầu triển khai chi tiết (thiết kế DB, thiết kế API/message contract RSocket, wireframe UI).*

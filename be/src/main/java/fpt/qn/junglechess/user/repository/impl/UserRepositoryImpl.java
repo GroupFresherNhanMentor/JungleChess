@@ -5,14 +5,19 @@ import static fpt.qn.junglechess.jooq.Tables.USERS;
 import static fpt.qn.junglechess.jooq.Tables.USER_ROLES;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.time.OffsetDateTime;
 
 import org.jooq.Condition;
 import org.jooq.DSLContext;
+import org.jooq.Field;
+import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import fpt.qn.junglechess.common.dto.PaginationResult;
 import fpt.qn.junglechess.common.repository.BaseRepository;
@@ -113,6 +118,57 @@ public class UserRepositoryImpl extends BaseRepository<UsersRecord> implements U
                     .onDuplicateKeyIgnore()
             ).then()
         ).switchIfEmpty(Mono.error(new IllegalArgumentException("Role not found: " + role)));
+    }
+
+    @Override
+    public Mono<Void> touchGuestActivity(UUID userId) {
+        return Mono.from(
+                dsl.update(USERS)
+                        .set(USERS.field("last_activity_at", OffsetDateTime.class), OffsetDateTime.now())
+                        .where(USERS.ID.eq(userId))
+                        .and(USERS.field("is_guest", Boolean.class).isTrue())
+        ).then();
+    }
+
+    @Override
+    @Transactional
+    public Mono<Void> deleteExpiredGuests(OffsetDateTime cutoff) {
+        Condition expiredGuest = USERS.field("is_guest", Boolean.class).isTrue()
+                .and(USERS.field("last_activity_at", OffsetDateTime.class).lt(cutoff));
+
+        return Flux.from(dsl.select(USERS.ID).from(USERS).where(expiredGuest))
+                .map(record -> record.get(USERS.ID))
+                .collectList()
+                .flatMap(this::detachExpiredGuestsFromMatchHistory)
+                .flatMapMany(ids -> Flux.from(
+                        dsl.deleteFrom(USERS).where(USERS.ID.in(ids))
+                ))
+                .then();
+    }
+
+    private Mono<List<UUID>> detachExpiredGuestsFromMatchHistory(List<UUID> guestIds) {
+        if (guestIds.isEmpty()) return Mono.just(guestIds);
+
+        Table<?> matchPlayers = DSL.table(DSL.name("match_players"));
+        Field<String> tableName = DSL.field(DSL.name("table_name"), String.class);
+        Field<String> tableSchema = DSL.field(DSL.name("table_schema"), String.class);
+        Field<UUID> matchPlayerUserId = DSL.field(DSL.name("user_id"), UUID.class);
+
+        Mono<Boolean> matchPlayersExists = Mono.from(
+                dsl.selectOne()
+                        .from(DSL.table(DSL.name("information_schema", "tables")))
+                        .where(tableSchema.eq("public").and(tableName.eq("match_players")))
+        ).hasElement();
+
+        return matchPlayersExists.flatMap(exists -> {
+            if (!exists) return Mono.just(guestIds);
+
+            return Mono.from(
+                    dsl.update(matchPlayers)
+                            .set(matchPlayerUserId, (UUID) null)
+                            .where(matchPlayerUserId.in(guestIds))
+            ).thenReturn(guestIds);
+        });
     }
 
     private Condition buildCondition(String keyword, SysRole role, UserStatus status) {

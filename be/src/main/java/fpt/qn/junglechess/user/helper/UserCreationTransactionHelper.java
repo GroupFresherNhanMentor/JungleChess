@@ -76,4 +76,56 @@ public class UserCreationTransactionHelper {
             );
         });
     }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Mono<UserDto> executeRegistration(String username, String password) {
+        UUID id = UuidV7.generate();
+        UsersRecord record = dsl.newRecord(USERS);
+        record.setId(id);
+        record.setUsername(username);
+        record.setFullName(username);
+        record.setPassword(passwordEncoder.encode(password));
+        record.setStatus(UserStatus.ACTIVE);
+
+        return Mono.from(dsl.insertInto(USERS).set(record).returning())
+                .flatMap(saved -> Mono.from(
+                                dsl.select(ROLES.ID)
+                                        .from(ROLES)
+                                        .where(ROLES.NAME.eq(fpt.qn.junglechess.jooq.enums.SysRole.USER))
+                        )
+                        .switchIfEmpty(Mono.error(new IllegalStateException("Default USER role is not configured")))
+                        .flatMap(roleRecord -> Mono.from(
+                                        dsl.insertInto(USER_ROLES)
+                                                .set(USER_ROLES.USER_ID, saved.getId())
+                                                .set(USER_ROLES.ROLE_ID, roleRecord.value1())
+                                ).then())
+                        .thenReturn(saved))
+                .map(saved -> userMapper.toDto(saved));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Mono<UserDto> executeGuestRegistration(String username) {
+        UUID id = UuidV7.generate();
+        UsersRecord record = dsl.newRecord(USERS);
+        record.setId(id);
+        record.setUsername(username);
+        record.setFullName(username);
+        record.setStatus(UserStatus.ACTIVE);
+        record.setIsGuest(true);
+
+        return Mono.from(dsl.insertInto(USERS).set(record).returning())
+                .flatMap(saved -> Mono.from(
+                                dsl.select(ROLES.ID)
+                                        .from(ROLES)
+                                        .where(ROLES.NAME.eq(fpt.qn.junglechess.jooq.enums.SysRole.USER))
+                        )
+                        .switchIfEmpty(Mono.error(new IllegalStateException("Default USER role is not configured")))
+                        .flatMap(roleRecord -> Mono.from(
+                                        dsl.insertInto(USER_ROLES)
+                                                .set(USER_ROLES.USER_ID, saved.getId())
+                                                .set(USER_ROLES.ROLE_ID, roleRecord.value1())
+                                ).then())
+                        .thenReturn(saved))
+                .map(userMapper::toDto);
+    }
 }

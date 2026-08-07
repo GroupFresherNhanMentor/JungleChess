@@ -57,6 +57,8 @@ public class SecurityConfig {
                 .authorizeExchange(auth -> auth
                         .pathMatchers(
                                 "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/guest",
                                 "/api/auth/refresh",
                                 "/api/auth/logout",
                                 "/actuator/**",

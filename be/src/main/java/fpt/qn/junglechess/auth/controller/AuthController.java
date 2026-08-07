@@ -10,8 +10,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import fpt.qn.junglechess.auth.dto.request.LoginRequest;
 import fpt.qn.junglechess.auth.dto.request.RefreshTokenRequest;
+import fpt.qn.junglechess.auth.dto.request.RegisterRequest;
 import fpt.qn.junglechess.auth.dto.response.LoginResponse;
 import fpt.qn.junglechess.auth.dto.response.RefreshTokenResponse;
+import fpt.qn.junglechess.auth.dto.response.RegisterResponse;
 import fpt.qn.junglechess.auth.service.AuthService;
 import fpt.qn.junglechess.common.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,6 +32,22 @@ import reactor.core.publisher.Mono;
 public class AuthController {
 
     AuthService authService;
+
+    @PostMapping("/register")
+    @Operation(summary = "Register a player account")
+    public Mono<ResponseEntity<ApiResponse<RegisterResponse>>> register(
+            @Valid @RequestBody RegisterRequest request) {
+        return authService.register(request)
+                .map(response -> ResponseEntity.status(201)
+                        .body(ApiResponse.success(response, "Registration successful")));
+    }
+
+    @PostMapping("/guest")
+    @Operation(summary = "Create and log in as a guest player")
+    public Mono<ResponseEntity<ApiResponse<LoginResponse>>> guest() {
+        return authService.guest()
+                .map(response -> ResponseEntity.ok(ApiResponse.success(response, "Guest login successful")));
+    }
 
     @PostMapping("/login")
     @Operation(summary = "User login")

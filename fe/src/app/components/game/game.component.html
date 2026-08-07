@@ -1,0 +1,74 @@
+<div class="game-wrapper">
+
+  <!-- Waiting Room -->
+  <div *ngIf="state()?.status === 'WAITING'" class="waiting-room">
+    <h2>Room {{ state()?.roomId }}</h2>
+    <p class="your-side">You are playing as <strong>{{ sideLabel }}</strong></p>
+
+    <div class="player-list">
+      <p>Players joined: {{ state()?.players?.length ?? 0 }} / 2</p>
+      <ul>
+        <li *ngFor="let p of state()?.players">
+          {{ p.side }} <span *ngIf="p.isBot">(Bot)</span>
+        </li>
+      </ul>
+    </div>
+
+    <button *ngIf="canStart" class="btn-start" (click)="startGame()">
+      Start Game
+    </button>
+    <p *ngIf="!canStart && state()?.isCreator">
+      Waiting for opponent to join...
+    </p>
+    <p *ngIf="!state()?.isCreator">
+      Waiting for host to start the game...
+    </p>
+
+    <button class="btn-leave" (click)="leaveRoom()">Leave Room</button>
+  </div>
+
+  <!-- Game Board -->
+  <div *ngIf="state()?.status === 'PLAYING'" class="game-area">
+    <div class="status-bar">
+      <span class="room-id">{{ state()?.roomId }}</span>
+      <span class="turn-indicator" [class.my-turn]="isMyTurn">
+        {{ isMyTurn ? 'Your turn' : "Opponent's turn" }} ({{ turnLabel }})
+      </span>
+      <span class="move-count">Move #{{ state()?.moveNumber }}</span>
+    </div>
+
+    <app-board
+      [pieces]="state()?.pieces ?? []"
+      [selectedPos]="selectedPos()"
+      [validMoves]="validMoves()"
+      [lastMove]="state()?.lastMove ?? null"
+      [movingPiece]="movingPiece()"
+      (squareClick)="onSquareClick($event)"
+      (moveAnimationComplete)="onMoveAnimationComplete()"
+    />
+
+    <div class="game-actions">
+      <button class="btn-leave" (click)="leaveRoom()">Forfeit &amp; Leave</button>
+    </div>
+  </div>
+
+  <!-- Game Over -->
+  <div *ngIf="state()?.status === 'ENDED'" class="game-over">
+    <h2 class="result">{{ winnerLabel }}</h2>
+    <p *ngIf="state()?.resultReason === 'OPPONENT_DISCONNECTED_TIMEOUT'">
+      Opponent disconnected.
+    </p>
+    <div class="end-actions">
+      <button *ngIf="state()?.mode === 'PVP'" class="btn-rematch" (click)="requestRematch()">
+        Request Rematch
+      </button>
+      <button class="btn-lobby" (click)="leaveRoom()">Back to Lobby</button>
+    </div>
+  </div>
+
+  <!-- Loading / Connecting -->
+  <div *ngIf="!state()" class="connecting">
+    <p>Connecting to room...</p>
+  </div>
+
+</div>

@@ -1,21 +1,20 @@
 package fpt.qn.junglechess.common.repository;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 public interface Repository<R> {
 
-    Mono<R> findById(UUID id);
+    Optional<R> findById(UUID id);
 
-    Flux<R> findAll();
+    List<R> findAll();
 
-    Mono<R> create(R record);
+    R create(R record);
 
-    Mono<R> update(R record);
+    R update(R record);
 
-    Mono<Void> hardDeleteById(UUID id);
+    void hardDeleteById(UUID id);
 
-    Mono<Boolean> existsById(UUID id);
+    boolean existsById(UUID id);
 }

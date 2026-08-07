@@ -12,6 +12,8 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PROTECTED)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
+        @JsonSubTypes.Type(value = RoomCreatedEvent.class,    name = "ROOM_CREATED"),
+        @JsonSubTypes.Type(value = RoomJoinedEvent.class,     name = "ROOM_JOINED"),
         @JsonSubTypes.Type(value = StateUpdatedEvent.class,   name = "STATE_UPDATED"),
         @JsonSubTypes.Type(value = PlayersUpdatedEvent.class, name = "PLAYERS_UPDATED"),
         @JsonSubTypes.Type(value = GameResultEvent.class,     name = "GAME_RESULT"),

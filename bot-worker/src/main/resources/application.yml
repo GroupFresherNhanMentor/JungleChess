@@ -2,9 +2,9 @@ spring:
   application:
     name: jc-bot-worker
 
+server:
+  port: ${SERVER_PORT:8081}
+
 bot:
-  room-id: ${ROOM_ID:room-test}
   server-url: ${SERVER_URL:ws://localhost:8080/ws}
-  side: ${SIDE:PLAYER_2}
-  difficulty: ${DIFFICULTY:MEDIUM}
   bot-token: ${BOT_TOKEN:}

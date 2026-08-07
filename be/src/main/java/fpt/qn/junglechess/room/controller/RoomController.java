@@ -2,31 +2,27 @@ package fpt.qn.junglechess.room.controller;
 
 import fpt.qn.junglechess.common.exception.AppException;
 import fpt.qn.junglechess.room.dto.event.RoomErrorEvent;
-import fpt.qn.junglechess.room.dto.event.RoomEvent;
+import fpt.qn.junglechess.room.dto.request.BotJoinRequest;
 import fpt.qn.junglechess.room.dto.request.CreateRoomRequest;
 import fpt.qn.junglechess.room.dto.request.MoveRequest;
-import fpt.qn.junglechess.room.dto.response.CreateRoomResponse;
-import fpt.qn.junglechess.room.dto.response.JoinRoomResponse;
-import fpt.qn.junglechess.room.dto.response.MoveAckResponse;
+import fpt.qn.junglechess.room.service.DisconnectScheduler;
 import fpt.qn.junglechess.room.service.RoomEventBus;
 import fpt.qn.junglechess.room.service.RoomService;
 import fpt.qn.junglechess.room.service.SessionRegistry;
+import fpt.qn.junglechess.security.JwtUserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.rsocket.RSocketRequester;
-import org.springframework.messaging.rsocket.annotation.ConnectMapping;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Controller;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import fpt.qn.junglechess.room.service.RSocketSessionContext;
-import fpt.qn.junglechess.security.JwtUserPrincipal;
-
-import java.util.UUID;
+import org.springframework.web.socket.messaging.SessionConnectedEvent;
+import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 @Slf4j
 @Controller
@@ -36,106 +32,136 @@ public class RoomController {
     private final RoomService roomService;
     private final RoomEventBus eventBus;
     private final SessionRegistry sessionRegistry;
+    private final DisconnectScheduler disconnectScheduler;
 
     // ── Connection lifecycle ──────────────────────────────────────────────────
 
-    @ConnectMapping
-    public Mono<Void> onConnect(RSocketRequester requester, @AuthenticationPrincipal JwtUserPrincipal principal) {
-        String sessionId = UUID.randomUUID().toString();
+    @EventListener
+    public void onConnect(SessionConnectedEvent event) {
+        StompHeaderAccessor sha = StompHeaderAccessor.wrap(event.getMessage());
+        String sessionId = sha.getSessionId();
+        JwtUserPrincipal principal = extractPrincipal(sha);
+        if (principal == null) return;
 
-        sessionRegistry.register(sessionId, requester, principal);
-        requester.rsocket()
-                .onClose()
-                .doFinally(signal -> {
-                    log.debug("Session {} disconnected: {}", sessionId, signal);
-                    roomService.handleDisconnect(sessionId).subscribe();
-                })
-                .subscribe();
+        String userId = principal.userId().toString();
+        boolean isReconnect = disconnectScheduler.cancel(userId);
+        if (isReconnect) {
+            String oldSessionId = sessionRegistry.getSessionIdForUser(userId);
+            if (oldSessionId != null) {
+                eventBus.destroySession(oldSessionId);
+                sessionRegistry.deregister(oldSessionId);
+                log.debug("Evicted stale session {} on reconnect for user {}", oldSessionId, userId);
+            }
+        }
 
-        log.debug("New RSocket session {} for user {}", sessionId, principal.userId());
-        return Mono.empty();
+        sessionRegistry.register(sessionId, principal);
+        log.debug("STOMP connected: session={}, user={}", sessionId, principal.username());
+    }
+
+    @EventListener
+    public void onDisconnect(SessionDisconnectEvent event) {
+        String sessionId = event.getSessionId();
+        log.debug("STOMP disconnected: session={}", sessionId);
+        roomService.handleDisconnect(sessionId);
     }
 
     // ── Room actions ──────────────────────────────────────────────────────────
 
     @MessageMapping("room.create")
-    public Mono<CreateRoomResponse> create(CreateRoomRequest req, RSocketRequester requester) {
-        RSocketSessionContext context = resolveSessionContext(requester);
-        return roomService.createRoom(req, context.sessionId(), context.principal().userId().toString())
-                .onErrorResume(AppException.class, e ->
-                        Mono.fromRunnable(() -> emitError(context.sessionId(), e.getMessage(), null))
-                                .then(Mono.error(e)));
+    public void create(@Payload CreateRoomRequest req, SimpMessageHeaderAccessor sha) {
+        String sessionId = sha.getSessionId();
+        JwtUserPrincipal principal = extractPrincipal(sha);
+        roomService.createRoom(req, sessionId, principal.userId().toString());
     }
 
     @MessageMapping("room.{id}.join")
-    public Mono<JoinRoomResponse> join(@DestinationVariable String id,
-                                       RSocketRequester requester) {
-        RSocketSessionContext context = resolveSessionContext(requester);
-        return roomService.joinRoom(id, context.sessionId(), false, context.principal().userId().toString())
-                .onErrorResume(AppException.class, e -> {
-                    emitError(context.sessionId(), e.getMessage(), id);
-                    return Mono.error(e);
-                });
+    public void join(@DestinationVariable String id, SimpMessageHeaderAccessor sha) {
+        JwtUserPrincipal principal = extractPrincipal(sha);
+        roomService.joinRoom(id, sha.getSessionId(), principal.userId().toString());
+    }
+
+    @MessageMapping("room.{id}.rejoin")
+    public void rejoin(@DestinationVariable String id, SimpMessageHeaderAccessor sha) {
+        JwtUserPrincipal principal = extractPrincipal(sha);
+        roomService.rejoinRoom(id, sha.getSessionId(), principal.userId().toString());
     }
 
     @MessageMapping("room.{id}.watch")
-    public Mono<Void> watch(@DestinationVariable String id, RSocketRequester requester) {
-        RSocketSessionContext context = resolveSessionContext(requester);
-        return roomService.watchRoom(id, context.sessionId(), context.principal().userId().toString())
-                .onErrorResume(AppException.class, e -> {
-                    emitError(context.sessionId(), e.getMessage(), id);
-                    return Mono.error(e);
-                });
+    public void watch(@DestinationVariable String id, SimpMessageHeaderAccessor sha) {
+        JwtUserPrincipal principal = extractPrincipal(sha);
+        roomService.watchRoom(id, sha.getSessionId(), principal.userId().toString());
     }
 
-    @MessageMapping("room.{id}.subscribe")
-    public Flux<RoomEvent> subscribe(@DestinationVariable String id, RSocketRequester requester) {
-        RSocketSessionContext context = resolveSessionContext(requester);
-        return roomService.subscribeRoom(id, context.sessionId())
-                .onErrorResume(AppException.class, e -> {
-                    emitError(context.sessionId(), e.getMessage(), id);
-                    return Flux.error(e);
-                });
+    @MessageMapping("room.{id}.start")
+    public void start(@DestinationVariable String id, SimpMessageHeaderAccessor sha) {
+        roomService.startGame(id, sha.getSessionId());
     }
 
     @MessageMapping("room.{id}.move")
-    public Mono<MoveAckResponse> move(@DestinationVariable String id,
-                                      MoveRequest req,
-                                      RSocketRequester requester) {
-        RSocketSessionContext context = resolveSessionContext(requester);
-        return roomService.move(id, context.sessionId(), req)
-                .onErrorResume(AppException.class, e -> {
-                    emitError(context.sessionId(), e.getMessage(), id);
-                    return Mono.error(e);
-                });
+    public void move(@DestinationVariable String id, @Payload MoveRequest req, SimpMessageHeaderAccessor sha) {
+        roomService.move(id, sha.getSessionId(), req);
     }
 
     @MessageMapping("room.{id}.leave")
-    public Mono<Void> leave(@DestinationVariable String id, RSocketRequester requester) {
-        return roomService.leaveRoom(id, resolveSessionContext(requester).sessionId());
+    public void leave(@DestinationVariable String id, SimpMessageHeaderAccessor sha) {
+        roomService.leaveRoom(id, sha.getSessionId());
     }
 
     @MessageMapping("room.{id}.rematch")
-    public Mono<Void> rematch(@DestinationVariable String id, RSocketRequester requester) {
-        RSocketSessionContext context = resolveSessionContext(requester);
-        return roomService.rematch(id, context.sessionId())
-                .onErrorResume(AppException.class, e -> {
-                    emitError(context.sessionId(), e.getMessage(), id);
-                    return Mono.error(e);
-                });
+    public void rematch(@DestinationVariable String id, SimpMessageHeaderAccessor sha) {
+        roomService.rematch(id, sha.getSessionId());
+    }
+
+    // ── Bot-worker endpoints (slash-notation used by bot-worker service) ───────
+
+    @MessageMapping("/room/{id}/bot-join")
+    public void botJoin(@DestinationVariable String id,
+                        @Payload BotJoinRequest req,
+                        SimpMessageHeaderAccessor sha) {
+        JwtUserPrincipal principal = extractPrincipal(sha);
+        roomService.joinRoomAsBot(id, sha.getSessionId(), req.getSide(), principal.userId().toString());
+    }
+
+    @MessageMapping("/room/{id}/move")
+    public void botMove(@DestinationVariable String id,
+                        @Payload MoveRequest req,
+                        SimpMessageHeaderAccessor sha) {
+        roomService.move(id, sha.getSessionId(), req);
+    }
+
+    // ── Error handling ────────────────────────────────────────────────────────
+
+    @MessageExceptionHandler(AppException.class)
+    public void handleAppException(AppException ex, SimpMessageHeaderAccessor sha) {
+        String sessionId = sha.getSessionId();
+        log.warn("[STOMP] app exception for session {}: {}", sessionId, ex.getMessage());
+        eventBus.emitToSession(sessionId, RoomErrorEvent.of("ACTION_ERROR", ex.getMessage()));
+    }
+
+    @MessageExceptionHandler(Exception.class)
+    public void handleException(Exception ex, SimpMessageHeaderAccessor sha) {
+        String sessionId = sha.getSessionId();
+        log.error("[STOMP] unexpected error for session {}", sessionId, ex);
+        eventBus.emitToSession(sessionId, RoomErrorEvent.of("SERVER_ERROR", "An unexpected error occurred"));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private RSocketSessionContext resolveSessionContext(RSocketRequester requester) {
-        RSocketSessionContext context = sessionRegistry.findByRequester(requester);
-        if (context == null) {
-            throw new AccessDeniedException("RSocket session is not authenticated");
+    private JwtUserPrincipal extractPrincipal(StompHeaderAccessor sha) {
+        var user = sha.getUser();
+        if (user instanceof UsernamePasswordAuthenticationToken auth
+                && auth.getPrincipal() instanceof JwtUserPrincipal p) {
+            return p;
         }
-        return context;
+        return null;
     }
 
-    private void emitError(String sessionId, String message, Object context) {
-        eventBus.emitToSession(sessionId, RoomErrorEvent.of("ACTION_ERROR", message));
+    private JwtUserPrincipal extractPrincipal(SimpMessageHeaderAccessor sha) {
+        var user = sha.getUser();
+        if (user instanceof UsernamePasswordAuthenticationToken auth
+                && auth.getPrincipal() instanceof JwtUserPrincipal p) {
+            return p;
+        }
+        return null;
     }
 }

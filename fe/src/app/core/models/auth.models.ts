@@ -1,9 +1,3 @@
-// ──────────────────────────────────────────────
-// Auth Models — Cờ Thú Online
-// Mapping với API Spec: docs/API_Spec_Co_Thu_Online.md § 2
-// ──────────────────────────────────────────────
-
-/** Generic API response wrapper từ backend */
 export interface ApiResponse<T> {
   data: T;
   message: string;
@@ -12,14 +6,15 @@ export interface ApiResponse<T> {
 
 // ── Request payloads ──────────────────────────
 
-export interface RegisterRequest {
+export interface LoginRequest {
   username: string;
   password: string;
 }
 
-export interface LoginRequest {
+export interface RegisterRequest {
   username: string;
   password: string;
+  fullName: string;
 }
 
 export interface RefreshTokenRequest {
@@ -28,6 +23,14 @@ export interface RefreshTokenRequest {
 
 // ── Response payloads ─────────────────────────
 
+/** Backend user object returned inside login/register responses. */
+export interface UserDto {
+  userId: string;
+  username: string;
+  roles: string[];
+}
+
+/** Client-side user shape stored in localStorage via TokenStorageService. */
 export interface AuthUser {
   id?: string;
   userId?: string;
@@ -35,40 +38,28 @@ export interface AuthUser {
   isGuest?: boolean;
 }
 
+export interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  user: UserDto;
+}
+
 export interface RegisterResponse {
   userId: string;
   username: string;
 }
 
-export interface LoginResponse {
-  accessToken: string;
-  accessTokenExpiresIn: number; // giây
-  refreshToken: string;
-  refreshTokenExpiresIn: number; // giây
-  user: AuthUser;
-}
-
-/** Response cho POST /api/auth/guest — wrapped trong ApiResponse */
-export interface GuestLoginResponse {
+export interface RefreshTokenResponse {
   accessToken: string;
   refreshToken: string;
   tokenType: string;
-  user: AuthUser;
 }
 
-export interface RefreshTokenResponse {
-  accessToken: string;
-  accessTokenExpiresIn: number;
-  refreshToken: string;
-  refreshTokenExpiresIn: number;
+/** Decoded JWT payload (client-side only, not verified here). */
+export interface JwtPayload {
+  sub: string;   // username
+  uid: string;   // userId
+  roles: string[];
+  exp: number;
 }
-
-// ── Error codes (tham chiếu API Spec § 3.4) ──
-
-export type AuthErrorCode =
-  | 'VALIDATION_ERROR'
-  | 'USERNAME_ALREADY_EXISTS'
-  | 'INVALID_CREDENTIALS'
-  | 'ACCOUNT_LOCKED'
-  | 'REFRESH_TOKEN_INVALID'
-  | 'REFRESH_TOKEN_EXPIRED';

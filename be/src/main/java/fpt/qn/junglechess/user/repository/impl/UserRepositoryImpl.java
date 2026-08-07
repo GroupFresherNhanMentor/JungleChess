@@ -7,17 +7,14 @@ import static fpt.qn.junglechess.jooq.Tables.USER_ROLES;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import java.time.OffsetDateTime;
 
 import org.jooq.Condition;
 import org.jooq.DSLContext;
-import org.jooq.Field;
-import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 import fpt.qn.junglechess.common.dto.PaginationResult;
 import fpt.qn.junglechess.common.repository.BaseRepository;
@@ -25,8 +22,6 @@ import fpt.qn.junglechess.jooq.enums.SysRole;
 import fpt.qn.junglechess.jooq.enums.UserStatus;
 import fpt.qn.junglechess.jooq.tables.records.UsersRecord;
 import fpt.qn.junglechess.user.repository.UserRepository;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 @Repository
 public class UserRepositoryImpl extends BaseRepository<UsersRecord> implements UserRepository {
@@ -36,139 +31,71 @@ public class UserRepositoryImpl extends BaseRepository<UsersRecord> implements U
     }
 
     @Override
-    public Mono<UsersRecord> findByUsername(String username) {
-        return Mono.from(
-            dsl.selectFrom(USERS).where(USERS.USERNAME.eq(username))
-        );
+    public Optional<UsersRecord> findByUsername(String username) {
+        return dsl.selectFrom(USERS).where(USERS.USERNAME.eq(username)).fetchOptional();
     }
 
     @Override
-    public Mono<Boolean> existsByUsername(String username) {
-        return Mono.from(
-            dsl.selectOne()
-                .whereExists(dsl.selectFrom(USERS).where(USERS.USERNAME.eq(username)))
-        ).map(r -> true).defaultIfEmpty(false);
+    public boolean existsByUsername(String username) {
+        return dsl.fetchExists(dsl.selectFrom(USERS).where(USERS.USERNAME.eq(username)));
     }
 
     @Override
-    public Mono<Boolean> existsByEmployeeId(String employeeId) {
-        return Mono.from(
-            dsl.selectOne()
-                .whereExists(dsl.selectFrom(USERS).where(USERS.EMPLOYEE_ID.eq(employeeId)))
-        ).map(r -> true).defaultIfEmpty(false);
-    }
-
-    @Override
-    public Flux<String> findUsernamesMatchingBase(String baseUsername) {
-        return Flux.from(
-            dsl.select(USERS.USERNAME)
+    public List<String> findUsernamesMatchingBase(String baseUsername) {
+        return dsl.select(USERS.USERNAME)
                 .from(USERS)
                 .where(USERS.USERNAME.like(baseUsername + "%"))
-        ).map(r -> r.get(USERS.USERNAME));
+                .fetch(USERS.USERNAME);
     }
 
     @Override
-    public Mono<PaginationResult<UsersRecord>> findAll(String keyword, SysRole role, UserStatus status, int page, int size) {
+    public PaginationResult<UsersRecord> findAll(String keyword, SysRole role, UserStatus status, int page, int size) {
         Condition condition = buildCondition(keyword, role, status);
 
-        Mono<Integer> countMono = Mono.from(
-            dsl.selectCount().from(USERS).where(condition)
-        ).map(r -> r.value1());
+        long count = dsl.selectCount().from(USERS).where(condition).fetchOne(0, long.class);
 
-        Mono<java.util.List<UsersRecord>> itemsMono = Flux.from(
-            dsl.selectFrom(USERS)
+        List<UsersRecord> items = dsl.selectFrom(USERS)
                 .where(condition)
                 .orderBy(USERS.CREATED_AT.desc())
                 .limit(size)
                 .offset((long) page * size)
-        ).collectList();
+                .fetch();
 
-        return Mono.zip(countMono, itemsMono, (count, items) -> new PaginationResult<>(count, items));
+        return new PaginationResult<>(count, items);
     }
 
     @Override
-    public Mono<Map<UUID, String>> findFullNamesByIds(Collection<UUID> ids) {
-        if (ids == null || ids.isEmpty()) return Mono.just(Map.of());
-        return Flux.from(
-            dsl.select(USERS.ID, USERS.FULL_NAME)
+    public Map<UUID, String> findFullNamesByIds(Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) return Map.of();
+        return dsl.select(USERS.ID, USERS.FULL_NAME)
                 .from(USERS)
                 .where(USERS.ID.in(ids))
-        ).collect(Collectors.toMap(r -> r.get(USERS.ID), r -> r.get(USERS.FULL_NAME)));
+                .fetch()
+                .stream()
+                .collect(Collectors.toMap(r -> r.get(USERS.ID), r -> r.get(USERS.FULL_NAME)));
     }
 
     @Override
-    public Flux<String> findRolesByUserId(UUID userId) {
-        return Flux.from(
-            dsl.select(ROLES.NAME)
+    public List<String> findRolesByUserId(UUID userId) {
+        return dsl.select(ROLES.NAME)
                 .from(USER_ROLES)
                 .join(ROLES).on(ROLES.ID.eq(USER_ROLES.ROLE_ID))
                 .where(USER_ROLES.USER_ID.eq(userId))
-        ).map(r -> r.get(ROLES.NAME).getLiteral());
+                .fetch()
+                .stream()
+                .map(r -> r.get(ROLES.NAME).getLiteral())
+                .toList();
     }
 
     @Override
-    public Mono<Void> assignRole(UUID userId, SysRole role) {
-        return Mono.from(
-            dsl.select(ROLES.ID).from(ROLES).where(ROLES.NAME.eq(role))
-        ).flatMap(roleRecord ->
-            Mono.from(
-                dsl.insertInto(USER_ROLES)
-                    .set(USER_ROLES.USER_ID, userId)
-                    .set(USER_ROLES.ROLE_ID, roleRecord.value1())
-                    .onDuplicateKeyIgnore()
-            ).then()
-        ).switchIfEmpty(Mono.error(new IllegalArgumentException("Role not found: " + role)));
-    }
-
-    @Override
-    public Mono<Void> touchGuestActivity(UUID userId) {
-        return Mono.from(
-                dsl.update(USERS)
-                        .set(USERS.field("last_activity_at", OffsetDateTime.class), OffsetDateTime.now())
-                        .where(USERS.ID.eq(userId))
-                        .and(USERS.field("is_guest", Boolean.class).isTrue())
-        ).then();
-    }
-
-    @Override
-    @Transactional
-    public Mono<Void> deleteExpiredGuests(OffsetDateTime cutoff) {
-        Condition expiredGuest = USERS.field("is_guest", Boolean.class).isTrue()
-                .and(USERS.field("last_activity_at", OffsetDateTime.class).lt(cutoff));
-
-        return Flux.from(dsl.select(USERS.ID).from(USERS).where(expiredGuest))
-                .map(record -> record.get(USERS.ID))
-                .collectList()
-                .flatMap(this::detachExpiredGuestsFromMatchHistory)
-                .flatMapMany(ids -> Flux.from(
-                        dsl.deleteFrom(USERS).where(USERS.ID.in(ids))
-                ))
-                .then();
-    }
-
-    private Mono<List<UUID>> detachExpiredGuestsFromMatchHistory(List<UUID> guestIds) {
-        if (guestIds.isEmpty()) return Mono.just(guestIds);
-
-        Table<?> matchPlayers = DSL.table(DSL.name("match_players"));
-        Field<String> tableName = DSL.field(DSL.name("table_name"), String.class);
-        Field<String> tableSchema = DSL.field(DSL.name("table_schema"), String.class);
-        Field<UUID> matchPlayerUserId = DSL.field(DSL.name("user_id"), UUID.class);
-
-        Mono<Boolean> matchPlayersExists = Mono.from(
-                dsl.selectOne()
-                        .from(DSL.table(DSL.name("information_schema", "tables")))
-                        .where(tableSchema.eq("public").and(tableName.eq("match_players")))
-        ).hasElement();
-
-        return matchPlayersExists.flatMap(exists -> {
-            if (!exists) return Mono.just(guestIds);
-
-            return Mono.from(
-                    dsl.update(matchPlayers)
-                            .set(matchPlayerUserId, (UUID) null)
-                            .where(matchPlayerUserId.in(guestIds))
-            ).thenReturn(guestIds);
-        });
+    public void assignRole(UUID userId, SysRole role) {
+        var roleRecord = dsl.select(ROLES.ID).from(ROLES).where(ROLES.NAME.eq(role)).fetchOne();
+        if (roleRecord == null) throw new IllegalArgumentException("Role not found: " + role);
+        dsl.insertInto(USER_ROLES)
+                .set(USER_ROLES.USER_ID, userId)
+                .set(USER_ROLES.ROLE_ID, roleRecord.value1())
+                .onDuplicateKeyIgnore()
+                .execute();
     }
 
     private Condition buildCondition(String keyword, SysRole role, UserStatus status) {
@@ -177,19 +104,19 @@ public class UserRepositoryImpl extends BaseRepository<UsersRecord> implements U
         if (keyword != null && !keyword.isBlank()) {
             String pattern = "%" + keyword.toLowerCase() + "%";
             condition = condition.and(
-                USERS.USERNAME.likeIgnoreCase(pattern)
-                    .or(USERS.FULL_NAME.likeIgnoreCase(pattern))
+                    USERS.USERNAME.likeIgnoreCase(pattern)
+                            .or(USERS.FULL_NAME.likeIgnoreCase(pattern))
             );
         }
 
         if (role != null) {
             condition = condition.and(
-                USERS.ID.in(
-                    DSL.select(USER_ROLES.USER_ID)
-                        .from(USER_ROLES)
-                        .join(ROLES).on(ROLES.ID.eq(USER_ROLES.ROLE_ID))
-                        .where(ROLES.NAME.eq(role))
-                )
+                    USERS.ID.in(
+                            DSL.select(USER_ROLES.USER_ID)
+                                    .from(USER_ROLES)
+                                    .join(ROLES).on(ROLES.ID.eq(USER_ROLES.ROLE_ID))
+                                    .where(ROLES.NAME.eq(role))
+                    )
             );
         }
 

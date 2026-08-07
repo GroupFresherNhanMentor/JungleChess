@@ -43,14 +43,13 @@ export interface Tile {
   side?: PieceSide; // For traps and dens
 }
 
-export type GameMode = 'PVA' | 'PVP';
-export type DetailedGameMode = 'PVP_ONLINE' | 'PVE' | 'EVE' | 'PVP_LOCAL';
+export type GameMode = 'PVP_ONLINE' | 'PVE' | 'EVE';
 export type RoomStatus = 'WAITING' | 'PLAYING' | 'ENDED';
 
 export interface RoomInfo {
   roomId: string;
   roomName: string;
-  mode: DetailedGameMode;
+  mode: GameMode;
   hostName: string;
   playerCount: number;
   maxPlayers: number;

@@ -8,22 +8,22 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
-import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
-import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
-import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
-import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.reactive.CorsConfigurationSource;
-import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.jwk.source.JWKSource;
@@ -34,11 +34,10 @@ import lombok.experimental.FieldDefaults;
 
 import fpt.qn.junglechess.security.JwtBlacklistFilter;
 import fpt.qn.junglechess.security.JwtPrincipalAuthenticationConverter;
-import reactor.core.publisher.Mono;
 
 @Configuration
-@EnableWebFluxSecurity
-@EnableReactiveMethodSecurity
+@EnableWebSecurity
+@EnableMethodSecurity
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SecurityConfig {
 
@@ -46,19 +45,19 @@ public class SecurityConfig {
     String jwtSecret;
 
     @Bean
-    public SecurityWebFilterChain filterChain(ServerHttpSecurity http, JwtBlacklistFilter jwtBlacklistFilter) {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtBlacklistFilter jwtBlacklistFilter) throws Exception {
         return http
-                .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .addFilterBefore(jwtBlacklistFilter, SecurityWebFiltersOrder.AUTHENTICATION)
-                .authorizeExchange(auth -> auth
-                        .pathMatchers(
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(jwtBlacklistFilter, UsernamePasswordAuthenticationFilter.class)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/register",
-                                "/api/auth/guest",
                                 "/api/auth/refresh",
                                 "/api/auth/logout",
-                                "/rsocket",
+                                "/ws/**",
                                 "/actuator/**",
                                 "/v3/api-docs/**",
                                 "/api-docs/**",
@@ -67,11 +66,11 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
-                        .anyExchange().authenticated()
+                        .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt
-                                .jwtDecoder(jwtDecoder())
+                                .decoder(jwtDecoder())
                                 .jwtAuthenticationConverter(jwtAuthenticationConverter())
                         )
                 )
@@ -79,10 +78,10 @@ public class SecurityConfig {
     }
 
     @Bean
-    public ReactiveJwtDecoder jwtDecoder() {
+    public JwtDecoder jwtDecoder() {
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
-        return NimbusReactiveJwtDecoder.withSecretKey(secretKey).build();
+        return NimbusJwtDecoder.withSecretKey(secretKey).build();
     }
 
     @Bean

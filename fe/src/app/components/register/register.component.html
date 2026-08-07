@@ -1,0 +1,71 @@
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <h1 class="auth-title">Cờ Thú Online</h1>
+    <h2 class="auth-subtitle">Đăng ký tài khoản</h2>
+
+    <form class="auth-form" (ngSubmit)="onSubmit()">
+      <div class="field">
+        <label for="username">Tên đăng nhập</label>
+        <input
+          id="username"
+          type="text"
+          [(ngModel)]="username"
+          name="username"
+          placeholder="Ít nhất 3 ký tự"
+          autocomplete="username"
+          required
+        />
+      </div>
+
+      <div class="field">
+        <label for="fullName">Họ và tên</label>
+        <input
+          id="fullName"
+          type="text"
+          [(ngModel)]="fullName"
+          name="fullName"
+          placeholder="Tên hiển thị của bạn"
+          autocomplete="name"
+          required
+        />
+      </div>
+
+      <div class="field">
+        <label for="password">Mật khẩu</label>
+        <input
+          id="password"
+          type="password"
+          [(ngModel)]="password"
+          name="password"
+          placeholder="Ít nhất 3 ký tự"
+          autocomplete="new-password"
+          required
+        />
+      </div>
+
+      <div class="field">
+        <label for="confirmPassword">Xác nhận mật khẩu</label>
+        <input
+          id="confirmPassword"
+          type="password"
+          [(ngModel)]="confirmPassword"
+          name="confirmPassword"
+          placeholder="Nhập lại mật khẩu"
+          autocomplete="new-password"
+          required
+        />
+      </div>
+
+      <p *ngIf="error()" class="error-msg">{{ error() }}</p>
+
+      <button type="submit" class="btn-primary" [disabled]="loading()">
+        {{ loading() ? 'Đang đăng ký...' : 'Đăng ký' }}
+      </button>
+    </form>
+
+    <p class="auth-footer">
+      Đã có tài khoản?
+      <a routerLink="/login">Đăng nhập</a>
+    </p>
+  </div>
+</div>

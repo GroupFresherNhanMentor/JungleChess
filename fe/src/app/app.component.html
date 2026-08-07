@@ -1,69 +1,104 @@
-<h1 id="game-title">{{ loc.translate('gameTitle') }}</h1>
+<!-- Global Top Header with Title and Fixed Language Selector -->
+<header id="global-header">
+  <h1 id="game-title">{{ loc.translate('gameTitle') }}</h1>
 
-<!-- Game Controls -->
-<app-game-controls
-  [currentLang]="currentLang"
-  (currentLangChange)="currentLang = $event"
-  [gameMode]="gameMode"
-  (gameModeChange)="onGameModeChange($event)"
-  [firstMoveSide]="firstMoveSide"
-  (firstMoveSideChange)="onFirstMoveSideChange($event)"
-  [aiDepth]="aiDepth"
-  (aiDepthChange)="aiDepth = $event"
-  [aiTimeLimit]="aiTimeLimit"
-  (aiTimeLimitChange)="aiTimeLimit = $event"
-  [actualAiDepth]="actualAiDepth"
-  (openRulesModal)="openRulesModal()"
-></app-game-controls>
+  <div id="global-lang-switcher">
+    <button
+      (click)="toggleLanguage()"
+      class="lang-toggle-btn"
+      [title]="currentLang === 'vn' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'"
+    >
+      <span class="lang-flag">{{ currentLang === 'vn' ? '🇻🇳' : '🇬🇧' }}</span>
+      <span class="lang-code">{{ currentLang === 'vn' ? 'VN' : 'EN' }}</span>
+    </button>
+  </div>
+</header>
 
-<!-- Page Wrapper to align Game Layout and Side Chat Box -->
-<div id="game-page-wrapper">
-  <!-- Main Game Layout Container -->
-  <div id="game-layout">
-    <!-- Left Panel -->
-    <app-left-panel
-      [capturedByRed]="capturedByRed"
-      [canUndo]="moveHistory.length > 0"
-      (resetGame)="initGame()"
-      (undoMove)="undoMove()"
-      (randomizeBoard)="randomizeBoard()"
-      (openRules)="openRulesModal()"
-    ></app-left-panel>
+<!-- View 1: Lobby Screen -->
+<ng-container *ngIf="activeView === 'LOBBY'">
+  <app-lobby (selectRoom)="onSelectRoomFromLobby($event)"></app-lobby>
+</ng-container>
 
-    <!-- Main Board Area -->
-    <div id="main-game-area">
-      <app-board
-        [pieces]="pieces"
-        [selectedPos]="selectedPos"
-        [validMoves]="validMoves"
-        [lastMove]="getLastMove()"
-        (squareClick)="onSquareClick($event)"
-      ></app-board>
+<!-- View 2: Active Game Room Screen -->
+<ng-container *ngIf="activeView === 'GAME'">
+  <!-- Active Room Banner Header -->
+  <div id="active-room-banner" *ngIf="currentRoom">
+    <button (click)="onBackToLobby()" class="back-lobby-header-btn">
+      {{ loc.translate('backToLobbyBtn') }}
+    </button>
+    <div class="room-banner-details">
+      <span class="room-badge">{{ currentRoom.mode }}</span>
+      <span class="room-code-tag">[{{ currentRoom.roomId }}]</span>
+      <span class="room-title-text">{{ currentRoom.roomName }}</span>
+    </div>
+  </div>
 
-      <!-- Status Message -->
-      <div id="status">{{ statusMessage }}</div>
+  <!-- Game Controls Bar -->
+  <app-game-controls
+    [currentLang]="currentLang"
+    (currentLangChange)="currentLang = $event"
+    [gameMode]="gameMode"
+    (gameModeChange)="onGameModeChange($event)"
+    [firstMoveSide]="firstMoveSide"
+    (firstMoveSideChange)="onFirstMoveSideChange($event)"
+    [aiDepth]="aiDepth"
+    (aiDepthChange)="aiDepth = $event"
+    [aiTimeLimit]="aiTimeLimit"
+    (aiTimeLimitChange)="aiTimeLimit = $event"
+    [actualAiDepth]="actualAiDepth"
+    (openRulesModal)="openRulesModal()"
+  ></app-game-controls>
 
-      <!-- Win Chance Bar -->
-      <app-win-chance-bar [pieces]="pieces"></app-win-chance-bar>
+  <!-- Page Wrapper to align Game Layout and Side Chat Box -->
+  <div id="game-page-wrapper">
+    <!-- Main Game Layout Container -->
+    <div id="game-layout">
+      <!-- Left Panel -->
+      <app-left-panel
+        [capturedByRed]="capturedByRed"
+        [canUndo]="moveHistory.length > 0"
+        (resetGame)="initGame()"
+        (undoMove)="undoMove()"
+        (randomizeBoard)="randomizeBoard()"
+        (openRules)="openRulesModal()"
+        (backToLobby)="onBackToLobby()"
+      ></app-left-panel>
+
+      <!-- Main Board Area -->
+      <div id="main-game-area">
+        <app-board
+          [pieces]="pieces"
+          [selectedPos]="selectedPos"
+          [validMoves]="validMoves"
+          [lastMove]="getLastMove()"
+          (squareClick)="onSquareClick($event)"
+        ></app-board>
+
+        <!-- Status Message -->
+        <div id="status">{{ statusMessage }}</div>
+
+        <!-- Win Chance Bar -->
+        <app-win-chance-bar [pieces]="pieces"></app-win-chance-bar>
+      </div>
+
+      <!-- Right Panel -->
+      <app-right-panel
+        [capturedByBlue]="capturedByBlue"
+        [moveHistory]="moveHistory"
+        [currentTurn]="currentTurn"
+      ></app-right-panel>
     </div>
 
-    <!-- Right Panel -->
-    <app-right-panel
-      [capturedByBlue]="capturedByBlue"
-      [moveHistory]="moveHistory"
-      [currentTurn]="currentTurn"
-    ></app-right-panel>
+    <!-- Side Chat Box -->
+    <div id="side-chat-wrapper">
+      <app-chat
+        [messages]="chatMessages"
+        [currentTurn]="currentTurn"
+        (sendMessage)="onSendChatMessage($event)"
+      ></app-chat>
+    </div>
   </div>
-
-  <!-- Side Chat Box (Positioned OUTSIDE Game Layout on the right) -->
-  <div id="side-chat-wrapper">
-    <app-chat
-      [messages]="chatMessages"
-      [currentTurn]="currentTurn"
-      (sendMessage)="onSendChatMessage($event)"
-    ></app-chat>
-  </div>
-</div>
+</ng-container>
 
 <!-- Rules Popup Modal -->
 <app-game-rules-modal

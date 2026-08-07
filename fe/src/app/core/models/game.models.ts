@@ -41,6 +41,22 @@ export interface Tile {
 }
 
 export type GameMode = 'PVA' | 'PVP';
+export type DetailedGameMode = 'PVP_ONLINE' | 'PVE' | 'EVE' | 'PVP_LOCAL';
+export type RoomStatus = 'WAITING' | 'PLAYING' | 'ENDED';
+
+export interface RoomInfo {
+  roomId: string;
+  roomName: string;
+  mode: DetailedGameMode;
+  hostName: string;
+  playerCount: number;
+  maxPlayers: number;
+  status: RoomStatus;
+  isPrivate?: boolean;
+  createdAt?: string;
+  aiDepth?: number;
+}
+
 export type Language = 'en' | 'vn';
 
 export const PIECE_RANKS: Record<PieceType, number> = {

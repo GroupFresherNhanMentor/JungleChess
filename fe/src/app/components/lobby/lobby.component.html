@@ -1,0 +1,228 @@
+<div id="lobby-container">
+  <!-- Clean Title Header -->
+  <div class="lobby-title-bar">
+    <h2>🏆 {{ loc.translate('lobbyTitle') }}</h2>
+  </div>
+
+  <!-- Modern Single-Row Toolbar -->
+  <div class="lobby-toolbar">
+    <!-- Left Section: Search & Filters on 1 Line -->
+    <div class="toolbar-left">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          [placeholder]="loc.translate('searchRoomPlaceholder')"
+          class="search-input"
+        />
+      </div>
+
+      <select [(ngModel)]="selectedFilterMode" class="filter-select">
+        <option value="ALL">Tất cả chế độ</option>
+        <option value="PVP_ONLINE">PvP Online</option>
+        <option value="PVE">Đấu với Máy (PvE)</option>
+        <option value="EVE">Bot vs Bot (EvE)</option>
+      </select>
+
+      <select [(ngModel)]="selectedFilterStatus" class="filter-select">
+        <option value="ALL">Tất cả trạng thái</option>
+        <option value="WAITING">Đang chờ</option>
+        <option value="PLAYING">Đang chơi</option>
+      </select>
+
+      <button (click)="refreshRooms()" class="refresh-btn" title="Làm mới">
+        🔄
+      </button>
+    </div>
+
+    <!-- Right Section: Action Buttons -->
+    <div class="toolbar-right">
+      <button (click)="openCreateRoomModal()" class="create-btn">
+        {{ loc.translate('createRoomBtn') }}
+      </button>
+      <button (click)="openJoinCodeModal()" class="join-code-btn">
+        {{ loc.translate('joinRoomCodeBtn') }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Room Grid / List Cards -->
+  <div class="room-grid">
+    <div *ngIf="filteredRooms.length === 0" class="no-rooms-card">
+      <span class="empty-icon">🎲</span>
+      <h3>Không tìm thấy phòng nào</h3>
+      <p>Bấm <strong>"Tạo Phòng Mới"</strong> để bắt đầu trận đấu đầu tiên!</p>
+      <button (click)="openCreateRoomModal()" class="create-btn">Tạo Phòng Ngay</button>
+    </div>
+
+    <div *ngFor="let room of filteredRooms" class="room-card" [ngClass]="'status-' + room.status.toLowerCase()">
+      <!-- Card Header -->
+      <div class="room-card-header">
+        <div class="room-mode-badge" [ngClass]="'mode-' + room.mode.toLowerCase()">
+          {{ getModeLabel(room.mode) }}
+        </div>
+        <span class="room-status-tag" [ngClass]="'tag-' + room.status.toLowerCase()">
+          {{ room.status === 'WAITING' ? loc.translate('roomStatusWaiting') : loc.translate('roomStatusPlaying') }}
+        </span>
+      </div>
+
+      <!-- Card Body -->
+      <div class="room-card-body">
+        <h3 class="room-title">{{ room.roomName }}</h3>
+        <div class="room-code-row">
+          <span class="code-label">Mã phòng:</span>
+          <code class="code-value">{{ room.roomId }}</code>
+          <button (click)="copyRoomCode(room.roomId)" class="copy-code-btn" title="Sao chép mã phòng">
+            📋
+          </button>
+        </div>
+
+        <div class="room-details">
+          <div class="detail-item">
+            <span class="detail-icon">👑</span>
+            <span class="detail-text">Chủ phòng: <strong>{{ room.hostName }}</strong></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-icon">👥</span>
+            <span class="detail-text">Số người: <strong>{{ room.playerCount }}/{{ room.maxPlayers }}</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Footer Action -->
+      <div class="room-card-footer">
+        <button
+          *ngIf="room.status === 'WAITING'"
+          (click)="onJoinRoom(room)"
+          class="join-btn"
+        >
+          ⚔️ {{ loc.translate('joinRoomBtn') }}
+        </button>
+
+        <button
+          *ngIf="room.status === 'PLAYING'"
+          (click)="onSpectateRoom(room)"
+          class="spectate-btn"
+        >
+          👁️ {{ loc.translate('spectateRoomBtn') }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Create Room Dialog -->
+  <div *ngIf="isCreateRoomModalOpen" class="modal-backdrop" (click)="closeCreateRoomModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>➕ Tạo Phòng Chơi Mới</h2>
+        <button (click)="closeCreateRoomModal()" class="modal-close-btn">&times;</button>
+      </div>
+
+      <form (submit)="onCreateRoomSubmit($event)" class="modal-body">
+        <div class="form-group">
+          <label for="createRoomName">Tên phòng:</label>
+          <input
+            id="createRoomName"
+            type="text"
+            [(ngModel)]="newRoomName"
+            name="newRoomName"
+            placeholder="Ví dụ: Phòng giao lưu Cờ Thú #1"
+            class="form-control"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="createRoomMode">Chế độ chơi:</label>
+          <select
+            id="createRoomMode"
+            [(ngModel)]="newRoomMode"
+            name="newRoomMode"
+            class="form-control"
+          >
+            <option value="PVP_ONLINE">PvP Online (2 Người qua mạng)</option>
+            <option value="PVE">Đấu với Máy (PvE AI Bot)</option>
+            <option value="EVE">Máy vs Máy (EvE Bot Watch)</option>
+            <option value="PVP_LOCAL">PvP Trên cùng thiết bị (Local)</option>
+          </select>
+        </div>
+
+        <div class="form-group" *ngIf="newRoomMode === 'PVE' || newRoomMode === 'EVE'">
+          <label for="createRoomAiDepth">Độ khó AI Bot (Search Depth):</label>
+          <select
+            id="createRoomAiDepth"
+            [(ngModel)]="newRoomAiDepth"
+            name="newRoomAiDepth"
+            class="form-control"
+          >
+            <option [ngValue]="3">Dễ (Depth 3)</option>
+            <option [ngValue]="6">Trung bình (Depth 6)</option>
+            <option [ngValue]="9">Khó (Depth 9)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="createRoomSide">Chọn bên đi trước:</label>
+          <select
+            id="createRoomSide"
+            [(ngModel)]="newRoomFirstSide"
+            name="newRoomFirstSide"
+            class="form-control"
+          >
+            <option [ngValue]="0">Xanh (Blue - Đi trước)</option>
+            <option [ngValue]="1">Đỏ (Red - Đi sau)</option>
+          </select>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" (click)="closeCreateRoomModal()" class="secondary-btn">
+            Hủy
+          </button>
+          <button type="submit" [disabled]="!newRoomName.trim()" class="create-btn">
+            Tạo & Vào Phòng
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Join Code Dialog -->
+  <div *ngIf="isJoinCodeModalOpen" class="modal-backdrop" (click)="closeJoinCodeModal()">
+    <div class="modal-card code-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>🔑 Nhập Mã Phòng</h2>
+        <button (click)="closeJoinCodeModal()" class="modal-close-btn">&times;</button>
+      </div>
+
+      <form (submit)="onJoinCodeSubmit($event)" class="modal-body">
+        <p class="modal-desc">Nhập mã phòng 6 ký tự do bạn bè gửi để tham gia trận đấu ngay lập tức:</p>
+        <div class="form-group">
+          <input
+            type="text"
+            [(ngModel)]="joinCodeInput"
+            name="joinCodeInput"
+            placeholder="Mã phòng (VD: ROOM-9941)"
+            class="form-control code-input"
+            required
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" (click)="closeJoinCodeModal()" class="secondary-btn">
+            Hủy
+          </button>
+          <button type="submit" [disabled]="!joinCodeInput.trim()" class="create-btn">
+            Vào Phòng ngay
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast notification message -->
+  <div *ngIf="toastMessage" class="toast-notification">
+    {{ toastMessage }}
+  </div>
+</div>

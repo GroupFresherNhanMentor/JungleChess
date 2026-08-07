@@ -1,7 +1,42 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  NgZone,
+  OnDestroy,
+  Output
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Move, Piece, Position } from '../../core/models/game.models';
 import { GameRuleService } from '../../core/services/game-rule.service';
+
+export interface MoveAnimation {
+  /** Monotonic id so the setter always re-fires, even on identical moves. */
+  id: number;
+  piece: Piece;
+  from: Position;
+  to: Position;
+  isCapture: boolean;
+}
+
+interface GhostState {
+  id: number;
+  piece: Piece;
+  /** Start pixel position (top-left of the 50px piece). */
+  fx: number;
+  fy: number;
+  /** End pixel position. */
+  tx: number;
+  ty: number;
+  isCapture: boolean;
+}
+
+const CELL = 60;
+const PIECE = 50;
+const OFFSET = (CELL - PIECE) / 2; // 5px
+const SLIDE_MS = 320;
+const POUNCE_DELAY_MS = 300;
+const POUNCE_MS = 400;
 
 @Component({
   selector: 'app-board',
@@ -10,13 +45,29 @@ import { GameRuleService } from '../../core/services/game-rule.service';
   templateUrl: './board.component.html',
   styleUrl: './board.component.css'
 })
-export class BoardComponent {
+export class BoardComponent implements OnDestroy {
   @Input() pieces: Piece[] = [];
   @Input() selectedPos: Position | null = null;
   @Input() validMoves: Position[] = [];
   @Input() lastMove: Move | null = null;
 
+  private _movingPiece: MoveAnimation | null = null;
+  private animSeq = 0;
+  private animTimer: ReturnType<typeof setTimeout> | null = null;
+
+  ghostState: GhostState | null = null;
+
+  @Input()
+  set movingPiece(v: MoveAnimation | null) {
+    this._movingPiece = v;
+    this.handleMovingPiece(v);
+  }
+  get movingPiece(): MoveAnimation | null {
+    return this._movingPiece;
+  }
+
   @Output() squareClick = new EventEmitter<Position>();
+  @Output() moveAnimationComplete = new EventEmitter<void>();
 
   cols = [0, 1, 2, 3, 4, 5, 6];
   rows = [0, 1, 2, 3, 4, 5, 6, 7, 8];
@@ -36,7 +87,16 @@ export class BoardComponent {
     '5-7': 'assets/decorations/decorations_2.png'  // F2 (row 7, col 5)
   };
 
-  constructor(private ruleService: GameRuleService) {}
+  constructor(
+    private ruleService: GameRuleService,
+    private ngZone: NgZone
+  ) {}
+
+  ngOnDestroy(): void {
+    if (this.animTimer) {
+      clearTimeout(this.animTimer);
+    }
+  }
 
   getPieceAt(col: number, row: number): Piece | undefined {
     return this.pieces.find(
@@ -52,11 +112,6 @@ export class BoardComponent {
   isTrap(col: number, row: number): boolean {
     const tile = this.ruleService.getTileInfo(col, row);
     return tile.type === 'trap';
-  }
-
-  isDen(col: number, row: number): boolean {
-    const tile = this.ruleService.getTileInfo(col, row);
-    return tile.type === 'den';
   }
 
   isBridge(col: number, row: number): boolean {
@@ -84,6 +139,13 @@ export class BoardComponent {
       'terrain-player1-den': tile.type === 'den' && tile.side === 1,
       selected: isSelected
     };
+  }
+
+  /** Hide the real piece while its ghost is animating the same piece id. */
+  isPieceAnimating(pieceId: string): boolean {
+    return (
+      this.ghostState !== null && this.ghostState.piece.id === pieceId
+    );
   }
 
   getLastMoveClass(col: number, row: number): string {
@@ -121,5 +183,50 @@ export class BoardComponent {
 
   onSquareClick(col: number, row: number) {
     this.squareClick.emit({ col, row });
+  }
+
+  private handleMovingPiece(v: MoveAnimation | null): void {
+    if (this.animTimer) {
+      clearTimeout(this.animTimer);
+      this.animTimer = null;
+    }
+
+    if (!v) {
+      this.ghostState = null;
+      return;
+    }
+
+    // Ignore re-set of the same animation (e.g. CD re-run) — keyed on the
+    // monotonic animation id so consecutive moves by the same piece restart.
+    if (this.ghostState && this.ghostState.id === v.id) {
+      return;
+    }
+
+    const fromX = v.from.col * CELL + OFFSET;
+    const fromY = v.from.row * CELL + OFFSET;
+    const toX = v.to.col * CELL + OFFSET;
+    const toY = v.to.row * CELL + OFFSET;
+
+    this.ghostState = {
+      id: v.id,
+      piece: v.piece,
+      fx: fromX,
+      fy: fromY,
+      tx: toX,
+      ty: toY,
+      isCapture: v.isCapture
+    };
+
+    const total =
+      v.isCapture
+        ? SLIDE_MS + POUNCE_DELAY_MS + POUNCE_MS
+        : SLIDE_MS + 50;
+
+    this.animTimer = setTimeout(() => {
+      this.animTimer = null;
+      this.ngZone.run(() => {
+        this.moveAnimationComplete.emit();
+      });
+    }, total);
   }
 }

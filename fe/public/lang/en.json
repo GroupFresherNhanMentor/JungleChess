@@ -80,5 +80,16 @@
   "ruleDens": "<b>Dens (Treasure):</b> Win by entering opponent's Den. Cannot enter own Den.",
   "ruleWinCondition": "Win by: entering opponent's Den, OR capturing all opponent's pieces.",
   "undoButton": "Undo Move",
-  "randomizeBoardButton": "Randomize Board"
+  "randomizeBoardButton": "Randomize Board",
+  "battleTitle": "BATTLE!",
+  "battleSubtitle": "Mash your key to win the clash!",
+  "battleTapBlue": "Hold A (Blue)",
+  "battleTapRed": "Hold L (Red)",
+  "battleAiAuto": "AI fighting...",
+  "battleHint": "Press A / L rapidly. First to fill their bar wins!",
+  "battleIntro": "Equal rank! Battle to decide the capture!",
+  "battleWin": "{winner} wins the clash!",
+  "battleCounter": "Counter-attack! The defender repelled the attack!",
+  "bannerFirstMove": "{player} moves first!",
+  "bannerWin": "{winner} wins!"
 }

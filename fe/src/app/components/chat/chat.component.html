@@ -56,6 +56,28 @@
       class="chat-input"
       autocomplete="off"
     />
+    <!-- Emoji picker toggle -->
+    <div class="emoji-picker-wrap">
+      <button
+        type="button"
+        (click)="toggleEmojiPicker()"
+        class="emoji-toggle-btn"
+        title="Emoji"
+        aria-label="Emoji"
+      >
+        😊
+      </button>
+      <div *ngIf="emojiPickerOpen" class="emoji-dropdown" (click)="$event.stopPropagation()">
+        <button
+          type="button"
+          *ngFor="let emojiItem of emojiList"
+          (click)="pickEmoji(emojiItem)"
+          class="emoji-item"
+        >
+          {{ emojiItem }}
+        </button>
+      </div>
+    </div>
     <button type="submit" [disabled]="!newMessageText.trim()" class="send-btn">
       {{ loc.translate('chatSend') }}
     </button>

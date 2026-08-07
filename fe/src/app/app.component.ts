@@ -18,7 +18,8 @@ import { AudioService } from './core/services/audio.service';
 import { AiBotService } from './core/services/ai-bot.service';
 
 import { GameControlsComponent } from './components/game-controls/game-controls.component';
-import { BoardComponent } from './components/board/board.component';
+import { BoardComponent, MoveAnimation } from './components/board/board.component';
+import { BattleOverlayComponent } from './components/battle-overlay/battle-overlay.component';
 import { LeftPanelComponent } from './components/left-panel/left-panel.component';
 import { RightPanelComponent } from './components/right-panel/right-panel.component';
 import { WinChanceBarComponent } from './components/win-chance-bar/win-chance-bar.component';
@@ -34,6 +35,7 @@ import { LobbyComponent } from './components/lobby/lobby.component';
     FormsModule,
     GameControlsComponent,
     BoardComponent,
+    BattleOverlayComponent,
     LeftPanelComponent,
     RightPanelComponent,
     WinChanceBarComponent,
@@ -68,6 +70,26 @@ export class AppComponent implements OnInit {
   isGameOver: boolean = false;
   isAiThinking: boolean = false;
   isRulesModalOpen: boolean = false;
+
+  /** Big center-screen announcement (turn start / win). */
+  banner: { title: string; subtitle?: string; side?: PieceSide } | null = null;
+  private bannerTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // --- Move animation + equal-rank battle state ---
+  /** Ghost currently sliding on the board (null when idle). */
+  movingPiece: MoveAnimation | null = null;
+  /** True while a ghost is sliding or a battle overlay is open. */
+  isAnimating = false;
+  /** Battle arena shown when two equal-rank pieces clash. */
+  battle: {
+    attacker: Piece;
+    defender: Piece;
+    from: Position;
+    to: Position;
+  } | null = null;
+  /** Hoisted win-check / turn-toggle / AI-trigger, run after animation. */
+  private pendingFinalize: (() => void) | null = null;
+  private animSeq = 0;
 
   private botTaunts = [
     'Tôi đã tính trước 9 nước cờ rồi đó! 🤖',
@@ -128,6 +150,10 @@ export class AppComponent implements OnInit {
     this.isGameOver = false;
     this.isAiThinking = false;
     this.actualAiDepth = 0;
+    this.movingPiece = null;
+    this.isAnimating = false;
+    this.battle = null;
+    this.pendingFinalize = null;
 
     const timeStr = new Date().toLocaleTimeString([], {
       hour: '2-digit',
@@ -146,6 +172,15 @@ export class AppComponent implements OnInit {
       }
     ];
 
+    // Announce who moves first (big banner)
+    this.showBanner(
+      this.loc.translate('bannerFirstMove', {
+        player: this.loc.translate(this.currentTurn === 0 ? 'playerStartsBlue' : 'playerStartsRed')
+      }),
+      undefined,
+      this.currentTurn
+    );
+
     this.updateStatusMessage();
     this.cdr.detectChanges();
 
@@ -153,6 +188,23 @@ export class AppComponent implements OnInit {
     if ((this.gameMode === 'PVA' || this.detailedGameMode === 'EVE') && this.currentTurn === 1) {
       this.triggerAiMove();
     }
+  }
+
+  /** Show a transient big announcement banner on screen. */
+  public showBanner(
+    title: string,
+    subtitle?: string,
+    side?: PieceSide
+  ): void {
+    if (this.bannerTimer) {
+      clearTimeout(this.bannerTimer);
+    }
+    this.banner = { title, subtitle, side };
+    this.cdr.detectChanges();
+    this.bannerTimer = setTimeout(() => {
+      this.banner = null;
+      this.cdr.detectChanges();
+    }, 1800);
   }
 
   public onSendChatMessage(text: string): void {
@@ -222,7 +274,7 @@ export class AppComponent implements OnInit {
   }
 
   public onSquareClick(pos: Position): void {
-    if (this.isGameOver || this.isAiThinking) {
+    if (this.isGameOver || this.isAnimating || this.isAiThinking) {
       return;
     }
 
@@ -294,6 +346,60 @@ export class AppComponent implements OnInit {
   }
 
   public executeMove(from: Position, to: Position): void {
+    const piece = this.ruleService.getPieceAt(this.pieces, from.col, from.row);
+    if (!piece) return;
+
+    const targetPiece = this.ruleService.getPieceAt(this.pieces, to.col, to.row);
+
+    // Equal-rank clash -> open the battle arena instead of resolving instantly
+    if (targetPiece && this.shouldBattle(piece, targetPiece)) {
+      this.isAnimating = true;
+      this.battle = { attacker: piece, defender: targetPiece, from, to };
+      this.statusMessage = this.loc.translate('battleIntro');
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.applyMove(from, to, 'attacker');
+  }
+
+  /** True when a capture is a true equal-rank clash (not auto-captured via trap). */
+  private shouldBattle(attacker: Piece, defender: Piece): boolean {
+    if (attacker.side === defender.side) return false;
+
+    const defenderTile = this.ruleService.getTileInfo(defender.position.col, defender.position.row);
+
+    // Defender in attacker's trap -> effective rank 0 -> instant capture, no battle
+    if (defenderTile.type === 'trap' && defenderTile.side === attacker.side) {
+      return false;
+    }
+
+    // Only equal nominal ranks trigger the clash (rat/elephant exceptions never equal)
+    return attacker.rank === defender.rank;
+  }
+
+  /** Called by the battle overlay with the winning side. */
+  public onBattleResult(winningSide: PieceSide): void {
+    const b = this.battle;
+    this.battle = null;
+    if (!b) return;
+
+    const attackerWon = b.attacker.side === winningSide;
+    const outcome: 'attacker' | 'defender' = attackerWon ? 'attacker' : 'defender';
+    this.statusMessage = attackerWon
+      ? this.loc.translate('battleWin', {
+          winner: this.loc.translate(winningSide === 0 ? 'playerStartsBlue' : 'playerStartsRed')
+        })
+      : this.loc.translate('battleCounter');
+
+    this.applyMove(b.from, b.to, outcome);
+  }
+
+  /**
+   * Resolve a move (with a known outcome) and animate the ghost.
+   * Win-check / turn-toggle / AI trigger are deferred to onMoveAnimationComplete.
+   */
+  private applyMove(from: Position, to: Position, outcome: 'attacker' | 'defender'): void {
     this.ngZone.run(() => {
       const piece = this.ruleService.getPieceAt(this.pieces, from.col, from.row);
       if (!piece) return;
@@ -301,8 +407,14 @@ export class AppComponent implements OnInit {
       const targetPiece = this.ruleService.getPieceAt(this.pieces, to.col, to.row);
       const targetTile = this.ruleService.getTileInfo(to.col, to.row);
 
+      // Determine which piece is actually removed (the loser of the clash)
+      const loser = outcome === 'attacker' ? targetPiece : piece;
+      const winnerSide = outcome === 'attacker' ? piece.side : (targetPiece?.side ?? piece.side);
+
       // Audio effect
-      if (targetTile.type === 'den') {
+      if (outcome === 'defender') {
+        this.audioService.playCapture(piece.type); // attacker eaten (counter)
+      } else if (targetTile.type === 'den') {
         this.audioService.playDenCapture();
       } else if (targetPiece) {
         this.audioService.playCapture(targetPiece.type);
@@ -312,20 +424,20 @@ export class AppComponent implements OnInit {
         this.audioService.playMove();
       }
 
-      // Capture piece logic
-      if (targetPiece) {
-        if (piece.side === 0) {
-          this.capturedByBlue = [...this.capturedByBlue, targetPiece];
+      // Capture bookkeeping: the loser goes to the winner's captured list
+      if (loser) {
+        if (winnerSide === 0) {
+          this.capturedByBlue = [...this.capturedByBlue, loser];
         } else {
-          this.capturedByRed = [...this.capturedByRed, targetPiece];
+          this.capturedByRed = [...this.capturedByRed, loser];
         }
       }
 
       // Update pieces array immutably
       this.pieces = this.pieces
-        .filter((p) => !(targetPiece && p.id === targetPiece.id))
+        .filter((p) => !(loser && p.id === loser.id))
         .map((p) => {
-          if (p.id === piece.id) {
+          if (outcome === 'attacker' && p.id === piece.id) {
             return {
               ...p,
               position: { col: to.col, row: to.row }
@@ -338,10 +450,37 @@ export class AppComponent implements OnInit {
         from,
         to,
         piece: { ...piece, position: { col: to.col, row: to.row } },
-        capturedPiece: targetPiece ? { ...targetPiece } : null
+        capturedPiece: loser ? { ...loser } : null,
+        battleOutcome: outcome === 'defender' ? 'defender' : undefined
       };
       this.moveHistory = [...this.moveHistory, moveRecord];
 
+      this.isAnimating = true;
+      this.movingPiece = {
+        id: ++this.animSeq,
+        piece,
+        from,
+        to,
+        isCapture: !!loser
+      };
+      this.cdr.detectChanges();
+
+      this.pendingFinalize = () => this.finalizeMove(piece.side);
+    });
+  }
+
+  /** Runs once the ghost slide finishes. */
+  public onMoveAnimationComplete(): void {
+    this.movingPiece = null;
+    this.isAnimating = false;
+
+    const fn = this.pendingFinalize;
+    this.pendingFinalize = null;
+    if (fn) fn();
+  }
+
+  private finalizeMove(movedSide: PieceSide): void {
+    this.ngZone.run(() => {
       // Check Win Condition
       const winCheck = this.ruleService.checkWinCondition(
         this.pieces,
@@ -350,11 +489,19 @@ export class AppComponent implements OnInit {
 
       if (winCheck.gameOver) {
         this.isGameOver = true;
+        this.isAiThinking = false;
         if (winCheck.winner === 0) {
           this.audioService.playVictory();
           this.statusMessage = this.loc.translate('statusWin', {
             winner: this.loc.translate('playerStartsBlue')
           });
+          this.showBanner(
+            this.loc.translate('bannerWin', {
+              winner: this.loc.translate('playerStartsBlue')
+            }),
+            undefined,
+            0
+          );
         } else if (winCheck.winner === 1) {
           if (this.gameMode === 'PVA') {
             this.audioService.playDefeat();
@@ -364,9 +511,17 @@ export class AppComponent implements OnInit {
           this.statusMessage = this.loc.translate('statusWin', {
             winner: this.loc.translate('playerStartsRed')
           });
+          this.showBanner(
+            this.loc.translate('bannerWin', {
+              winner: this.loc.translate('playerStartsRed')
+            }),
+            undefined,
+            1
+          );
         } else {
           this.audioService.playDraw();
           this.statusMessage = this.loc.translate('statusDraw');
+          this.showBanner(this.loc.translate('statusDraw'));
         }
         this.cdr.detectChanges();
         return;
@@ -377,9 +532,11 @@ export class AppComponent implements OnInit {
       this.updateStatusMessage();
       this.cdr.detectChanges();
 
-      // Trigger AI if PVA mode and AI turn
+      // Trigger AI if PVA mode and AI turn; otherwise release the input lock.
       if (this.gameMode === 'PVA' && this.currentTurn === 1 && !this.isGameOver) {
         this.triggerAiMove();
+      } else {
+        this.isAiThinking = false;
       }
     });
   }
@@ -400,8 +557,6 @@ export class AppComponent implements OnInit {
       );
 
       this.ngZone.run(() => {
-        this.isAiThinking = false;
-
         if (aiMove) {
           this.actualAiDepth = aiMove.depthAchieved;
           // Step 1: Highlight AI's selected piece & target move square
@@ -421,6 +576,7 @@ export class AppComponent implements OnInit {
         } else {
           // AI has no moves -> Player wins
           this.isGameOver = true;
+          this.isAiThinking = false;
           this.audioService.playVictory();
           this.statusMessage = this.loc.translate('errorAINoMoves');
           this.cdr.detectChanges();
@@ -430,7 +586,7 @@ export class AppComponent implements OnInit {
   }
 
   public undoMove(): void {
-    if (this.moveHistory.length === 0 || this.isAiThinking) return;
+    if (this.moveHistory.length === 0 || this.isAiThinking || this.isAnimating) return;
 
     const undoCount = this.gameMode === 'PVA' && this.moveHistory.length >= 2 ? 2 : 1;
 
@@ -438,27 +594,44 @@ export class AppComponent implements OnInit {
       const lastMove = this.moveHistory.pop();
       if (!lastMove) break;
 
-      // Restore moved piece position
-      this.pieces = this.pieces.map((p) => {
-        if (
-          p.id === lastMove.piece.id ||
-          (p.position.col === lastMove.to.col && p.position.row === lastMove.to.row)
-        ) {
-          return {
-            ...p,
-            position: { ...lastMove.from }
-          };
-        }
-        return p;
-      });
-
-      // Restore captured piece if any
-      if (lastMove.capturedPiece) {
-        this.pieces = [...this.pieces, { ...lastMove.capturedPiece }];
-        if (lastMove.piece.side === 0) {
+      if (lastMove.battleOutcome === 'defender') {
+        // Counter-attack: the attacker was removed, the defender stayed at `to`.
+        // Re-add the attacker at `from`; leave the defender in place.
+        this.pieces = [
+          ...this.pieces,
+          { ...lastMove.piece, position: { ...lastMove.from } }
+        ];
+        // The removed attacker was pushed to the defender's captured list.
+        const defenderSide = lastMove.piece.side === 0 ? 1 : 0;
+        if (defenderSide === 0) {
           this.capturedByBlue = this.capturedByBlue.slice(0, -1);
         } else {
           this.capturedByRed = this.capturedByRed.slice(0, -1);
+        }
+      } else {
+        // Normal move: attacker is at `to`; defender was captured (if any).
+        // Restore the moved piece back to `from` (match by id or by landing cell).
+        this.pieces = this.pieces.map((p) => {
+          if (
+            p.id === lastMove.piece.id ||
+            (p.position.col === lastMove.to.col && p.position.row === lastMove.to.row)
+          ) {
+            return {
+              ...p,
+              position: { ...lastMove.from }
+            };
+          }
+          return p;
+        });
+
+        // Restore captured piece if any
+        if (lastMove.capturedPiece) {
+          this.pieces = [...this.pieces, { ...lastMove.capturedPiece }];
+          if (lastMove.piece.side === 0) {
+            this.capturedByBlue = this.capturedByBlue.slice(0, -1);
+          } else {
+            this.capturedByRed = this.capturedByRed.slice(0, -1);
+          }
         }
       }
 
@@ -473,7 +646,7 @@ export class AppComponent implements OnInit {
   }
 
   public randomizeBoard(): void {
-    if (this.isAiThinking) return;
+    if (this.isAiThinking || this.isAnimating) return;
 
     // Available non-water land positions
     const landPositions: Position[] = [];

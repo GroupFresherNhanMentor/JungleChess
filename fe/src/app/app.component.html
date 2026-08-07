@@ -71,7 +71,9 @@
           [selectedPos]="selectedPos"
           [validMoves]="validMoves"
           [lastMove]="getLastMove()"
+          [movingPiece]="movingPiece"
           (squareClick)="onSquareClick($event)"
+          (moveAnimationComplete)="onMoveAnimationComplete()"
         ></app-board>
 
         <!-- Status Message -->
@@ -105,3 +107,25 @@
   [isOpen]="isRulesModalOpen"
   (close)="closeRulesModal()"
 ></app-game-rules-modal>
+
+<!-- Turn / Win Announcement Banner (fixed center overlay) -->
+<div
+  *ngIf="banner as b"
+  class="announce-banner"
+  [class.blue]="b.side === 0"
+  [class.red]="b.side === 1"
+  [class.neutral]="b.side === undefined"
+>
+  <div class="announce-title">{{ b.title }}</div>
+  <div *ngIf="b.subtitle" class="announce-subtitle">{{ b.subtitle }}</div>
+</div>
+
+<!-- Equal-Rank Battle Arena (fixed full-screen overlay) -->
+<app-battle-overlay
+  *ngIf="battle as b"
+  [attacker]="b.attacker"
+  [defender]="b.defender"
+  [attackerIsAI]="b.attacker.side === 1 && (gameMode === 'PVA' || detailedGameMode === 'EVE')"
+  [defenderIsAI]="b.defender.side === 1 && (gameMode === 'PVA' || detailedGameMode === 'EVE')"
+  (battleResult)="onBattleResult($event)"
+></app-battle-overlay>

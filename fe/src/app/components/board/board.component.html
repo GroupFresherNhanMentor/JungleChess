@@ -35,15 +35,6 @@
             />
           </div>
 
-          <!-- Den texture overlay (Chest icon) -->
-          <div *ngIf="isDen(c, r)" class="den-texture-container">
-            <img
-              src="assets/decorations/chest.png"
-              class="terrain-texture-img"
-              alt="Den Chest"
-            />
-          </div>
-
           <!-- Wooden bridge overlay for cols A, D, G on river rows (Rows 4, 5, 6) -->
           <div *ngIf="isBridge(c, r)" class="den-texture-container" style="z-index: 3; opacity: 0.95;">
             <img
@@ -76,6 +67,7 @@
           <!-- Piece element -->
           <ng-container *ngIf="getPieceAt(c, r) as p">
             <div
+              *ngIf="!isPieceAnimating(p.id)"
               class="piece"
               [ngClass]="p.side === 0 ? 'player0' : 'player1'"
             >
@@ -88,6 +80,27 @@
         </div>
       </ng-container>
     </ng-container>
+
+    <!-- Ghost piece sliding from origin to destination -->
+    <div
+      *ngIf="ghostState as g"
+      class="piece ghost-piece"
+      [ngClass]="[
+        g.piece.side === 0 ? 'player0' : 'player1',
+        g.isCapture ? 'pounce' : ''
+      ]"
+      [ngStyle]="{
+        '--ghost-fx': g.fx + 'px',
+        '--ghost-fy': g.fy + 'px',
+        '--ghost-tx': g.tx + 'px',
+        '--ghost-ty': g.ty + 'px'
+      }"
+    >
+      <img
+        [src]="'assets/images/head_no_background/' + g.piece.type + '.png'"
+        [alt]="g.piece.type"
+      />
+    </div>
   </div>
 
   <!-- Row labels right (9 to 1 top to bottom) -->

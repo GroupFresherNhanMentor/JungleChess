@@ -1,0 +1,126 @@
+/* --- Battle overlay: full-screen dim + arena --- */
+.battle-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.battle-stage {
+  background: linear-gradient(160deg, #2b2b3a 0%, #1a1a26 100%);
+  border: 3px solid #ffd54f;
+  border-radius: 18px;
+  padding: 28px 40px;
+  width: min(560px, 92vw);
+  box-shadow: 0 0 40px rgba(255, 213, 79, 0.35);
+  text-align: center;
+  color: #fff;
+}
+
+.battle-title {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: #ffd54f;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.battle-subtitle {
+  font-size: 15px;
+  color: #cbd5e1;
+  margin: 4px 0 18px;
+}
+
+.arena {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.fighter {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.fighter-img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 4px solid #888;
+  background: radial-gradient(circle at 30% 25%, #ffffff, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+.fighter-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.fighter-img.blue { border-color: #3b82f6; box-shadow: 0 0 18px rgba(59, 130, 246, 0.6); }
+.fighter-img.red  { border-color: #ef4444; box-shadow: 0 0 18px rgba(239, 68, 68, 0.6); }
+
+.fighter-name {
+  font-size: 20px;
+  font-weight: 800;
+}
+.fighter-side {
+  font-size: 13px;
+  color: #cbd5e1;
+}
+.fighter-key {
+  font-size: 13px;
+  font-weight: 700;
+  background: #ffffff;
+  color: #1e293b;
+  border-radius: 20px;
+  padding: 4px 14px;
+}
+.fighter-key.hidden {
+  display: none;
+}
+
+.vs {
+  font-size: 40px;
+  font-weight: 900;
+  color: #ffd54f;
+}
+
+/* --- Progress bar --- */
+.battle-bar {
+  display: flex;
+  height: 32px;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0f172a;
+  border: 2px solid #334155;
+  position: relative;
+}
+.bar-segment {
+  height: 100%;
+  transition: width 0.08s linear;
+}
+.bar-blue {
+  background: linear-gradient(90deg, #1d4ed8, #3b82f6);
+  border-right: 2px solid rgba(255, 255, 255, 0.25);
+}
+.bar-red {
+  background: linear-gradient(270deg, #b91c1c, #ef4444);
+}
+
+.battle-hint {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #94a3b8;
+}

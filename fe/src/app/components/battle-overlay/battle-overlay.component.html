@@ -1,0 +1,60 @@
+<div class="battle-overlay">
+  <div class="battle-stage">
+    <div class="battle-title">{{ loc.translate('battleTitle') }}</div>
+    <div class="battle-subtitle">{{ loc.translate('battleSubtitle') }}</div>
+
+    <div class="arena">
+      <!-- Attacker (left) -->
+      <div class="fighter">
+        <div class="fighter-img" [class.blue]="attacker!.side === 0" [class.red]="attacker!.side === 1">
+          <img
+            [src]="'assets/images/head_no_background/' + attacker!.type + '.png'"
+            [alt]="attacker!.type"
+          />
+        </div>
+        <div class="fighter-name">{{ pieceName(attacker) }}</div>
+        <div class="fighter-side">
+          {{ attacker!.side === 0 ? loc.translate('playerStartsBlue') : loc.translate('playerStartsRed') }}
+        </div>
+        <div class="fighter-key" [class.hidden]="attackerIsAI">
+          {{ attacker!.side === 0 ? loc.translate('battleTapBlue') : loc.translate('battleTapRed') }}
+        </div>
+        <div class="fighter-key" [class.hidden]="!attackerIsAI">
+          {{ loc.translate('battleAiAuto') }}
+        </div>
+      </div>
+
+      <div class="vs">⚔️</div>
+
+      <!-- Defender (right) -->
+      <div class="fighter">
+        <div class="fighter-img" [class.blue]="defender!.side === 0" [class.red]="defender!.side === 1">
+          <img
+            [src]="'assets/images/head_no_background/' + defender!.type + '.png'"
+            [alt]="defender!.type"
+          />
+        </div>
+        <div class="fighter-name">{{ pieceName(defender) }}</div>
+        <div class="fighter-side">
+          {{ defender!.side === 0 ? loc.translate('playerStartsBlue') : loc.translate('playerStartsRed') }}
+        </div>
+        <div class="fighter-key" [class.hidden]="defenderIsAI">
+          {{ defender!.side === 0 ? loc.translate('battleTapBlue') : loc.translate('battleTapRed') }}
+        </div>
+        <div class="fighter-key" [class.hidden]="!defenderIsAI">
+          {{ loc.translate('battleAiAuto') }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress bar: blue fills from left, red fills from right -->
+    <div class="battle-bar">
+      <div class="bar-segment bar-blue" [style.width.%]="blueProgress"></div>
+      <div class="bar-segment bar-red" [style.width.%]="redProgress"></div>
+    </div>
+
+    <div class="battle-hint">
+      {{ loc.translate('battleHint') }}
+    </div>
+  </div>
+</div>

@@ -177,6 +177,11 @@ public class DefaultGameRuleEngine implements GameRuleEngine {
             return;
         }
 
+        if (!attackerInRiver && targetInRiver) {
+            // Piece on land cannot capture Rat in river
+            return;
+        }
+
         // Capture Rank Check
         if (canCapture(movedPiece, targetPiece)) {
             validMoves.add(new Move(from, to, movedPiece, targetPiece, event));

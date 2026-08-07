@@ -115,4 +115,27 @@ class BoardEvaluatorTest {
                 "Enemy piece the bot can capture next move should boost the score, holding material constant "
                         + "(free=" + freeScore + ", capturable=" + capturableScore + ")");
     }
+
+    @Test
+    @DisplayName("Piece threatened by enemy Tiger river jump scores lower than unthreatened piece")
+    void testRiverJumpThreatDetected() {
+        Piece p1Wolf = new Piece(Side.PLAYER_1, PieceType.WOLF);
+        Piece p2Tiger = new Piece(Side.PLAYER_2, PieceType.TIGER);
+
+        // Unthreatened: P2 Tiger at (2,0) - not aligned with river
+        Board unthreatened = new Board();
+        unthreatened.setPiece(new Position(6, 1), p1Wolf);
+        unthreatened.setPiece(new Position(2, 0), p2Tiger);
+        int unthreatenedScore = evaluator.evaluate(unthreatened, Side.PLAYER_1);
+
+        // Threatened: P2 Tiger at (2,1) - directly across left river from P1 Wolf at (6,1)
+        Board threatened = new Board();
+        threatened.setPiece(new Position(6, 1), p1Wolf);
+        threatened.setPiece(new Position(2, 1), p2Tiger);
+        int threatenedScore = evaluator.evaluate(threatened, Side.PLAYER_1);
+
+        assertTrue(threatenedScore < unthreatenedScore,
+                "Piece threatened by enemy Tiger river jump should receive a threat penalty ("
+                        + "unthreatened=" + unthreatenedScore + ", threatened=" + threatenedScore + ")");
+    }
 }

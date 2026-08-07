@@ -118,12 +118,13 @@ public class BoardEvaluator {
      * threatens them), so evaluation is symmetric.
      */
     private boolean isThreatened(Board board, int row, int col, Piece piece, Side attackerSide) {
-        int[] dr = {-1, 1, 0, 0};
-        int[] dc = {0, 0, -1, 1};
+        int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+        boolean targetInRiver = Board.isRiver(row, col);
 
-        for (int i = 0; i < dr.length; i++) {
-            int er = row + dr[i];
-            int ec = col + dc[i];
+        // 1. Direct adjacent checks
+        for (int[] dir : directions) {
+            int er = row + dir[0];
+            int ec = col + dir[1];
             if (er < 0 || er >= Board.ROWS || ec < 0 || ec >= Board.COLS) {
                 continue;
             }
@@ -133,14 +134,53 @@ public class BoardEvaluator {
                 continue;
             }
 
-            // Attacker standing on the threatened piece's trap is neutralized (rank 0) —
-            // cannot capture.
+            // Attacker standing on the threatened piece's trap is neutralized (rank 0) — cannot capture.
             if (Board.isTrap(er, ec, piece.side())) {
+                continue;
+            }
+
+            boolean attackerInRiver = Board.isRiver(er, ec);
+            // River boundary rules: river Rat cannot capture land piece, land piece cannot capture river Rat
+            if (attackerInRiver != targetInRiver) {
                 continue;
             }
 
             if (gameRuleEngine.canCapture(attacker, piece)) {
                 return true;
+            }
+        }
+
+        // 2. River jump threat checks for Tiger & Lion (only applicable when target is on land)
+        if (!targetInRiver) {
+            for (int[] dir : directions) {
+                int r = row + dir[0];
+                int c = col + dir[1];
+
+                if (!Position.isValid(r, c) || !Board.isRiver(r, c)) {
+                    continue;
+                }
+
+                boolean blockedByRat = false;
+                while (Position.isValid(r, c) && Board.isRiver(r, c)) {
+                    Piece riverPiece = board.getPiece(r, c);
+                    if (riverPiece != null && riverPiece.type() == PieceType.RAT) {
+                        blockedByRat = true;
+                        break;
+                    }
+                    r += dir[0];
+                    c += dir[1];
+                }
+
+                if (!blockedByRat && Position.isValid(r, c)) {
+                    Piece attacker = board.getPiece(r, c);
+                    if (attacker != null && attacker.side() == attackerSide) {
+                        if (attacker.type() == PieceType.TIGER || attacker.type() == PieceType.LION) {
+                            if (!Board.isTrap(r, c, piece.side()) && gameRuleEngine.canCapture(attacker, piece)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
             }
         }
 

@@ -17,9 +17,14 @@ import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.messaging.rsocket.annotation.ConnectMapping;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import fpt.qn.junglechess.room.service.RSocketSessionContext;
+import fpt.qn.junglechess.security.JwtUserPrincipal;
 
 import java.util.UUID;
 
@@ -35,15 +40,10 @@ public class RoomController {
     // ── Connection lifecycle ──────────────────────────────────────────────────
 
     @ConnectMapping
-    public Mono<Void> onConnect(RSocketRequester requester) {
+    public Mono<Void> onConnect(RSocketRequester requester, @AuthenticationPrincipal JwtUserPrincipal principal) {
         String sessionId = UUID.randomUUID().toString();
-        // Attach sessionId to the requester for downstream use
-        requester.rsocket()
-                .metadataPush(null) // metadata-based sessionId injection handled by auth layer later
-                .onErrorComplete()
-                .subscribe();
 
-        sessionRegistry.register(sessionId, requester);
+        sessionRegistry.register(sessionId, requester, principal);
         requester.rsocket()
                 .onClose()
                 .doFinally(signal -> {
@@ -52,7 +52,7 @@ public class RoomController {
                 })
                 .subscribe();
 
-        log.debug("New RSocket session: {}", sessionId);
+        log.debug("New RSocket session {} for user {}", sessionId, principal.userId());
         return Mono.empty();
     }
 
@@ -60,41 +60,40 @@ public class RoomController {
 
     @MessageMapping("room.create")
     public Mono<CreateRoomResponse> create(CreateRoomRequest req, RSocketRequester requester) {
-        String sessionId = resolveSessionId(requester);
-        return roomService.createRoom(req, sessionId, sessionId)
+        RSocketSessionContext context = resolveSessionContext(requester);
+        return roomService.createRoom(req, context.sessionId(), context.principal().userId().toString())
                 .onErrorResume(AppException.class, e ->
-                        Mono.fromRunnable(() -> emitError(sessionId, e.getMessage(), null))
+                        Mono.fromRunnable(() -> emitError(context.sessionId(), e.getMessage(), null))
                                 .then(Mono.error(e)));
     }
 
     @MessageMapping("room.{id}.join")
     public Mono<JoinRoomResponse> join(@DestinationVariable String id,
                                        RSocketRequester requester) {
-        String sessionId = resolveSessionId(requester);
-        // isBot flag: bots will set metadata; default false until auth layer handles it
-        return roomService.joinRoom(id, sessionId, false, sessionId)
+        RSocketSessionContext context = resolveSessionContext(requester);
+        return roomService.joinRoom(id, context.sessionId(), false, context.principal().userId().toString())
                 .onErrorResume(AppException.class, e -> {
-                    emitError(sessionId, e.getMessage(), id);
+                    emitError(context.sessionId(), e.getMessage(), id);
                     return Mono.error(e);
                 });
     }
 
     @MessageMapping("room.{id}.watch")
     public Mono<Void> watch(@DestinationVariable String id, RSocketRequester requester) {
-        String sessionId = resolveSessionId(requester);
-        return roomService.watchRoom(id, sessionId, sessionId)
+        RSocketSessionContext context = resolveSessionContext(requester);
+        return roomService.watchRoom(id, context.sessionId(), context.principal().userId().toString())
                 .onErrorResume(AppException.class, e -> {
-                    emitError(sessionId, e.getMessage(), id);
+                    emitError(context.sessionId(), e.getMessage(), id);
                     return Mono.error(e);
                 });
     }
 
     @MessageMapping("room.{id}.subscribe")
     public Flux<RoomEvent> subscribe(@DestinationVariable String id, RSocketRequester requester) {
-        String sessionId = resolveSessionId(requester);
-        return roomService.subscribeRoom(id, sessionId)
+        RSocketSessionContext context = resolveSessionContext(requester);
+        return roomService.subscribeRoom(id, context.sessionId())
                 .onErrorResume(AppException.class, e -> {
-                    emitError(sessionId, e.getMessage(), id);
+                    emitError(context.sessionId(), e.getMessage(), id);
                     return Flux.error(e);
                 });
     }
@@ -103,36 +102,37 @@ public class RoomController {
     public Mono<MoveAckResponse> move(@DestinationVariable String id,
                                       MoveRequest req,
                                       RSocketRequester requester) {
-        String sessionId = resolveSessionId(requester);
-        return roomService.move(id, sessionId, req)
+        RSocketSessionContext context = resolveSessionContext(requester);
+        return roomService.move(id, context.sessionId(), req)
                 .onErrorResume(AppException.class, e -> {
-                    emitError(sessionId, e.getMessage(), id);
+                    emitError(context.sessionId(), e.getMessage(), id);
                     return Mono.error(e);
                 });
     }
 
     @MessageMapping("room.{id}.leave")
     public Mono<Void> leave(@DestinationVariable String id, RSocketRequester requester) {
-        String sessionId = resolveSessionId(requester);
-        return roomService.leaveRoom(id, sessionId);
+        return roomService.leaveRoom(id, resolveSessionContext(requester).sessionId());
     }
 
     @MessageMapping("room.{id}.rematch")
     public Mono<Void> rematch(@DestinationVariable String id, RSocketRequester requester) {
-        String sessionId = resolveSessionId(requester);
-        return roomService.rematch(id, sessionId)
+        RSocketSessionContext context = resolveSessionContext(requester);
+        return roomService.rematch(id, context.sessionId())
                 .onErrorResume(AppException.class, e -> {
-                    emitError(sessionId, e.getMessage(), id);
+                    emitError(context.sessionId(), e.getMessage(), id);
                     return Mono.error(e);
                 });
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private String resolveSessionId(RSocketRequester requester) {
-        // Until auth layer injects userId from JWT, use requester identity as sessionId.
-        // Auth co-worker will replace this with principal extraction.
-        return String.valueOf(System.identityHashCode(requester));
+    private RSocketSessionContext resolveSessionContext(RSocketRequester requester) {
+        RSocketSessionContext context = sessionRegistry.findByRequester(requester);
+        if (context == null) {
+            throw new AccessDeniedException("RSocket session is not authenticated");
+        }
+        return context;
     }
 
     private void emitError(String sessionId, String message, Object context) {

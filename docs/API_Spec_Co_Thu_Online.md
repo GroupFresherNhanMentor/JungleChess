@@ -178,15 +178,16 @@
 ### 3.1 Kết nối & xác thực
 
 - Client kết nối RSocket over WebSocket tới endpoint `/rsocket`.
-- Gửi `accessToken` trong authentication metadata của RSocket SETUP/payload. Metadata dùng Bearer JWT:
+- Gửi access token tại RSocket SETUP trong composite metadata `message/x.rsocket.composite-metadata.v0`, với bearer entry `message/x.rsocket.authentication.bearer.v0`:
 
 ```
-Authorization: Bearer eyJhbGciOi...
+Bearer eyJhbGciOi...
 ```
 
 - Server xác thực JWT metadata trước khi xử lý route và tạo `Principal` gồm `userId`, username và roles.
 - Command dùng interaction model `request-response`; event phòng dùng `request-stream`.
-- Nếu token không hợp lệ/hết hạn → server từ chối payload/stream. Client cần refresh access token qua REST rồi reconnect RSocket bằng token mới.
+- `lobby.rooms` và toàn bộ `room.*` yêu cầu access token hợp lệ; `admin.eve.rooms` yêu cầu role `ADMIN`.
+- Server kiểm tra expiration và blacklist trước mỗi payload protected. Nếu token không hợp lệ, hết hạn hoặc revoked → server từ chối payload/stream. Client cần refresh access token qua REST rồi reconnect RSocket bằng token mới.
 
 ### 3.2 Danh sách route và interaction model
 

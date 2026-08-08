@@ -8,6 +8,7 @@ import fpt.qn.junglechess.room.model.GameMode;
 import fpt.qn.junglechess.room.service.RoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,6 +24,7 @@ public class EveAdminController {
     private final DockerBotService dockerBotService;
 
     @PostMapping("/eve")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public Mono<CreateRoomResponse> createEveRoom() {
         CreateRoomRequest req = new CreateRoomRequest(GameMode.EVE, true, true, null);
         // Admin session/userId placeholder — real auth injected by co-worker's security layer

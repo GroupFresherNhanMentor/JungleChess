@@ -2,6 +2,8 @@ package fpt.qn.junglechess.security;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
@@ -20,6 +22,7 @@ import reactor.core.publisher.Mono;
 public class JwtBlacklistFilter implements WebFilter {
 
     RedisTokenBlacklistService blacklistService;
+    ReactiveJwtDecoder jwtDecoder;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
@@ -32,7 +35,8 @@ public class JwtBlacklistFilter implements WebFilter {
 
         String token = authHeader.substring(7);
 
-        return blacklistService.isBlacklisted(token)
+        return jwtDecoder.decode(token)
+                .flatMap(jwt -> blacklistService.isBlacklisted(jwt.getId()))
                 .flatMap(isBlacklisted -> {
                     if (isBlacklisted) {
                         log.warn("Blocked blacklisted JWT token at {}", request.getPath());
@@ -40,6 +44,7 @@ public class JwtBlacklistFilter implements WebFilter {
                         return exchange.getResponse().setComplete();
                     }
                     return chain.filter(exchange);
-                });
+                })
+                .onErrorResume(JwtException.class, error -> chain.filter(exchange));
     }
 }

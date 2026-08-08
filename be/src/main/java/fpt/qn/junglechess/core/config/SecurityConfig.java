@@ -8,7 +8,6 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
@@ -21,9 +20,6 @@ import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
-import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
@@ -37,6 +33,7 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
 import fpt.qn.junglechess.security.JwtBlacklistFilter;
+import fpt.qn.junglechess.security.JwtPrincipalAuthenticationConverter;
 import reactor.core.publisher.Mono;
 
 @Configuration
@@ -61,6 +58,7 @@ public class SecurityConfig {
                                 "/api/auth/guest",
                                 "/api/auth/refresh",
                                 "/api/auth/logout",
+                                "/rsocket",
                                 "/actuator/**",
                                 "/v3/api-docs/**",
                                 "/api-docs/**",
@@ -101,15 +99,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public Converter<Jwt, Mono<AbstractAuthenticationToken>> jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthorityPrefix("");
-        grantedAuthoritiesConverter.setAuthoritiesClaimName("roles");
-
-        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
-
-        return new ReactiveJwtAuthenticationConverterAdapter(jwtAuthenticationConverter);
+    public JwtPrincipalAuthenticationConverter jwtAuthenticationConverter() {
+        return new JwtPrincipalAuthenticationConverter();
     }
 
     @Bean

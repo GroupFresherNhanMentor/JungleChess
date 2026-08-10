@@ -1,27 +1,24 @@
 /* ──────────────────────────────────────────────────────────────
    Auth Pages Shared Styles — Login & Register
+   Warm Wood & Forest theme (matches lobby / game screens)
    ────────────────────────────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-/* Page Layout — Overlay full-screen vignette over map background */
+/* Page Layout — full-screen over the jungle map background (no dark overlay,
+   the auth card itself is an opaque wood panel so text stays readable) */
 .auth-page {
-  font-family: 'Inter', sans-serif;
+  font-family: sans-serif;
   min-height: 100vh;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(10, 20, 15, 0.65);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   position: relative;
   overflow: hidden;
   padding: 1.5rem;
   box-sizing: border-box;
 }
 
-/* Floating jungle pieces background */
+/* Floating jungle pieces background (kept — subtle wood-tone look) */
 .bg-decoration {
   position: absolute;
   inset: 0;
@@ -31,7 +28,8 @@
 .jungle-piece {
   position: absolute;
   font-size: 3rem;
-  opacity: 0.08;
+  opacity: 0.1;
+  filter: sepia(0.5) saturate(0.7);
   animation: floatPiece 12s ease-in-out infinite;
   user-select: none;
 }
@@ -49,20 +47,16 @@
   66%       { transform: translateY(10px) rotate(-4deg); }
 }
 
-/* Card — Sleek Compact Dark Jungle Glass Modal */
+/* Card — Warm Wood Panel (matches lobby / modal cards) */
 .auth-card {
-  background: rgba(18, 32, 22, 0.88);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1.5px solid rgba(74, 222, 128, 0.4);
-  border-radius: 20px;
+  background-color: var(--wood-panel-solid);
+  background-image: var(--panel-grad-top);
+  border: 3px solid var(--wood-border);
+  border-radius: 16px;
   padding: 2rem 1.75rem;
   width: 100%;
   max-width: 380px;
-  box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.6),
-    0 0 24px rgba(74, 222, 128, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow: var(--panel-shadow-3d);
   position: relative;
   z-index: 1;
   animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
@@ -104,34 +98,31 @@
   width: auto;
   font-size: 1.7rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #4ade80, #86efac);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--ink-strong);
+  text-shadow: var(--text-emboss);
   margin: 0 0 0.35rem 0;
   padding: 0;
   border: none;
   box-shadow: none;
   letter-spacing: -0.3px;
-  text-shadow: none;
 }
 
 .auth-subtitle {
   position: static;
   display: block;
   font-size: 0.88rem;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--ink);
   margin: 0;
 }
 
-/* Error banner */
+/* Error banner — warm wood panel with red accent */
 .error-banner {
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 10px;
+  background: var(--clan-red-bg);
+  border: 1px solid var(--clan-red-bright);
+  border-radius: 8px;
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
-  color: #fca5a5;
+  color: #ffb4b4;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -162,7 +153,7 @@
 .form-group label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--ink-strong);
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
@@ -183,11 +174,11 @@
 
 .form-input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  background-color: var(--wood-panel-light);
+  border: 1.5px solid var(--wood-border);
+  border-radius: 8px;
   padding: 0.75rem 2.75rem 0.75rem 2.75rem;
-  color: #fff;
+  color: var(--ink-strong);
   font-size: 0.95rem;
   font-family: inherit;
   transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
@@ -195,14 +186,15 @@
 }
 
 .form-input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--ink);
+  opacity: 0.9;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #4ade80;
-  background: rgba(74, 222, 128, 0.07);
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15);
+  border-color: var(--gold-accent);
+  background-color: var(--wood-panel-light);
+  box-shadow: 0 0 0 3px rgba(233, 180, 92, 0.25);
 }
 
 .form-input:disabled {
@@ -217,21 +209,21 @@
   border: none;
   cursor: pointer;
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--ink);
   padding: 0.25rem;
   line-height: 1;
   transition: color 0.2s;
 }
 
 .toggle-password-btn:hover {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--gold-accent-bright);
 }
 
-/* Buttons */
+/* Buttons — 3D wood/gold (same language as lobby) */
 .btn {
   width: 100%;
   padding: 0.85rem 1.5rem;
-  border-radius: 12px;
+  border-radius: 8px;
   border: none;
   font-size: 0.95rem;
   font-weight: 700;
@@ -241,12 +233,12 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+  transition: transform 0.1s, box-shadow 0.15s, opacity 0.2s;
   letter-spacing: 0.3px;
 }
 
 .btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: translateY(3px);
 }
 
 .btn:disabled {
@@ -255,27 +247,35 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #16a34a, #22c55e);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
+  background: var(--btn-gold);
+  color: var(--ink-strong);
+  border: 2px solid var(--gold-accent);
+  box-shadow: var(--btn-shadow-3d);
   margin-top: 0.5rem;
 }
 
 .btn-primary:hover:not(:disabled) {
-  box-shadow: 0 6px 24px rgba(34, 197, 94, 0.5);
-  transform: translateY(-1px);
+  background: var(--btn-gold-hot);
+  border-color: var(--gold-accent-bright);
+  box-shadow: var(--btn-shadow-3d);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: var(--btn-shadow-3d-active);
 }
 
 .btn-ghost {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.75);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  background: var(--btn-wood);
+  color: var(--ink-strong);
+  border: 1px solid var(--wood-border-soft);
+  box-shadow: var(--btn-shadow-3d-sml);
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--btn-wood-hot);
+  border-color: var(--gold-accent);
+  box-shadow: var(--btn-shadow-3d);
 }
 
 /* Divider */
@@ -284,7 +284,7 @@
   align-items: center;
   gap: 0.75rem;
   margin: 1rem 0;
-  color: rgba(255, 255, 255, 0.25);
+  color: var(--ink);
   font-size: 0.8rem;
 }
 
@@ -293,7 +293,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--wood-border);
 }
 
 /* Footer */
@@ -301,28 +301,28 @@
   text-align: center;
   margin-top: 1.25rem;
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--ink);
 }
 
 .auth-link {
-  color: #4ade80;
+  color: var(--gold-accent-bright);
   font-weight: 600;
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .auth-link:hover {
-  color: #86efac;
+  color: #ffe9b8;
   text-decoration: underline;
 }
 
-/* Spinner */
+/* Spinner — on the gold button uses dark spin ring */
 .spinner {
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2.5px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
+  border: 2.5px solid rgba(0, 0, 0, 0.2);
+  border-top-color: var(--edge-dark);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -339,6 +339,6 @@
 /* Validation error text */
 .field-error {
   font-size: 0.78rem;
-  color: #fca5a5;
+  color: #ffb4b4;
   margin-top: 0.15rem;
 }

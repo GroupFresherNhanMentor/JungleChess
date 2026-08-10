@@ -48,20 +48,35 @@
     </div>
 
     <div *ngFor="let room of filteredRooms" class="room-card" [ngClass]="'status-' + room.status.toLowerCase()">
-      <div class="room-card-header">
-        <span class="room-mode-badge mode-{{ room.mode.toLowerCase() }}">
-          {{ getModeLabel(room.mode) }}
-        </span>
-        <span class="room-status-tag tag-{{ room.status.toLowerCase() }}">
-          {{ room.status === 'WAITING' ? 'Đang chờ' : room.status === 'PLAYING' ? 'Đang chơi' : 'Kết thúc' }}
-        </span>
+      <div class="room-card-top">
+        <div class="room-card-header">
+          <span class="room-mode-badge mode-{{ room.mode.toLowerCase() }}">
+            {{ getModeLabel(room.mode) }}
+          </span>
+          <span class="room-status-tag tag-{{ room.status.toLowerCase() }}">
+            {{ room.status === 'WAITING' ? 'Đang chờ' : room.status === 'PLAYING' ? 'Đang chơi' : 'Kết thúc' }}
+          </span>
+        </div>
+
+        <div class="room-id-block">
+          <span class="code-label">Mã phòng</span>
+          <div class="room-code-row">
+            <code class="room-id">{{ room.roomId }}</code>
+            <span class="copy-hint">🔗</span>
+          </div>
+        </div>
       </div>
 
       <div class="room-card-body">
-        <code class="room-id">{{ room.roomId }}</code>
         <div class="room-meta">
-          <span>👥 {{ room.playerCount }}/2</span>
-          <span *ngIf="room.spectatorCount > 0">👁 {{ room.spectatorCount }}</span>
+          <span class="meta-item">
+            <span class="meta-icon">👥</span>
+            {{ room.playerCount }}/2 người
+          </span>
+          <span *ngIf="room.spectatorCount > 0" class="meta-item">
+            <span class="meta-icon">👁</span>
+            {{ room.spectatorCount }} xem
+          </span>
           <span *ngIf="room.allowSpectator" class="spectate-tag">Xem được</span>
         </div>
       </div>
@@ -81,23 +96,26 @@
   <!-- Create Room Modal -->
   <div *ngIf="isCreateModalOpen" class="modal-overlay" (click)="closeCreateModal()">
     <div class="modal-card" (click)="$event.stopPropagation()">
-      <h3>Tạo Phòng Mới</h3>
+      <div class="modal-header">
+        <h3>🛖 Tạo Phòng Mới</h3>
+        <button class="modal-close-btn" (click)="closeCreateModal()">&times;</button>
+      </div>
 
       <div class="form-group">
-        <label>Chế độ chơi</label>
-        <select [(ngModel)]="newRoomMode" class="form-select">
-          <option value="PVP_ONLINE">PvP Online</option>
-          <option value="PVE">Người vs Máy</option>
-          <option value="EVE">Bot vs Bot</option>
+        <label for="create-mode-select">Chế độ chơi</label>
+        <select id="create-mode-select" [(ngModel)]="newRoomMode" class="form-select">
+          <option value="PVP_ONLINE">⚔️ PvP Online</option>
+          <option value="PVE">🤖 Người vs Máy</option>
+          <option value="EVE">🤖🤖 Bot vs Bot</option>
         </select>
       </div>
 
       <div *ngIf="newRoomMode === 'PVE' || newRoomMode === 'EVE'" class="form-group">
-        <label>Độ khó Bot</label>
-        <select [(ngModel)]="newRoomDifficulty" class="form-select">
-          <option value="EASY">Dễ</option>
-          <option value="MEDIUM">Vừa</option>
-          <option value="HARD">Khó</option>
+        <label for="create-difficulty-select">Độ khó Bot</label>
+        <select id="create-difficulty-select" [(ngModel)]="newRoomDifficulty" class="form-select">
+          <option value="EASY">😌 Dễ</option>
+          <option value="MEDIUM">🙂 Vừa</option>
+          <option value="HARD">😈 Khó</option>
         </select>
       </div>
 
@@ -113,8 +131,8 @@
       </div>
 
       <div class="modal-actions">
-        <button (click)="onCreateRoom()" class="create-btn">Tạo Phòng</button>
-        <button (click)="closeCreateModal()" class="cancel-btn">Hủy</button>
+        <button (click)="onCreateRoom()" class="modal-create-btn">Tạo Phòng</button>
+        <button (click)="closeCreateModal()" class="modal-cancel-btn">Hủy</button>
       </div>
     </div>
   </div>

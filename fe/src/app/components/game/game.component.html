@@ -23,44 +23,43 @@
 
   <!-- Waiting Room -->
   <div *ngIf="state()?.status === 'WAITING'" class="waiting-room">
-    <h2>Room {{ state()?.roomId }}</h2>
-    <p class="your-side">{{ loc.translate('playerLabel') }} <strong>{{ sideLabel }}</strong></p>
-    <p class="your-side" *ngIf="!state()?.isSpectator">
-      You are playing as <strong>{{ sideLabel }}</strong>
-    </p>
+    <h2>🏠 Room {{ state()?.roomId }}</h2>
+    <p class="your-side" *ngIf="!state()?.isSpectator">{{ loc.translate('playerLabel') }}: <strong class="side-highlight">{{ sideLabel }}</strong></p>
     <p class="your-side" *ngIf="state()?.isSpectator">
-      You are <strong>watching</strong> ({{ state()?.mode === 'EVE' ? 'Bot vs Bot' : 'Spectator' }})
+      You are <strong class="side-highlight">watching</strong> ({{ state()?.mode === 'EVE' ? 'Bot vs Bot' : 'Spectator' }})
     </p>
 
     <div class="player-list">
-      <p>Players joined: {{ state()?.players?.length ?? 0 }} / 2</p>
+      <p class="players-joined">👥 Players joined: <strong>{{ state()?.players?.length ?? 0 }}</strong> / 2</p>
       <ul>
         <li *ngFor="let p of state()?.players">
-          {{ p.side }} <span *ngIf="p.isBot">(Bot)</span>
+          {{ p.side }} <span *ngIf="p.isBot" class="bot-tag">(Bot)</span>
         </li>
       </ul>
     </div>
 
-    <button *ngIf="canStart" class="btn-start" (click)="startGame()">
-      Start Game
-    </button>
-    <p *ngIf="!canStart && state()?.isCreator && !state()?.isSpectator">
-      Waiting for opponent to join...
-    </p>
-    <p *ngIf="!canStart && state()?.isCreator && state()?.isSpectator">
-      Waiting for bots to join...
-    </p>
-    <p *ngIf="!state()?.isCreator">
-      Waiting for host to start the game...
-    </p>
+    <div class="waiting-actions">
+      <button *ngIf="canStart" class="btn-start" (click)="startGame()">
+        🚀 Start Game
+      </button>
+      <p *ngIf="!canStart && state()?.isCreator && !state()?.isSpectator" class="waiting-note">
+        ⏳ Waiting for opponent to join...
+      </p>
+      <p *ngIf="!canStart && state()?.isCreator && state()?.isSpectator" class="waiting-note">
+        ⏳ Waiting for bots to join...
+      </p>
+      <p *ngIf="!state()?.isCreator" class="waiting-note">
+        ⏳ Waiting for host to start the game...
+      </p>
 
-    <button class="btn-leave" (click)="onBackToLobby()">
-      {{ loc.translate('backToLobbyBtn') }}
-    </button>
+      <button class="btn-leave" (click)="onBackToLobby()">
+        ⬅️ {{ loc.translate('backToLobbyBtn') }}
+      </button>
+    </div>
   </div>
 
-  <!-- Game Board (rich layout) -->
-  <div *ngIf="state()?.status === 'PLAYING'" id="game-page-wrapper">
+  <!-- Game Board (rich layout) — stays visible after the game ends -->
+  <div *ngIf="state()?.status === 'PLAYING' || state()?.status === 'ENDED'" id="game-page-wrapper">
     <div id="game-layout">
       <!-- Left Panel -->
       <app-left-panel
@@ -86,9 +85,14 @@
         <!-- Status Message -->
         <div id="status">
           <ng-container *ngIf="state() as s">
-            <span *ngIf="s.status === 'PLAYING'">
-              {{ isMyTurn ? 'Your turn' : "Opponent's turn" }} ({{ turnLabel }}) — Move #{{ s.moveNumber }}
-            </span>
+            <ng-container *ngIf="s.status === 'PLAYING'">
+              <span>
+                {{ isMyTurn ? 'Your turn' : "Opponent's turn" }} ({{ turnLabel }}) — Move #{{ s.moveNumber }}
+              </span>
+            </ng-container>
+            <ng-container *ngIf="s.status === 'ENDED'">
+              <span class="ended-status">{{ winnerLabel }}</span>
+            </ng-container>
           </ng-container>
         </div>
 
@@ -105,23 +109,7 @@
     </div>
   </div>
 
-  <!-- Game Over -->
-  <div *ngIf="state()?.status === 'ENDED'" class="game-over">
-    <h2 class="result">{{ winnerLabel }}</h2>
-    <p *ngIf="state()?.resultReason === 'OPPONENT_DISCONNECTED_TIMEOUT'">
-      Opponent disconnected.
-    </p>
-    <div class="end-actions">
-      <button class="btn-rematch" (click)="requestRematch()">
-        {{ state()?.mode === 'PVP' ? 'Request Rematch' : 'Rematch' }}
-      </button>
-      <button class="btn-lobby" (click)="onBackToLobby()">
-        {{ loc.translate('backToLobbyBtn') }}
-      </button>
-    </div>
-  </div>
-
-  <!-- Loading / Connecting -->
+<!-- Loading / Connecting -->
   <div *ngIf="!state()" class="connecting">
     <p>Connecting to room...</p>
   </div>
@@ -134,51 +122,43 @@
   (close)="closeRules()"
 ></app-game-rules-modal>
 
-<!-- Turn / Win Announcement Banner (fixed center overlay) -->
+<!-- ── Game result: Phase 1 — full-screen celebration (single trophy/icon + line) ──
+     Click anywhere to dismiss → reveals the small popup below. Board stays visible. -->
 <div
-  *ngIf="banner() as b"
-  class="announce-banner"
-  [class.blue]="b.side === 0"
-  [class.red]="b.side === 1"
-  [class.neutral]="b.side === undefined"
+  *ngIf="showResultCelebration()"
+  class="result-celebration"
+  [class.won]="resultWon()"
+  [class.lost]="!resultWon()"
+  (click)="dismissResultCelebration()"
 >
-  <div class="announce-title">{{ b.title }}</div>
-  <div *ngIf="b.subtitle" class="announce-subtitle">{{ b.subtitle }}</div>
-</div>
-
-<!-- Victory Fireworks Overlay (winner-side colors) -->
-<div
-  *ngIf="fireworkBursts.length > 0"
-  class="fireworks-overlay"
-  [class.blue]="fireworkSide === 0"
-  [class.red]="fireworkSide === 1"
->
-  <div class="fireworks-congrats" aria-live="polite">
-    <div class="fireworks-title">{{ fireworkTitle }}</div>
-    <div class="fireworks-subtitle">{{ fireworkSubtitle }}</div>
+  <div class="celebration-inner">
+    <div class="celebration-icon">{{ resultWon() ? '🏆' : '😵' }}</div>
+    <div class="celebration-line">{{ resultWon() ? 'Chiến Thắng!' : 'Thua Cuộc!' }}</div>
+    <div class="celebration-hint">(click để tiếp tục)</div>
   </div>
-
-  <ng-container *ngFor="let burst of fireworkBursts">
-    <div
-      class="firework-burst"
-      [ngStyle]="{ left: burst.x + 'vw', top: burst.y + 'vh' }"
-    >
-      <div
-        *ngFor="let p of burst.particles"
-        class="firework-particle"
-        [style.--dx]="p.dx + 'px'"
-        [style.--dy]="p.dy + 'px'"
-        [style.--delay]="p.delay + 'ms'"
-        [style.--size]="p.size + 'px'"
-        [style.--pcolor]="p.color"
-      ></div>
-    </div>
-  </ng-container>
 </div>
 
-<!-- Defeat Clown Overlay -->
-<div *ngIf="showClown" class="clown-overlay">
-  <div class="clown-face">🤡</div>
+<!-- ── Game result: Phase 2 — small "{X} wins!" popup over the still-visible board ── -->
+<div
+  *ngIf="resultPopupOpen()"
+  class="result-popup-backdrop"
+  (click)="closeResultPopup()"
+>
+  <div class="result-popup">
+    <div class="result-popup-icon">{{ resultWon() ? '🏆' : '😵' }}</div>
+    <div class="result-popup-text">{{ resultText() }}</div>
+    <p *ngIf="state()?.resultReason === 'OPPONENT_DISCONNECTED_TIMEOUT'" class="result-popup-note">
+      Opponent disconnected.
+    </p>
+    <div class="result-popup-actions">
+      <button *ngIf="state()?.mode === 'PVP'" class="btn-rematch" (click)="requestRematch()">
+        Request Rematch
+      </button>
+      <button class="btn-lobby" (click)="onBackToLobby()">
+        {{ loc.translate('backToLobbyBtn') }}
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- Eaten-animal popup (captured piece jumps from the corner) -->

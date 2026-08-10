@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy, inject, signal, effect, HostBinding, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, effect, HostBinding } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Move, Piece, PieceSide, PieceType, Position } from '../../core/models/game.models';
+import { Move, Piece, PieceType, Position } from '../../core/models/game.models';
 import { GameRoomService, OnlineGameState } from '../../core/services/game-room.service';
 import { GameRuleService } from '../../core/services/game-rule.service';
 import { AudioService } from '../../core/services/audio.service';
@@ -14,24 +14,6 @@ import { RightPanelComponent } from '../right-panel/right-panel.component';
 import { WinChanceBarComponent } from '../win-chance-bar/win-chance-bar.component';
 import { GameRulesModalComponent } from '../game-rules-modal/game-rules-modal.component';
 import { EatenPopupComponent, EatenItem } from '../eaten-popup/eaten-popup.component';
-
-/** A single firework particle; dx/dy precomputed in px (no CSS trig). */
-interface FireworkParticle {
-  dx: number;
-  dy: number;
-  size: number;
-  delay: number;
-  color: string;
-}
-
-/** One radially-symmetric explosion anchored at a viewport %. */
-interface FireworkBurst {
-  id: number;
-  x: number; // vw %
-  y: number; // vh %
-  hue: 'blue' | 'red' | 'gold';
-  particles: FireworkParticle[];
-}
 
 @Component({
   selector: 'app-game',
@@ -56,8 +38,6 @@ export class GameComponent implements OnInit, OnDestroy {
   private readonly audioService = inject(AudioService);
   readonly loc = inject(LocalizationService);
   private readonly authService = inject(AuthService);
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly ngZone = inject(NgZone);
 
   readonly state = toSignal(this.gameRoom.gameState$, {
     initialValue: null as OnlineGameState | null,
@@ -71,40 +51,29 @@ export class GameComponent implements OnInit, OnDestroy {
   readonly capturedByBlue = signal<Piece[]>([]);   // Red pieces captured by Blue
   readonly moveHistory = signal<Move[]>([]);
   readonly eatenPopups = signal<EatenItem[]>([]);
-  readonly banner = signal<{ title: string; subtitle?: string; side?: PieceSide } | null>(null);
   readonly screenShaking = signal(false);
   readonly isRulesModalOpen = signal(false);
-  readonly statusMessage = signal('');
 
-  // Victory fireworks + defeat clown state
-  fireworkBursts: FireworkBurst[] = [];
-  fireworkSide: PieceSide | null = null;
-  fireworkTitle: string = '';
-  fireworkSubtitle: string = '';
-  showClown: boolean = false;
+  // Victory / defeat result flow:
+  //   Phase 1 — full-screen celebration (trophy / defeat icon + line), click to dismiss
+  //   Phase 2 — small "{X} wins!" popup over the still-visible board
+  readonly showResultCelebration = signal(false);
+  readonly resultPopupOpen = signal(false);
+  readonly resultWon = signal(false);
+  readonly resultText = signal('');
 
   private roomId = '';
   private animCounter = 0;
   private lastAnimatedMoveNumber = -1;
-  private fireworkSeq = 0;
   private eatenSeq = 0;
   private lastAnnouncedResult = '';
 
-  private bannerTimer: ReturnType<typeof setTimeout> | null = null;
   private shakeTimers: ReturnType<typeof setTimeout>[] = [];
   private eatenTimers: ReturnType<typeof setTimeout>[] = [];
-  private fireworkTimer: ReturnType<typeof setTimeout> | null = null;
-  private clownTimer: ReturnType<typeof setTimeout> | null = null;
 
   @HostBinding('class.screen-shake') get shakeActive(): boolean {
     return this.screenShaking();
   }
-
-  private static readonly FIREWORK_COLORS: Record<'blue' | 'red' | 'gold', string[]> = {
-    blue: ['#3b82f6', '#60a5fa', '#93c5fd', '#ffffff'],
-    red:  ['#ef4444', '#f97316', '#fbbf24', '#ffd97a'],
-    gold: ['#ffd97a', '#f0c268', '#ff9f43', '#ffffff'],
-  };
 
   constructor() {
     // Trigger piece animation + capture effects whenever a new move arrives.
@@ -150,7 +119,8 @@ export class GameComponent implements OnInit, OnDestroy {
       this.moveHistory.set([...this.moveHistory(), lastMove]);
     });
 
-    // Announce game result (victory / defeat) once per room.
+    // Game result once per room. The board stays visible; first show a
+    // full-screen celebration, then on click a small "{X} wins!" popup.
     effect(() => {
       const s = this.state();
       if (!s || s.status !== 'ENDED' || s.winner === undefined) return;
@@ -158,14 +128,17 @@ export class GameComponent implements OnInit, OnDestroy {
       if (key === this.lastAnnouncedResult) return;
       this.lastAnnouncedResult = key;
 
-      if (s.winner === s.yourSide) {
+      const won = s.winner === s.yourSide;
+      this.resultWon.set(won);
+      this.resultText.set(this.winnerLabel);
+      this.showResultCelebration.set(true);
+      this.resultPopupOpen.set(false);
+
+      if (won) {
         this.audioService.playVictory();
-        this.launchVictoryFireworks(s.winner);
       } else {
         this.audioService.playDefeat();
-        this.playLossClown();
       }
-      this.showBanner(this.winnerLabel);
     });
   }
 
@@ -307,19 +280,6 @@ export class GameComponent implements OnInit, OnDestroy {
 
   // ── Effects ───────────────────────────────────────────────────────────────
 
-  /** Show a transient big announcement banner on screen. */
-  private showBanner(title: string, subtitle?: string, side?: PieceSide): void {
-    if (this.bannerTimer) {
-      clearTimeout(this.bannerTimer);
-    }
-    this.banner.set({ title, subtitle, side });
-    this.cdr.detectChanges();
-    this.bannerTimer = setTimeout(() => {
-      this.banner.set(null);
-      this.cdr.detectChanges();
-    }, 1800);
-  }
-
   /** Brief full-screen shake after a capture. */
   private shakeScreen(): void {
     this.screenShaking.set(true);
@@ -341,81 +301,19 @@ export class GameComponent implements OnInit, OnDestroy {
     this.eatenTimers.push(t);
   }
 
-  /** Launch a sequence of fireworks in the winner's color scheme. */
-  private launchVictoryFireworks(winner: PieceSide): void {
-    this.fireworkSide = winner;
-    const winnerName = this.loc.translate(
-      winner === 0 ? 'playerStartsBlue' : 'playerStartsRed'
-    );
-    this.fireworkTitle = this.loc.translate('victoryCongratsTitle', {
-      winner: winnerName,
-    });
-    this.fireworkSubtitle =
-      winner === 0
-        ? this.loc.translate('victoryCongratsSub')
-        : this.loc.translate('victoryCongratsSubRed');
-
-    const colors: ('blue' | 'red' | 'gold')[] =
-      winner === 0 ? ['blue', 'blue', 'gold'] : ['red', 'red', 'gold'];
-
-    for (let i = 0; i < 6; i++) {
-      const delay = i * 550 + Math.random() * 150; // 0 → ~3.3s window
-      const cx = 12 + Math.random() * 76;          // vw %
-      const cy = 15 + Math.random() * 55;          // vh %
-      const hue = colors[i % colors.length];
-
-      this.fireworkTimer = setTimeout(() => {
-        this.ngZone.run(() => {
-          const burst = this.makeFirework(hue, cx, cy, ++this.fireworkSeq);
-          this.fireworkBursts = [...this.fireworkBursts, burst];
-          this.cdr.detectChanges();
-          // Drop this burst once its last particle animation ends (~1.9s).
-          setTimeout(() => {
-            this.fireworkBursts = this.fireworkBursts.filter(
-              b => b.id !== burst.id
-            );
-            this.cdr.detectChanges();
-          }, 2100);
-        });
-      }, delay);
-    }
+  /**
+   * Click on the full-screen celebration: hide it and reveal the small
+   * "{X} wins!" popup over the (still visible) board.
+   */
+  dismissResultCelebration(): void {
+    if (!this.showResultCelebration()) return;
+    this.showResultCelebration.set(false);
+    this.resultPopupOpen.set(true);
   }
 
-  private makeFirework(
-    hue: 'blue' | 'red' | 'gold',
-    cx: number,
-    cy: number,
-    id: number
-  ): FireworkBurst {
-    const palette = GameComponent.FIREWORK_COLORS[hue];
-    const particleCount = 28;
-    const particles: FireworkParticle[] = [];
-
-    for (let i = 0; i < particleCount; i++) {
-      const angle = (i / particleCount) * Math.PI * 2 + Math.random() * 0.15;
-      const dist = 70 + Math.random() * 110; // explosion radius in px
-      particles.push({
-        dx: Math.cos(angle) * dist,
-        dy: Math.sin(angle) * dist,
-        size: Math.floor(4 + Math.random() * 4),
-        delay: Math.floor(Math.random() * 80),
-        color: palette[Math.floor(Math.random() * palette.length)],
-      });
-    }
-
-    return { id, x: cx, y: cy, hue, particles };
-  }
-
-  /** Show clown face animation when the player loses. */
-  private playLossClown(): void {
-    this.showClown = true;
-    this.cdr.detectChanges();
-    this.clownTimer = setTimeout(() => {
-      this.ngZone.run(() => {
-        this.showClown = false;
-        this.cdr.detectChanges();
-      });
-    }, 3200);
+  /** Close the result popup (user chose to continue). */
+  closeResultPopup(): void {
+    this.resultPopupOpen.set(false);
   }
 
   // ── Private ───────────────────────────────────────────────────────────────
@@ -430,20 +328,16 @@ export class GameComponent implements OnInit, OnDestroy {
     this.capturedByBlue.set([]);
     this.moveHistory.set([]);
     this.eatenPopups.set([]);
+    this.showResultCelebration.set(false);
+    this.resultPopupOpen.set(false);
     this.lastAnimatedMoveNumber = -1;
     this.lastAnnouncedResult = '';
   }
 
   private clearAllTimers(): void {
-    if (this.bannerTimer) clearTimeout(this.bannerTimer);
     this.shakeTimers.forEach(t => clearTimeout(t));
     this.eatenTimers.forEach(t => clearTimeout(t));
-    if (this.fireworkTimer) clearTimeout(this.fireworkTimer);
-    if (this.clownTimer) clearTimeout(this.clownTimer);
-    this.bannerTimer = null;
     this.shakeTimers = [];
     this.eatenTimers = [];
-    this.fireworkTimer = null;
-    this.clownTimer = null;
   }
 }

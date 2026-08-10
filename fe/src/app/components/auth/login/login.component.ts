@@ -23,7 +23,6 @@ export class LoginComponent {
   showPassword = false;
 
   isLoading = signal(false);
-  isGuestLoading = signal(false);
   errorMessage = signal<string | null>(null);
 
   onLogin(): void {
@@ -52,19 +51,6 @@ export class LoginComponent {
             this.errorMessage.set('Đã có lỗi xảy ra. Vui lòng thử lại.');
           }
         },
-      });
-  }
-
-  onGuestLogin(): void {
-    this.isGuestLoading.set(true);
-    this.errorMessage.set(null);
-
-    this.authService
-      .guest()
-      .pipe(finalize(() => this.isGuestLoading.set(false)))
-      .subscribe({
-        next: () => this.router.navigate(['/lobby']),
-        error: () => this.errorMessage.set('Không thể tạo tài khoản khách. Vui lòng thử lại.'),
       });
   }
 

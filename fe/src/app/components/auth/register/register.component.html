@@ -32,6 +32,27 @@
     <!-- Register Form -->
     <form id="register-form" (submit)="$event.preventDefault(); onRegister()" class="auth-form">
       <div class="form-group">
+        <label for="register-fullname">Họ và tên</label>
+        <div class="input-wrapper">
+          <span class="input-icon">📝</span>
+          <input
+            id="register-fullname"
+            type="text"
+            [(ngModel)]="fullName"
+            name="fullName"
+            placeholder="Nhập họ và tên..."
+            class="form-input"
+            autocomplete="name"
+            [disabled]="isLoading()"
+            required
+          />
+        </div>
+        <span class="field-error" *ngIf="fullName.length > 0 && fullName.trim().length < 2">
+          Họ và tên cần ít nhất 2 ký tự.
+        </span>
+      </div>
+
+      <div class="form-group">
         <label for="register-username">Tên đăng nhập</label>
         <div class="input-wrapper">
           <span class="input-icon">👤</span>
@@ -62,10 +83,10 @@
             [type]="showPassword ? 'text' : 'password'"
             [(ngModel)]="password"
             name="password"
-            placeholder="Ít nhất 8 ký tự..."
+            placeholder="Ít nhất 3 ký tự..."
             class="form-input"
             autocomplete="new-password"
-            minlength="8"
+            minlength="3"
             [disabled]="isLoading()"
             required
           />
@@ -78,8 +99,8 @@
             {{ showPassword ? '🙈' : '👁️' }}
           </button>
         </div>
-        <span class="field-error" *ngIf="password.length > 0 && password.length < 8">
-          Mật khẩu cần ít nhất 8 ký tự.
+        <span class="field-error" *ngIf="password.length > 0 && password.length < 3">
+          Mật khẩu cần ít nhất 3 ký tự.
         </span>
       </div>
 
@@ -105,7 +126,6 @@
         </span>
       </div>
 
-      <!-- Submit button -->
       <button
         id="register-submit-btn"
         type="submit"

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { GameMode, PieceSide, RoomInfo, RoomStatus } from '../../core/models/game.models';
+import { AuthService } from '../../core/services/auth.service';
 import { LobbyRoomEntry } from '../../core/models/room-events.models';
 import { GameRoomService } from '../../core/services/game-room.service';
 import { LobbyRSocketService } from '../../core/services/lobby-rsocket.service';
@@ -21,6 +22,7 @@ export class LobbyComponent implements OnInit {
 
   private readonly lobbyRSocket = inject(LobbyRSocketService);
   private readonly gameRoom = inject(GameRoomService);
+  private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
   readonly rooms = toSignal(this.lobbyRSocket.rooms$, { initialValue: [] as LobbyRoomEntry[] });
@@ -43,6 +45,12 @@ export class LobbyComponent implements OnInit {
 
   ngOnInit(): void {
     this.lobbyRSocket.connect();
+  }
+
+  onLogout(): void {
+    this.authService.logout().subscribe({
+      error: () => this.router.navigate(['/login']),
+    });
   }
 
   get filteredRooms(): LobbyRoomEntry[] {

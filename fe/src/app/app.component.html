@@ -14,9 +14,25 @@
   </div>
 </header>
 
+<!-- View 0: Cinematic Forest Intro (login → portal → lobby) -->
+<ng-container *ngIf="activeView === 'INTRO'">
+  <app-forest-intro (entered)="onForestEntered()"></app-forest-intro>
+</ng-container>
+
 <!-- View 1: Lobby Screen -->
 <ng-container *ngIf="activeView === 'LOBBY'">
-  <app-lobby (selectRoom)="onSelectRoomFromLobby($event)"></app-lobby>
+  <app-lobby-scene
+    [rooms]="rooms"
+    [selectedRoom]="currentRoom"
+    (selectRoom)="onSelectRoomFromLobby($event)"
+    (createRoom)="openLobbyPanel()"
+    (joinCode)="openLobbyPanel()"
+    (logout)="onLobbyLogout()"
+  ></app-lobby-scene>
+  <app-lobby
+    *ngIf="showLobbyPanel"
+    (selectRoom)="onSelectRoomFromLobby($event); showLobbyPanel = false"
+  ></app-lobby>
 </ng-container>
 
 <!-- View 2: Active Game Room Screen -->

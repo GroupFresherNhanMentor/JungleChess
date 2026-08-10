@@ -16,6 +16,7 @@ import { LocalizationService } from './core/services/localization.service';
 import { GameRuleService } from './core/services/game-rule.service';
 import { AudioService } from './core/services/audio.service';
 import { AiBotService } from './core/services/ai-bot.service';
+import { AuthService } from './core/services/auth.service';
 
 import { GameControlsComponent } from './components/game-controls/game-controls.component';
 import { BoardComponent, MoveAnimation } from './components/board/board.component';
@@ -26,6 +27,8 @@ import { WinChanceBarComponent } from './components/win-chance-bar/win-chance-ba
 import { GameRulesModalComponent } from './components/game-rules-modal/game-rules-modal.component';
 import { ChatComponent } from './components/chat/chat.component';
 import { LobbyComponent } from './components/lobby/lobby.component';
+import { ForestIntroComponent } from './components/forest-intro/forest-intro.component';
+import { LobbyScene3DComponent } from './components/lobby-scene/lobby-scene.component';
 
 /** A single firework particle; dx/dy precomputed in px (no CSS trig). */
 interface FireworkParticle {
@@ -59,13 +62,62 @@ interface FireworkBurst {
     WinChanceBarComponent,
     GameRulesModalComponent,
     ChatComponent,
-    LobbyComponent
+    LobbyComponent,
+    ForestIntroComponent,
+    LobbyScene3DComponent
   ],
   templateUrl: './app.component.html'
 })
 export class AppComponent implements OnInit {
-  activeView: 'LOBBY' | 'GAME' = 'LOBBY';
+  activeView: 'INTRO' | 'LOBBY' | 'GAME' = 'INTRO';
   currentRoom: RoomInfo | null = null;
+  showLobbyPanel = false;
+
+  /** Mock rooms shared by the 3D lobby scene. */
+  rooms: RoomInfo[] = [
+    {
+      roomId: 'ROOM-1024',
+      roomName: 'Trận đấu giao hữu #1',
+      mode: 'PVP_ONLINE',
+      hostName: 'TinPT15',
+      playerCount: 1,
+      maxPlayers: 2,
+      status: 'WAITING',
+      createdAt: '10:15'
+    },
+    {
+      roomId: 'ROOM-5582',
+      roomName: 'Thách đấu Cao Thủ Cờ Thú',
+      mode: 'PVP_ONLINE',
+      hostName: 'AnhKhoi_Pro',
+      playerCount: 2,
+      maxPlayers: 2,
+      status: 'PLAYING',
+      createdAt: '09:45'
+    },
+    {
+      roomId: 'ROOM-8831',
+      roomName: 'Luyện tập với AI Bot (PvE)',
+      mode: 'PVE',
+      hostName: 'Player_Guest',
+      playerCount: 1,
+      maxPlayers: 2,
+      status: 'PLAYING',
+      aiDepth: 9,
+      createdAt: '10:00'
+    },
+    {
+      roomId: 'ROOM-9940',
+      roomName: 'Đại chiến Bot vs Bot (EvE)',
+      mode: 'EVE',
+      hostName: 'System_Bot',
+      playerCount: 0,
+      maxPlayers: 2,
+      status: 'PLAYING',
+      aiDepth: 9,
+      createdAt: '10:10'
+    }
+  ];
 
   currentLang: Language = 'vn';
   gameMode: GameMode = 'PVA';
@@ -132,6 +184,7 @@ export class AppComponent implements OnInit {
     private ruleService: GameRuleService,
     private audioService: AudioService,
     private aiBotService: AiBotService,
+    private auth: AuthService,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone
   ) {}
@@ -147,6 +200,27 @@ export class AppComponent implements OnInit {
   public toggleLanguage(): void {
     const newLang: Language = this.currentLang === 'vn' ? 'en' : 'vn';
     this.loc.setLanguage(newLang);
+    this.cdr.detectChanges();
+  }
+
+  /** Called when the forest intro camera passes through the portal. */
+  public onForestEntered(): void {
+    this.activeView = 'LOBBY';
+    this.showLobbyPanel = false;
+    this.cdr.detectChanges();
+  }
+
+  /** Toggle the classic list/panel lobby over the 3D world. */
+  public openLobbyPanel(): void {
+    this.showLobbyPanel = !this.showLobbyPanel;
+    this.cdr.detectChanges();
+  }
+
+  /** Sign out and return to the forest intro. */
+  public onLobbyLogout(): void {
+    this.auth.logout();
+    this.showLobbyPanel = false;
+    this.activeView = 'INTRO';
     this.cdr.detectChanges();
   }
 

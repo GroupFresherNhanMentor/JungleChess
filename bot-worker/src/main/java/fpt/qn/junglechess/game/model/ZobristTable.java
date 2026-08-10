@@ -11,6 +11,12 @@ public final class ZobristTable {
 
     private static final long[][][] TABLE = new long[2][PieceType.values().length][Board.ROWS * Board.COLS];
 
+    /**
+     * XOR into the TT key when it is PLAYER_2's turn to move.
+     * Ensures the same board position with different active sides maps to different TT slots.
+     */
+    public static final long SIDE_TO_MOVE_KEY;
+
     static {
         Random rng = new Random(0xDEADBEEFCAFEBABEL);
         for (int s = 0; s < 2; s++) {
@@ -20,6 +26,7 @@ public final class ZobristTable {
                 }
             }
         }
+        SIDE_TO_MOVE_KEY = rng.nextLong();
     }
 
     private ZobristTable() {}

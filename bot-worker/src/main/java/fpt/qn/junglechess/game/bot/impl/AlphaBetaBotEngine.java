@@ -1,16 +1,17 @@
 package fpt.qn.junglechess.game.bot.impl;
 
+import fpt.qn.junglechess.game.bot.BotContext;
 import fpt.qn.junglechess.game.bot.BotEngine;
 import fpt.qn.junglechess.game.bot.eval.BoardEvaluator;
 import fpt.qn.junglechess.game.model.Board;
 import fpt.qn.junglechess.game.model.Move;
 import fpt.qn.junglechess.game.model.Piece;
 import fpt.qn.junglechess.game.model.Side;
+import fpt.qn.junglechess.game.model.ZobristTable;
 import fpt.qn.junglechess.game.rule.GameRuleEngine;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -23,23 +24,14 @@ public class AlphaBetaBotEngine implements BotEngine {
     private final fpt.qn.junglechess.game.bot.opening.OpeningBook openingBook;
     private final Random random;
 
-    // Fix #2 (partial): TT persists across nextMove() calls within a game.
-    // Uses depth-preferred replacement: deeper entries are kept over shallower ones.
-    private final Map<Long, TranspositionEntry> transpositionTable = new HashMap<>();
-
     private static final int TT_EXACT      = 0;
     private static final int TT_LOWERBOUND = 1;
     private static final int TT_UPPERBOUND = 2;
 
-    // Fix #3: cheap terminal check uses direct den coordinates, not full evaluate()
     private static final int P1_DEN_ROW = 0, P1_DEN_COL = 3;
     private static final int P2_DEN_ROW = 8, P2_DEN_COL = 3;
 
-    /**
-     * Fix #2: TT entry now stores the best move found at this node, so it doubles
-     * as a move-ordering tool (try TT best move before killers/MVV-LVA).
-     */
-    private record TranspositionEntry(int depth, int score, int flag, Move bestMove) {}
+    private static final int MATE_THRESHOLD = BoardEvaluator.WIN_SCORE - 1000;
 
     public AlphaBetaBotEngine(GameRuleEngine gameRuleEngine, BoardEvaluator boardEvaluator,
                              fpt.qn.junglechess.game.bot.opening.OpeningBook openingBook, Random random) {
@@ -50,7 +42,11 @@ public class AlphaBetaBotEngine implements BotEngine {
     }
 
     @Override
-    public Move nextMove(Board board, Side side, int maxDepth, long timeoutMillis) {
+    public Move nextMove(Board board, Side side, int maxDepth, long timeoutMillis, BotContext context) {
+        if (context == null) {
+            context = new BotContext();
+        }
+
         Board workingBoard = board.cloneBoard();
 
         List<Move> validMoves = gameRuleEngine.getValidMoves(workingBoard, side);
@@ -66,6 +62,7 @@ public class AlphaBetaBotEngine implements BotEngine {
         }
 
         long deadline = System.nanoTime() + timeoutMillis * 1_000_000L;
+        Map<Long, BotContext.TranspositionEntry> tt = context.getTranspositionTable();
 
         // killerMoves[ply][0..1] — 2 slots per depth level
         Move[][] killerMoves = new Move[maxDepth + 8][2];
@@ -77,7 +74,8 @@ public class AlphaBetaBotEngine implements BotEngine {
             }
 
             // TT best move for root node (from previous iteration)
-            TranspositionEntry rootTt = transpositionTable.get(workingBoard.getZobristHash());
+            long rootTtKey = computeTtKey(workingBoard.getZobristHash(), side);
+            BotContext.TranspositionEntry rootTt = tt.get(rootTtKey);
             Move guidingMove = (rootTt != null && rootTt.bestMove() != null)
                     ? rootTt.bestMove() : bestMoveFound;
 
@@ -96,7 +94,18 @@ public class AlphaBetaBotEngine implements BotEngine {
                 }
 
                 workingBoard.makeMove(move);
-                int value = minimax(workingBoard, currentDepth - 1, alpha, beta, false, side, deadline, killerMoves, 1);
+
+                // Repetition Check: if making this move reproduces a position seen 2+ times in this game, penalize it
+                long nextPosKey = computeTtKey(workingBoard.getZobristHash(), side.getOpposite());
+                int repCount = context.getPositionCount(nextPosKey);
+
+                int value;
+                if (repCount >= 2) {
+                    value = -5000; // Penalize 3-fold repetition to prevent infinite move loops
+                } else {
+                    value = minimax(workingBoard, currentDepth - 1, alpha, beta, false, side, deadline, killerMoves, 1, context);
+                }
+
                 workingBoard.undoMove(move);
 
                 if (value > bestValue) {
@@ -111,16 +120,12 @@ public class AlphaBetaBotEngine implements BotEngine {
 
             Move iterBest = tiedMoves.isEmpty() ? null : selectBestDeterministicMove(tiedMoves, side);
 
-            // Only promote iterBest to bestMoveFound if the full iteration completed.
-            // If the search was aborted mid-iteration, the result is partial and unreliable.
             if (!aborted && iterBest != null) {
                 bestMoveFound = iterBest;
             } else if (bestMoveFound == null && iterBest != null) {
-                // Nothing at all yet — even a partial result beats null.
                 bestMoveFound = iterBest;
             }
 
-            // Fix #4: WIN_SCORE is adjusted by ply inside minimax; subtract maxDepth as buffer
             if (bestValue >= BoardEvaluator.WIN_SCORE - maxDepth) {
                 break; // forced win found
             }
@@ -130,64 +135,58 @@ public class AlphaBetaBotEngine implements BotEngine {
     }
 
     // -------------------------------------------------------------------------
-    // Core minimax with alpha-beta + TT + killer moves
+    // Core minimax with alpha-beta + per-game TT + killer moves
     // -------------------------------------------------------------------------
 
     private int minimax(Board board, int depth, int alpha, int beta, boolean isMaximizing,
-                        Side botSide, long deadline, Move[][] killerMoves, int ply) {
+                        Side botSide, long deadline, Move[][] killerMoves, int ply, BotContext context) {
 
-        // 1. Deadline guard
         if (deadlineExceeded(deadline)) {
             return boardEvaluator.evaluate(board, botSide);
         }
 
-        // Fix #1: use 64-bit Zobrist hash — no birthday-paradox collision at practical depths
-        long boardHash = board.getZobristHash();
-        TranspositionEntry ttEntry = transpositionTable.get(boardHash);
+        Side currentTurn = isMaximizing ? botSide : botSide.getOpposite();
+        long ttKey = computeTtKey(board.getZobristHash(), currentTurn);
+
+        Map<Long, BotContext.TranspositionEntry> tt = context.getTranspositionTable();
+        BotContext.TranspositionEntry ttEntry = tt.get(ttKey);
         Move ttBestMove = null;
 
         if (ttEntry != null) {
             ttBestMove = ttEntry.bestMove();
             if (ttEntry.depth() >= depth) {
+                int score = denormalizeMateScore(ttEntry.score(), ply);
                 if (ttEntry.flag() == TT_EXACT) {
-                    return ttEntry.score();
+                    return score;
                 } else if (ttEntry.flag() == TT_LOWERBOUND) {
-                    alpha = Math.max(alpha, ttEntry.score());
+                    alpha = Math.max(alpha, score);
                 } else { // TT_UPPERBOUND
-                    beta = Math.min(beta, ttEntry.score());
+                    beta = Math.min(beta, score);
                 }
                 if (beta <= alpha) {
-                    return ttEntry.score();
+                    return score;
                 }
             }
         }
 
-        // Fix #3: cheap terminal check — only 2 array reads, no full board scan
         Side winner = fastCheckWinner(board);
         if (winner != null) {
-            // Fix #4: prefer faster wins, slower losses
             return winner == botSide
                     ? BoardEvaluator.WIN_SCORE  - ply
                     : BoardEvaluator.LOSS_SCORE + ply;
         }
 
-        // Leaf: hand off to quiescence (never call expensive evaluate() here)
         if (depth <= 0) {
             return quiesce(board, alpha, beta, isMaximizing, botSide, deadline, ply);
         }
 
-        // Generate moves
-        Side currentTurn = isMaximizing ? botSide : botSide.getOpposite();
         List<Move> validMoves = gameRuleEngine.getValidMoves(board, currentTurn);
-
         if (validMoves.isEmpty()) {
-            // Stalemate: the side to move has no legal moves — they lose
             return isMaximizing
                     ? BoardEvaluator.LOSS_SCORE + ply
                     : BoardEvaluator.WIN_SCORE  - ply;
         }
 
-        // Fix #2: TT best move tried first, then killers, then MVV-LVA
         orderMoves(validMoves, ttBestMove, killerMoves, ply);
 
         int originalAlpha = alpha;
@@ -197,7 +196,7 @@ public class AlphaBetaBotEngine implements BotEngine {
             int maxEval = Integer.MIN_VALUE;
             for (Move move : validMoves) {
                 board.makeMove(move);
-                int eval = minimax(board, depth - 1, alpha, beta, false, botSide, deadline, killerMoves, ply + 1);
+                int eval = minimax(board, depth - 1, alpha, beta, false, botSide, deadline, killerMoves, ply + 1, context);
                 board.undoMove(move);
 
                 if (eval > maxEval) {
@@ -210,14 +209,14 @@ public class AlphaBetaBotEngine implements BotEngine {
                     break;
                 }
             }
-            storeTransposition(boardHash, depth, maxEval, originalAlpha, beta, bestMoveAtNode);
+            storeTransposition(tt, ttKey, depth, maxEval, originalAlpha, beta, bestMoveAtNode, ply);
             return maxEval;
 
         } else {
             int minEval = Integer.MAX_VALUE;
             for (Move move : validMoves) {
                 board.makeMove(move);
-                int eval = minimax(board, depth - 1, alpha, beta, true, botSide, deadline, killerMoves, ply + 1);
+                int eval = minimax(board, depth - 1, alpha, beta, true, botSide, deadline, killerMoves, ply + 1, context);
                 board.undoMove(move);
 
                 if (eval < minEval) {
@@ -230,7 +229,7 @@ public class AlphaBetaBotEngine implements BotEngine {
                     break;
                 }
             }
-            storeTransposition(boardHash, depth, minEval, originalAlpha, beta, bestMoveAtNode);
+            storeTransposition(tt, ttKey, depth, minEval, originalAlpha, beta, bestMoveAtNode, ply);
             return minEval;
         }
     }
@@ -242,7 +241,6 @@ public class AlphaBetaBotEngine implements BotEngine {
     private int quiesce(Board board, int alpha, int beta, boolean isMaximizing,
                         Side botSide, long deadline, int ply) {
 
-        // Fix #3/#4: cheap terminal here too, with ply-adjusted score
         Side winner = fastCheckWinner(board);
         if (winner != null) {
             return winner == botSide
@@ -250,7 +248,6 @@ public class AlphaBetaBotEngine implements BotEngine {
                     : BoardEvaluator.LOSS_SCORE + ply;
         }
 
-        // Fix #3: evaluate() called only here at the true leaf, not at every interior node
         int standPat = boardEvaluator.evaluate(board, botSide);
 
         if (deadlineExceeded(deadline)) {
@@ -263,7 +260,7 @@ public class AlphaBetaBotEngine implements BotEngine {
 
             for (Move move : gameRuleEngine.getValidMoves(board, botSide)) {
                 if (move.capturedPiece() == null && !Board.isDen(move.to(), botSide.getOpposite())) {
-                    continue; // only tactical moves in quiescence
+                    continue;
                 }
                 board.makeMove(move);
                 int score = quiesce(board, alpha, beta, false, botSide, deadline, ply + 1);
@@ -297,10 +294,10 @@ public class AlphaBetaBotEngine implements BotEngine {
     // Helpers
     // -------------------------------------------------------------------------
 
-    /**
-     * Fix #3: O(1) terminal check — exactly 2 array reads.
-     * Avoids running full evaluate() at every internal minimax node.
-     */
+    private static long computeTtKey(long boardHash, Side currentTurn) {
+        return currentTurn == Side.PLAYER_2 ? (boardHash ^ ZobristTable.SIDE_TO_MOVE_KEY) : boardHash;
+    }
+
     private Side fastCheckWinner(Board board) {
         Piece p1InP2Den = board.getPiece(P2_DEN_ROW, P2_DEN_COL);
         if (p1InP2Den != null && p1InP2Den.side() == Side.PLAYER_1) {
@@ -322,8 +319,8 @@ public class AlphaBetaBotEngine implements BotEngine {
         }
     }
 
-    /** Fix #2: store best move in TT entry; use depth-preferred replacement scheme. */
-    private void storeTransposition(long hash, int depth, int val, int originalAlpha, int beta, Move bestMove) {
+    private void storeTransposition(Map<Long, BotContext.TranspositionEntry> tt, long hash, int depth,
+                                     int val, int originalAlpha, int beta, Move bestMove, int ply) {
         int flag;
         if (val <= originalAlpha) {
             flag = TT_UPPERBOUND;
@@ -332,17 +329,34 @@ public class AlphaBetaBotEngine implements BotEngine {
         } else {
             flag = TT_EXACT;
         }
-        TranspositionEntry existing = transpositionTable.get(hash);
-        if (existing == null || depth >= existing.depth()) {
-            transpositionTable.put(hash, new TranspositionEntry(depth, val, flag, bestMove));
+
+        // Ply-normalize mate scores before storing in Transposition Table
+        int storedScore = val;
+        if (val >= MATE_THRESHOLD) {
+            storedScore = val + ply;
+        } else if (val <= -MATE_THRESHOLD) {
+            storedScore = val - ply;
         }
+
+        BotContext.TranspositionEntry existing = tt.get(hash);
+        if (existing == null || depth >= existing.depth()) {
+            tt.put(hash, new BotContext.TranspositionEntry(depth, storedScore, flag, bestMove));
+        }
+    }
+
+    private int denormalizeMateScore(int storedScore, int ply) {
+        if (storedScore >= MATE_THRESHOLD) {
+            return storedScore - ply;
+        } else if (storedScore <= -MATE_THRESHOLD) {
+            return storedScore + ply;
+        }
+        return storedScore;
     }
 
     private boolean deadlineExceeded(long deadline) {
         return System.nanoTime() > deadline;
     }
 
-    /** Move ordering: TT best move > den entry > MVV-LVA captures > killers > quiet forward moves */
     private void orderMoves(List<Move> moves, Move primaryMove, Move[][] killerMoves, int ply) {
         Move k1 = ply < killerMoves.length ? killerMoves[ply][0] : null;
         Move k2 = ply < killerMoves.length ? killerMoves[ply][1] : null;
@@ -353,29 +367,22 @@ public class AlphaBetaBotEngine implements BotEngine {
     }
 
     private int scoreMoveForOrdering(Move move, Move primaryMove, Move k1, Move k2) {
-        // 1. TT / previous-iteration best move — absolute top priority
         if (move.equals(primaryMove)) return 20000;
 
         Side enemySide = move.movedPiece().side().getOpposite();
-
-        // 2. Winning move (entering enemy den)
         if (Board.isDen(move.to(), enemySide)) return 10000;
 
         int score = 0;
 
-        // 3. MVV-LVA: high-value victim, low-value aggressor captures first
         if (move.capturedPiece() != null) {
             score += 1000 + (move.capturedPiece().getRank() * 10 - move.movedPiece().getRank());
         }
 
-        // 4. Killer moves (quiet beta-cutoff moves from sibling nodes at same depth)
         if (move.equals(k1))      score += 500;
         else if (move.equals(k2)) score += 400;
 
-        // 5. Avoid walking into enemy trap without a capture
         if (Board.isTrap(move.to(), enemySide) && move.capturedPiece() == null) score -= 200;
 
-        // 6. Forward progress toward enemy den
         int enemyDenRow = move.movedPiece().side() == Side.PLAYER_1 ? 8 : 0;
         int distBefore = Math.abs(move.from().row() - enemyDenRow) + Math.abs(move.from().col() - 3);
         int distAfter  = Math.abs(move.to().row()   - enemyDenRow) + Math.abs(move.to().col()   - 3);
@@ -384,7 +391,6 @@ public class AlphaBetaBotEngine implements BotEngine {
         return score;
     }
 
-    /** Tie-break for equal-scoring root moves: prefer moves closest to enemy den, breaking remaining ties randomly. */
     private Move selectBestDeterministicMove(List<Move> moves, Side side) {
         if (moves.isEmpty()) return null;
         if (moves.size() == 1) return moves.get(0);

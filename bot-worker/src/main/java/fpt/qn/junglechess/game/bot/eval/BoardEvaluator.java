@@ -108,11 +108,6 @@ public class BoardEvaluator {
             }
         }
 
-        // Mobility Term: bonus for having more legal move options (active positioning)
-        int myMoves = gameRuleEngine.getValidMoves(board, side).size();
-        int oppMoves = gameRuleEngine.getValidMoves(board, opponent).size();
-        score += (myMoves - oppMoves) * 3;
-
         return score;
     }
 

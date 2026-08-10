@@ -72,10 +72,7 @@ public class BotGameSession {
         String[][] boardArray = parseBoard(map);
         Board board = boardFromArray(boardArray);
         Side turnSide = currentTurn != null ? Side.valueOf(currentTurn.toUpperCase()) : Side.PLAYER_1;
-        long posKey = board.getZobristHash();
-        if (turnSide == Side.PLAYER_2) {
-            posKey ^= fpt.qn.junglechess.game.model.ZobristTable.SIDE_TO_MOVE_KEY;
-        }
+        long posKey = fpt.qn.junglechess.game.model.ZobristTable.computeKey(board.getZobristHash(), turnSide);
         botContext.recordPosition(posKey);
 
         if (side.equalsIgnoreCase(currentTurn)) {
@@ -150,6 +147,7 @@ public class BotGameSession {
                 }
             }
         }
+        board.recomputeZobrist();
         return board;
     }
 

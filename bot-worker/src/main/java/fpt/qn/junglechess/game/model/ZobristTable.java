@@ -38,4 +38,8 @@ public final class ZobristTable {
         int sideIdx = piece.side() == Side.PLAYER_1 ? 0 : 1;
         return TABLE[sideIdx][piece.type().ordinal()][row * Board.COLS + col];
     }
+
+    public static long computeKey(long boardHash, Side currentTurn) {
+        return currentTurn == Side.PLAYER_2 ? (boardHash ^ SIDE_TO_MOVE_KEY) : boardHash;
+    }
 }

@@ -20,5 +20,5 @@ export class LeftPanelComponent {
   @Output() openRules = new EventEmitter<void>();
   @Output() backToLobby = new EventEmitter<void>();
 
-  constructor(public loc: LocalizationService) {}
+  constructor(public loc: LocalizationService) { }
 }

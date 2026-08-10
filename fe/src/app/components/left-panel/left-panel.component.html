@@ -8,15 +8,8 @@
           {{ loc.translate('capturedNone') }}
         </span>
       </ng-container>
-      <div
-        *ngFor="let p of capturedByRed"
-        class="captured-piece player0"
-        [title]="p.type"
-      >
-        <img
-          [src]="'assets/images/head_no_background/' + p.type + '.png'"
-          [alt]="p.type"
-        />
+      <div *ngFor="let p of capturedByRed" class="captured-piece player0" [title]="p.type">
+        <img [src]="'assets/images/head_no_background/' + p.type + '.png'" [alt]="p.type" />
       </div>
     </div>
   </div>
@@ -32,11 +25,7 @@
         {{ loc.translate('resetButton') }}
       </button>
 
-      <button
-        (click)="undoMove.emit()"
-        [disabled]="!canUndo"
-        class="panel-btn undo-btn"
-      >
+      <button (click)="undoMove.emit()" [disabled]="!canUndo" class="panel-btn undo-btn">
         Hoàn nước
       </button>
 

@@ -1,0 +1,108 @@
+<div class="auth-page" id="login-page">
+  <!-- Background decoration -->
+  <div class="bg-decoration">
+    <div class="jungle-piece piece-1">🐘</div>
+    <div class="jungle-piece piece-2">🦁</div>
+    <div class="jungle-piece piece-3">🐯</div>
+    <div class="jungle-piece piece-4">🐆</div>
+    <div class="jungle-piece piece-5">🐺</div>
+    <div class="jungle-piece piece-6">🐭</div>
+  </div>
+
+  <div class="auth-card">
+    <!-- Logo & Title -->
+    <div class="auth-header">
+      <div class="auth-logo">🌿</div>
+      <h1 class="auth-title">Cờ Thú Online</h1>
+      <p class="auth-subtitle">Đăng nhập để bắt đầu trận đấu</p>
+    </div>
+
+    <!-- Error message -->
+    <div class="error-banner" *ngIf="errorMessage()" role="alert">
+      <span class="error-icon">⚠️</span>
+      {{ errorMessage() }}
+    </div>
+
+    <!-- Login Form -->
+    <form id="login-form" (submit)="$event.preventDefault(); onLogin()" class="auth-form">
+      <div class="form-group">
+        <label for="login-username">Tên đăng nhập</label>
+        <div class="input-wrapper">
+          <span class="input-icon">👤</span>
+          <input
+            id="login-username"
+            type="text"
+            [(ngModel)]="username"
+            name="username"
+            placeholder="Nhập tên đăng nhập..."
+            class="form-input"
+            autocomplete="username"
+            [disabled]="isLoading() || isGuestLoading()"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="login-password">Mật khẩu</label>
+        <div class="input-wrapper">
+          <span class="input-icon">🔒</span>
+          <input
+            id="login-password"
+            [type]="showPassword ? 'text' : 'password'"
+            [(ngModel)]="password"
+            name="password"
+            placeholder="Nhập mật khẩu..."
+            class="form-input"
+            autocomplete="current-password"
+            [disabled]="isLoading() || isGuestLoading()"
+            required
+          />
+          <button
+            type="button"
+            class="toggle-password-btn"
+            (click)="toggleShowPassword()"
+            [title]="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+          >
+            {{ showPassword ? '🙈' : '👁️' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Primary: Login button -->
+      <button
+        id="login-submit-btn"
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="isLoading() || isGuestLoading() || !username.trim() || !password"
+      >
+        <span *ngIf="isLoading()" class="spinner"></span>
+        <span *ngIf="!isLoading()">⚔️ Đăng Nhập</span>
+        <span *ngIf="isLoading()">Đang đăng nhập...</span>
+      </button>
+    </form>
+
+    <div class="divider">
+      <span>hoặc</span>
+    </div>
+
+    <!-- Guest: Quick play button -->
+    <button
+      id="guest-login-btn"
+      type="button"
+      class="btn btn-ghost"
+      (click)="onGuestLogin()"
+      [disabled]="isLoading() || isGuestLoading()"
+    >
+      <span *ngIf="isGuestLoading()" class="spinner spinner-dark"></span>
+      <span *ngIf="!isGuestLoading()">🎭 Chơi Ngay (Khách)</span>
+      <span *ngIf="isGuestLoading()">Đang tạo phiên khách...</span>
+    </button>
+
+    <!-- Register link -->
+    <p class="auth-footer-text">
+      Chưa có tài khoản?
+      <a id="go-to-register-link" routerLink="/register" class="auth-link">Đăng ký ngay</a>
+    </p>
+  </div>
+</div>

@@ -14,7 +14,7 @@ export interface LoginRequest {
 export interface RegisterRequest {
   username: string;
   password: string;
-  fullName: string;
+  fullName?: string;
 }
 
 export interface RefreshTokenRequest {

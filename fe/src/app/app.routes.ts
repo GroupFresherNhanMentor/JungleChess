@@ -22,8 +22,8 @@ export const routes: Routes = [
   {
     path: 'lobby',
     loadComponent: () =>
-      import('./components/game-container/game-container.component').then(
-        (m) => m.GameContainerComponent,
+      import('./components/lobby/lobby.component').then(
+        (m) => m.LobbyComponent,
       ),
     canActivate: [authGuard],
   },

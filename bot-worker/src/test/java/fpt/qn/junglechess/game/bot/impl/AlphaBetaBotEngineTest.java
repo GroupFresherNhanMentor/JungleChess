@@ -21,8 +21,9 @@ class AlphaBetaBotEngineTest {
     void setUp() {
         GameRuleEngine gameRuleEngine = new DefaultGameRuleEngine();
         BoardEvaluator boardEvaluator = new BoardEvaluator(gameRuleEngine);
+        fpt.qn.junglechess.game.bot.opening.OpeningBook openingBook = new fpt.qn.junglechess.game.bot.opening.OpeningBook();
         Random random = new Random(42);
-        botEngine = new AlphaBetaBotEngine(gameRuleEngine, boardEvaluator, random);
+        botEngine = new AlphaBetaBotEngine(gameRuleEngine, boardEvaluator, openingBook, random);
     }
 
     @Test

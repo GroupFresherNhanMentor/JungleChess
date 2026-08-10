@@ -54,6 +54,9 @@ public class AlphaBetaBotEngine implements BotEngine {
             return null;
         }
 
+        // Decay history table at start of search to keep move scores relevant
+        context.decayHistory();
+
         // 1. Query opening book for instant strong opening move during first few turns
         int pieceCount = countTotalPieces(workingBoard);
         Move bookMove = openingBook.findOpeningMove(workingBoard, side, pieceCount);
@@ -79,7 +82,7 @@ public class AlphaBetaBotEngine implements BotEngine {
             Move guidingMove = (rootTt != null && rootTt.bestMove() != null)
                     ? rootTt.bestMove() : bestMoveFound;
 
-            orderMoves(validMoves, guidingMove, killerMoves, 0);
+            orderMoves(validMoves, guidingMove, killerMoves, 0, context);
 
             int bestValue        = Integer.MIN_VALUE;
             int alpha            = Integer.MIN_VALUE;
@@ -103,7 +106,7 @@ public class AlphaBetaBotEngine implements BotEngine {
                 if (repCount >= 2) {
                     value = -5000; // Penalize 3-fold repetition to prevent infinite move loops
                 } else {
-                    value = minimax(workingBoard, currentDepth - 1, alpha, beta, false, side, deadline, killerMoves, 1, context);
+                    value = minimax(workingBoard, currentDepth - 1, alpha, beta, false, side, deadline, killerMoves, 1, context, false, pieceCount);
                 }
 
                 workingBoard.undoMove(move);
@@ -135,11 +138,12 @@ public class AlphaBetaBotEngine implements BotEngine {
     }
 
     // -------------------------------------------------------------------------
-    // Core minimax with alpha-beta + per-game TT + killer moves
+    // Core minimax with alpha-beta + per-game TT + NMP + killer/history moves
     // -------------------------------------------------------------------------
 
     private int minimax(Board board, int depth, int alpha, int beta, boolean isMaximizing,
-                        Side botSide, long deadline, Move[][] killerMoves, int ply, BotContext context) {
+                        Side botSide, long deadline, Move[][] killerMoves, int ply,
+                        BotContext context, boolean skipNullMove, int pieceCount) {
 
         if (deadlineExceeded(deadline)) {
             return boardEvaluator.evaluate(board, botSide);
@@ -180,6 +184,19 @@ public class AlphaBetaBotEngine implements BotEngine {
             return quiesce(board, alpha, beta, isMaximizing, botSide, deadline, ply);
         }
 
+        // Null Move Pruning (NMP): Pass turn if depth >= 3 and not in late endgame
+        if (depth >= 3 && pieceCount > 4 && !skipNullMove && Math.abs(beta) < MATE_THRESHOLD) {
+            int R = 2; // Reduction
+            int nullEval = minimax(board, depth - 1 - R, alpha, beta, !isMaximizing, botSide, deadline, killerMoves, ply + 1, context, true, pieceCount);
+
+            if (isMaximizing && nullEval >= beta) {
+                return beta; // Cutoff for maximizing node
+            }
+            if (!isMaximizing && nullEval <= alpha) {
+                return alpha; // Cutoff for minimizing node
+            }
+        }
+
         List<Move> validMoves = gameRuleEngine.getValidMoves(board, currentTurn);
         if (validMoves.isEmpty()) {
             return isMaximizing
@@ -187,7 +204,7 @@ public class AlphaBetaBotEngine implements BotEngine {
                     : BoardEvaluator.WIN_SCORE  - ply;
         }
 
-        orderMoves(validMoves, ttBestMove, killerMoves, ply);
+        orderMoves(validMoves, ttBestMove, killerMoves, ply, context);
 
         int originalAlpha = alpha;
         Move bestMoveAtNode = null;
@@ -196,7 +213,7 @@ public class AlphaBetaBotEngine implements BotEngine {
             int maxEval = Integer.MIN_VALUE;
             for (Move move : validMoves) {
                 board.makeMove(move);
-                int eval = minimax(board, depth - 1, alpha, beta, false, botSide, deadline, killerMoves, ply + 1, context);
+                int eval = minimax(board, depth - 1, alpha, beta, false, botSide, deadline, killerMoves, ply + 1, context, false, pieceCount);
                 board.undoMove(move);
 
                 if (eval > maxEval) {
@@ -206,6 +223,11 @@ public class AlphaBetaBotEngine implements BotEngine {
                 alpha = Math.max(alpha, eval);
                 if (beta <= alpha) {
                     storeKillerMove(killerMoves, ply, move);
+                    if (move.capturedPiece() == null) {
+                        int fromSq = move.from().row() * 7 + move.from().col();
+                        int toSq = move.to().row() * 7 + move.to().col();
+                        context.recordHistory(fromSq, toSq, depth);
+                    }
                     break;
                 }
             }
@@ -216,7 +238,7 @@ public class AlphaBetaBotEngine implements BotEngine {
             int minEval = Integer.MAX_VALUE;
             for (Move move : validMoves) {
                 board.makeMove(move);
-                int eval = minimax(board, depth - 1, alpha, beta, true, botSide, deadline, killerMoves, ply + 1, context);
+                int eval = minimax(board, depth - 1, alpha, beta, true, botSide, deadline, killerMoves, ply + 1, context, false, pieceCount);
                 board.undoMove(move);
 
                 if (eval < minEval) {
@@ -226,6 +248,11 @@ public class AlphaBetaBotEngine implements BotEngine {
                 beta = Math.min(beta, eval);
                 if (beta <= alpha) {
                     storeKillerMove(killerMoves, ply, move);
+                    if (move.capturedPiece() == null) {
+                        int fromSq = move.from().row() * 7 + move.from().col();
+                        int toSq = move.to().row() * 7 + move.to().col();
+                        context.recordHistory(fromSq, toSq, depth);
+                    }
                     break;
                 }
             }
@@ -330,7 +357,6 @@ public class AlphaBetaBotEngine implements BotEngine {
             flag = TT_EXACT;
         }
 
-        // Ply-normalize mate scores before storing in Transposition Table
         int storedScore = val;
         if (val >= MATE_THRESHOLD) {
             storedScore = val + ply;
@@ -357,16 +383,16 @@ public class AlphaBetaBotEngine implements BotEngine {
         return System.nanoTime() > deadline;
     }
 
-    private void orderMoves(List<Move> moves, Move primaryMove, Move[][] killerMoves, int ply) {
+    private void orderMoves(List<Move> moves, Move primaryMove, Move[][] killerMoves, int ply, BotContext context) {
         Move k1 = ply < killerMoves.length ? killerMoves[ply][0] : null;
         Move k2 = ply < killerMoves.length ? killerMoves[ply][1] : null;
         moves.sort((m1, m2) ->
                 Integer.compare(
-                        scoreMoveForOrdering(m2, primaryMove, k1, k2),
-                        scoreMoveForOrdering(m1, primaryMove, k1, k2)));
+                        scoreMoveForOrdering(m2, primaryMove, k1, k2, context),
+                        scoreMoveForOrdering(m1, primaryMove, k1, k2, context)));
     }
 
-    private int scoreMoveForOrdering(Move move, Move primaryMove, Move k1, Move k2) {
+    private int scoreMoveForOrdering(Move move, Move primaryMove, Move k1, Move k2, BotContext context) {
         if (move.equals(primaryMove)) return 20000;
 
         Side enemySide = move.movedPiece().side().getOpposite();
@@ -380,6 +406,13 @@ public class AlphaBetaBotEngine implements BotEngine {
 
         if (move.equals(k1))      score += 500;
         else if (move.equals(k2)) score += 400;
+
+        // Incorporate History Heuristic score for quiet moves
+        if (move.capturedPiece() == null && context != null) {
+            int fromSq = move.from().row() * 7 + move.from().col();
+            int toSq = move.to().row() * 7 + move.to().col();
+            score += context.getHistoryScore(fromSq, toSq) / 128;
+        }
 
         if (Board.isTrap(move.to(), enemySide) && move.capturedPiece() == null) score -= 200;
 

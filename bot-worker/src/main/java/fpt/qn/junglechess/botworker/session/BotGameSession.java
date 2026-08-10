@@ -19,6 +19,7 @@ import java.util.concurrent.Executors;
 public class BotGameSession {
 
     private static final Logger log = LoggerFactory.getLogger(BotGameSession.class);
+    private static final long MIN_MOVE_MS = 1_200;
 
     private final String roomId;
     private final String side;
@@ -95,11 +96,15 @@ public class BotGameSession {
     }
 
     private void computeAndSendMove(String[][] boardArray) {
+        long startMs = System.currentTimeMillis();
         try {
             Board board = boardFromArray(boardArray);
             Side botSide = Side.valueOf(side.toUpperCase());
             Move best = botEngine.nextMove(board, botSide, difficulty.getSearchDepth(), 2500);
             if (best != null) {
+                long elapsed = System.currentTimeMillis() - startMs;
+                long remaining = MIN_MOVE_MS - elapsed;
+                if (remaining > 0) Thread.sleep(remaining);
                 MoveRequestDto req = new MoveRequestDto(
                         new int[]{best.from().row(), best.from().col()},
                         new int[]{best.to().row(), best.to().col()});
@@ -110,6 +115,8 @@ public class BotGameSession {
             } else {
                 log.warn("[Room {}] No legal move found!", roomId);
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         } catch (Exception e) {
             log.error("[Room {}] Error computing move: {}", roomId, e.getMessage(), e);
         }
@@ -145,5 +152,9 @@ public class BotGameSession {
 
     public String getSide() {
         return side;
+    }
+
+    public String getDifficulty() {
+        return difficulty.name();
     }
 }

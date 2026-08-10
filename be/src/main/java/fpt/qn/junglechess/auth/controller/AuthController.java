@@ -39,6 +39,13 @@ public class AuthController {
                 .body(ApiResponse.success(authService.register(request), "Registration successful"));
     }
 
+    @PostMapping("/bot-register")
+    @Operation(summary = "Self-register a bot account with BOT role (called by bot-worker on startup)")
+    public ResponseEntity<ApiResponse<RegisterResponse>> botRegister(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.status(201)
+                .body(ApiResponse.success(authService.botRegister(request), "Bot registration successful"));
+    }
+
     @PostMapping("/login")
     @Operation(summary = "User login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {

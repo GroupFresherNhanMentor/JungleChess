@@ -11,6 +11,8 @@ public interface AuthService {
 
     RegisterResponse register(RegisterRequest request);
 
+    RegisterResponse botRegister(RegisterRequest request);
+
     LoginResponse login(LoginRequest request);
 
     RefreshTokenResponse refresh(RefreshTokenRequest request);

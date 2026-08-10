@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Component
 public class BotSessionManager {
@@ -25,6 +26,8 @@ public class BotSessionManager {
 
     // key = roomId:side
     private final Map<String, BotGameSession> sessions = new ConcurrentHashMap<>();
+    // key = "/topic/room/{roomId}" → all bot sessions listening on that topic (EVE has 2)
+    private final Map<String, CopyOnWriteArrayList<BotGameSession>> topicSessions = new ConcurrentHashMap<>();
     // queued when STOMP not yet connected
     private final List<PendingAssignment> pendingQueue = new ArrayList<>();
 
@@ -32,6 +35,19 @@ public class BotSessionManager {
         this.connection = connection;
         this.botEngine = botEngine;
         connection.addOnConnectedCallback(this::processPending);
+        connection.setOnAssignCallback(this::handleAssignMessage);
+    }
+
+    /** Called by the WebSocket assign callback when the backend pushes an assignment. */
+    private synchronized void handleAssignMessage(Map<?, ?> map) {
+        String roomId = (String) map.get("roomId");
+        String side = (String) map.get("side");
+        String difficulty = map.get("difficulty") instanceof String d ? d : "MEDIUM";
+        if (roomId != null && side != null) {
+            assign(roomId, side, difficulty);
+        } else {
+            log.warn("Received malformed assign message: {}", map);
+        }
     }
 
     public synchronized void assign(String roomId, String side, String difficulty) {
@@ -49,15 +65,10 @@ public class BotSessionManager {
     }
 
     private synchronized void processPending() {
-        // Re-join all existing (non-ended) sessions after reconnect
         sessions.values().stream()
                 .filter(s -> !s.isEnded())
-                .forEach(s -> {
-                    // Re-subscribe handled by StompConnectionService (subscriptions map)
-                    // Re-send bot-join so server re-registers the new session
-                    connection.send("/app/room/" + s.getRoomId() + "/bot-join",
-                            new BotJoinRequestDto(s.getSide(), "MEDIUM"));
-                });
+                .forEach(s -> connection.send("/app/room/" + s.getRoomId() + "/bot-join",
+                        new BotJoinRequestDto(s.getSide(), s.getDifficulty())));
 
         List<PendingAssignment> toProcess = new ArrayList<>(pendingQueue);
         pendingQueue.clear();
@@ -68,23 +79,36 @@ public class BotSessionManager {
         BotGameSession session = new BotGameSession(roomId, side, difficulty, botEngine, connection);
         sessions.put(roomId + ":" + side, session);
 
-        connection.subscribe("/topic/room/" + roomId, new StompFrameHandler() {
-            @Override
-            public Type getPayloadType(StompHeaders headers) {
-                return Map.class;
-            }
+        String topic = "/topic/room/" + roomId;
+        CopyOnWriteArrayList<BotGameSession> roomSessions =
+                topicSessions.computeIfAbsent(topic, k -> new CopyOnWriteArrayList<>());
+        roomSessions.add(session);
 
-            @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
-                if (payload instanceof Map<?, ?> map) {
-                    session.handleEvent(map);
-                    if (session.isEnded()) {
-                        sessions.remove(roomId + ":" + side);
-                        log.info("Removed ended session for room {} side {}", roomId, side);
-                    }
+        if (roomSessions.size() == 1) {
+            // First bot for this room — register one shared STOMP subscription.
+            // A second bot (EVE PLAYER_2) reuses this same subscription via topicSessions.
+            connection.subscribe(topic, new StompFrameHandler() {
+                @Override
+                public Type getPayloadType(StompHeaders headers) { return Map.class; }
+
+                @Override
+                public void handleFrame(StompHeaders headers, Object payload) {
+                    if (!(payload instanceof Map<?, ?> map)) return;
+                    CopyOnWriteArrayList<BotGameSession> active = topicSessions.get(topic);
+                    if (active == null) return;
+                    active.removeIf(s -> {
+                        s.handleEvent(map);
+                        if (s.isEnded()) {
+                            sessions.remove(s.getRoomId() + ":" + s.getSide());
+                            log.info("Removed ended session room={} side={}", s.getRoomId(), s.getSide());
+                            return true;
+                        }
+                        return false;
+                    });
+                    if (active.isEmpty()) topicSessions.remove(topic);
                 }
-            }
-        });
+            });
+        }
 
         connection.send("/app/room/" + roomId + "/bot-join", new BotJoinRequestDto(side, difficulty));
         log.info("Bot assigned: room={} side={} difficulty={}", roomId, side, difficulty);

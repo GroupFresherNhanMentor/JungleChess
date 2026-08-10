@@ -20,7 +20,9 @@ import { GameRuleService } from './game-rule.service';
 export interface OnlineGameState {
   roomId: string;
   yourSide: PieceSide;
+  yourSideRaw: string;
   isCreator: boolean;
+  isSpectator: boolean;
   mode: string;
   status: RoomStatus;
   pieces: Piece[];
@@ -79,6 +81,10 @@ export class GameRoomService {
       if (event.type === 'ROOM_CREATED' && !result$.closed) {
         const roomId = (event as RoomCreatedEvent).roomId;
         this.subscribeToRoom(roomId);
+        // Keep personal queue active for late PLAYERS_UPDATED events (bots may join after subscription)
+        this.setupPersonalSubscription();
+        // Request current state in case bots joined before our room-topic subscription reached the server
+        this.stomp.send(`/app/room.${roomId}.sync`);
         tempSub.unsubscribe();
         result$.next(roomId);
         result$.complete();
@@ -213,7 +219,9 @@ export class GameRoomService {
         this.gameState$.next({
           roomId: e.roomId,
           yourSide: this.adapter.toSide(e.yourSide),
+          yourSideRaw: e.yourSide,
           isCreator: true,
+          isSpectator: e.yourSide === 'SPECTATOR',
           mode: e.mode,
           status: e.status as RoomStatus,
           pieces: this.ruleService.getInitialPieces(),
@@ -232,7 +240,9 @@ export class GameRoomService {
         this.gameState$.next({
           roomId: e.roomId,
           yourSide: this.adapter.toSide(e.yourSide),
+          yourSideRaw: e.yourSide,
           isCreator: current?.isCreator ?? false,
+          isSpectator: e.yourSide === 'SPECTATOR',
           mode: current?.mode ?? '',
           status: e.status as RoomStatus,
           pieces: this.adapter.toPieces(e.board),

@@ -29,7 +29,7 @@ app:
     access-token-expiration: ${JWT_ACCESS_EXPIRATION:259200000}
     refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
   bot-worker:
-    url: ${BOT_WORKER_URL:http://localhost:8081}
+    username: ${BOT_USERNAME:bot-worker}
   seed:
     admin:
       username: ${SEED_ADMIN_USERNAME:admin}

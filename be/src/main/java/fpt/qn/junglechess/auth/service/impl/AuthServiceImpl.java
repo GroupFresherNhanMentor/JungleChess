@@ -62,6 +62,25 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public RegisterResponse botRegister(RegisterRequest request) {
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new UsernameAlreadyExistsException();
+        }
+        try {
+            UserDto user = userCreationTransactionHelper.executeBotRegistration(
+                    request.getUsername(), request.getPassword(),
+                    request.getFullName() != null ? request.getFullName() : request.getUsername());
+            return RegisterResponse.builder()
+                    .userId(user.getId())
+                    .username(user.getUsername())
+                    .build();
+        } catch (DataAccessException e) {
+            if (isDuplicateUsernameConstraint(e)) throw new UsernameAlreadyExistsException();
+            throw e;
+        }
+    }
+
+    @Override
     public LoginResponse login(LoginRequest request) {
         var user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(InvalidCredentialsException::new);

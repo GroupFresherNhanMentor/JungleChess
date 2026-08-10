@@ -274,7 +274,7 @@ export class GameComponent implements OnInit, OnDestroy {
 
   get isMyTurn(): boolean {
     const s = this.state();
-    return !!s && s.currentTurn === s.yourSide;
+    return !!s && !s.isSpectator && s.currentTurn === s.yourSide;
   }
 
   get canStart(): boolean {
@@ -283,7 +283,10 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   get sideLabel(): string {
-    return this.state()?.yourSide === 1 ? 'Red (PLAYER_1)' : 'Blue (PLAYER_2)';
+    const raw = this.state()?.yourSideRaw;
+    if (raw === 'PLAYER_1') return 'Red (PLAYER_1)';
+    if (raw === 'PLAYER_2') return 'Blue (PLAYER_2)';
+    return '';
   }
 
   get turnLabel(): string {

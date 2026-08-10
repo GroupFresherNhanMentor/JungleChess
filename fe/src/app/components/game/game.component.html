@@ -25,6 +25,12 @@
   <div *ngIf="state()?.status === 'WAITING'" class="waiting-room">
     <h2>Room {{ state()?.roomId }}</h2>
     <p class="your-side">{{ loc.translate('playerLabel') }} <strong>{{ sideLabel }}</strong></p>
+    <p class="your-side" *ngIf="!state()?.isSpectator">
+      You are playing as <strong>{{ sideLabel }}</strong>
+    </p>
+    <p class="your-side" *ngIf="state()?.isSpectator">
+      You are <strong>watching</strong> ({{ state()?.mode === 'EVE' ? 'Bot vs Bot' : 'Spectator' }})
+    </p>
 
     <div class="player-list">
       <p>Players joined: {{ state()?.players?.length ?? 0 }} / 2</p>
@@ -38,8 +44,11 @@
     <button *ngIf="canStart" class="btn-start" (click)="startGame()">
       Start Game
     </button>
-    <p *ngIf="!canStart && state()?.isCreator">
+    <p *ngIf="!canStart && state()?.isCreator && !state()?.isSpectator">
       Waiting for opponent to join...
+    </p>
+    <p *ngIf="!canStart && state()?.isCreator && state()?.isSpectator">
+      Waiting for bots to join...
     </p>
     <p *ngIf="!state()?.isCreator">
       Waiting for host to start the game...
@@ -103,8 +112,8 @@
       Opponent disconnected.
     </p>
     <div class="end-actions">
-      <button *ngIf="state()?.mode === 'PVP'" class="btn-rematch" (click)="requestRematch()">
-        Request Rematch
+      <button class="btn-rematch" (click)="requestRematch()">
+        {{ state()?.mode === 'PVP' ? 'Request Rematch' : 'Rematch' }}
       </button>
       <button class="btn-lobby" (click)="onBackToLobby()">
         {{ loc.translate('backToLobbyBtn') }}

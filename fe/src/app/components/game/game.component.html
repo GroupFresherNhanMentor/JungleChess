@@ -1,9 +1,30 @@
 <div class="game-wrapper">
 
+  <!-- Active Room Banner Header (all statuses) -->
+  <div id="active-room-banner" *ngIf="state() as s">
+    <button (click)="onBackToLobby()" class="back-lobby-header-btn">
+      {{ loc.translate('backToLobbyBtn') }}
+    </button>
+    <div class="room-banner-details">
+      <span class="room-badge">{{ s.mode }}</span>
+      <span class="room-code-tag">[{{ s.roomId }}]</span>
+      <span class="room-title-text">{{ s.mode === 'PVP' ? 'PVP' : s.mode === 'PVE' ? 'PVE' : s.mode }}</span>
+    </div>
+    <div class="banner-right-controls">
+      <button (click)="toggleLanguage()" class="lang-toggle-btn">
+        <span class="lang-flag">{{ loc.currentLanguage === 'vn' ? '🇻🇳' : '🇬🇧' }}</span>
+        <span class="lang-code">{{ loc.currentLanguage === 'vn' ? 'VN' : 'EN' }}</span>
+      </button>
+      <button (click)="onLogout()" class="logout-btn">
+        {{ loc.currentLanguage === 'vn' ? 'Đăng xuất' : 'Logout' }}
+      </button>
+    </div>
+  </div>
+
   <!-- Waiting Room -->
   <div *ngIf="state()?.status === 'WAITING'" class="waiting-room">
     <h2>Room {{ state()?.roomId }}</h2>
-    <p class="your-side">You are playing as <strong>{{ sideLabel }}</strong></p>
+    <p class="your-side">{{ loc.translate('playerLabel') }} <strong>{{ sideLabel }}</strong></p>
 
     <div class="player-list">
       <p>Players joined: {{ state()?.players?.length ?? 0 }} / 2</p>
@@ -24,31 +45,54 @@
       Waiting for host to start the game...
     </p>
 
-    <button class="btn-leave" (click)="leaveRoom()">Leave Room</button>
+    <button class="btn-leave" (click)="onBackToLobby()">
+      {{ loc.translate('backToLobbyBtn') }}
+    </button>
   </div>
 
-  <!-- Game Board -->
-  <div *ngIf="state()?.status === 'PLAYING'" class="game-area">
-    <div class="status-bar">
-      <span class="room-id">{{ state()?.roomId }}</span>
-      <span class="turn-indicator" [class.my-turn]="isMyTurn">
-        {{ isMyTurn ? 'Your turn' : "Opponent's turn" }} ({{ turnLabel }})
-      </span>
-      <span class="move-count">Move #{{ state()?.moveNumber }}</span>
-    </div>
+  <!-- Game Board (rich layout) -->
+  <div *ngIf="state()?.status === 'PLAYING'" id="game-page-wrapper">
+    <div id="game-layout">
+      <!-- Left Panel -->
+      <app-left-panel
+        [capturedByRed]="capturedByRed()"
+        [canUndo]="false"
+        [onlineMode]="true"
+        (openRules)="openRules()"
+        (backToLobby)="onBackToLobby()"
+      ></app-left-panel>
 
-    <app-board
-      [pieces]="state()?.pieces ?? []"
-      [selectedPos]="selectedPos()"
-      [validMoves]="validMoves()"
-      [lastMove]="state()?.lastMove ?? null"
-      [movingPiece]="movingPiece()"
-      (squareClick)="onSquareClick($event)"
-      (moveAnimationComplete)="onMoveAnimationComplete()"
-    />
+      <!-- Main Board Area -->
+      <div id="main-game-area">
+        <app-board
+          [pieces]="state()?.pieces ?? []"
+          [selectedPos]="selectedPos()"
+          [validMoves]="validMoves()"
+          [lastMove]="getLastMove()"
+          [movingPiece]="movingPiece()"
+          (squareClick)="onSquareClick($event)"
+          (moveAnimationComplete)="onMoveAnimationComplete()"
+        ></app-board>
 
-    <div class="game-actions">
-      <button class="btn-leave" (click)="leaveRoom()">Forfeit &amp; Leave</button>
+        <!-- Status Message -->
+        <div id="status">
+          <ng-container *ngIf="state() as s">
+            <span *ngIf="s.status === 'PLAYING'">
+              {{ isMyTurn ? 'Your turn' : "Opponent's turn" }} ({{ turnLabel }}) — Move #{{ s.moveNumber }}
+            </span>
+          </ng-container>
+        </div>
+
+        <!-- Win Chance Bar -->
+        <app-win-chance-bar [pieces]="state()?.pieces ?? []"></app-win-chance-bar>
+      </div>
+
+      <!-- Right Panel -->
+      <app-right-panel
+        [capturedByBlue]="capturedByBlue()"
+        [moveHistory]="moveHistory()"
+        [currentTurn]="state()?.currentTurn ?? 0"
+      ></app-right-panel>
     </div>
   </div>
 
@@ -62,7 +106,9 @@
       <button *ngIf="state()?.mode === 'PVP'" class="btn-rematch" (click)="requestRematch()">
         Request Rematch
       </button>
-      <button class="btn-lobby" (click)="leaveRoom()">Back to Lobby</button>
+      <button class="btn-lobby" (click)="onBackToLobby()">
+        {{ loc.translate('backToLobbyBtn') }}
+      </button>
     </div>
   </div>
 
@@ -72,3 +118,59 @@
   </div>
 
 </div>
+
+<!-- Rules Popup Modal -->
+<app-game-rules-modal
+  [isOpen]="isRulesModalOpen()"
+  (close)="closeRules()"
+></app-game-rules-modal>
+
+<!-- Turn / Win Announcement Banner (fixed center overlay) -->
+<div
+  *ngIf="banner() as b"
+  class="announce-banner"
+  [class.blue]="b.side === 0"
+  [class.red]="b.side === 1"
+  [class.neutral]="b.side === undefined"
+>
+  <div class="announce-title">{{ b.title }}</div>
+  <div *ngIf="b.subtitle" class="announce-subtitle">{{ b.subtitle }}</div>
+</div>
+
+<!-- Victory Fireworks Overlay (winner-side colors) -->
+<div
+  *ngIf="fireworkBursts.length > 0"
+  class="fireworks-overlay"
+  [class.blue]="fireworkSide === 0"
+  [class.red]="fireworkSide === 1"
+>
+  <div class="fireworks-congrats" aria-live="polite">
+    <div class="fireworks-title">{{ fireworkTitle }}</div>
+    <div class="fireworks-subtitle">{{ fireworkSubtitle }}</div>
+  </div>
+
+  <ng-container *ngFor="let burst of fireworkBursts">
+    <div
+      class="firework-burst"
+      [ngStyle]="{ left: burst.x + 'vw', top: burst.y + 'vh' }"
+    >
+      <div
+        *ngFor="let p of burst.particles"
+        class="firework-particle"
+        [style.--dx]="p.dx + 'px'"
+        [style.--dy]="p.dy + 'px'"
+        [style.--delay]="p.delay + 'ms'"
+        [style.--size]="p.size + 'px'"
+        [style.--pcolor]="p.color"
+      ></div>
+    </div>
+  </ng-container>
+</div>
+
+<!-- Defeat Clown Overlay -->
+<div *ngIf="showClown" class="clown-overlay">
+  <div class="clown-face">🤡</div>
+</div>
+
+<!-- Eaten-animal popup (captured piece jumps from the corner) -->
+<app-eaten-popup [items]="eatenPopups()"></app-eaten-popup>

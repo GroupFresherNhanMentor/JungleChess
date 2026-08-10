@@ -1,0 +1,50 @@
+.falling-decor {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* A single falling leaf. Falls straight down on its own animation; the gust
+   push (wind-x/wind-y) is a smooth translate applied via `transition`, so when
+   the TS updates the vars the leaf eases sideways and back without restarting
+   the fall. Negative delay means it is already partway down when the page
+   loads — no empty sky at start. */
+.fall-item {
+  position: absolute;
+  top: -8vh;
+  display: inline-block;
+  line-height: 1;
+  user-select: none;
+  animation: fall-drop var(--fall-dur, 12s) linear var(--fall-delay, 0s) infinite;
+  translate: var(--wind-x, 0px) var(--wind-y, 0px);
+  transition: translate 1.4s ease-out var(--gust-delay, 0s);
+  will-change: translate;
+}
+
+/* Inner span does the continuous left-right flutter on top of the fall. */
+.fall-flutter {
+  display: inline-block;
+  animation: flutter var(--sway-dur, 2.6s) ease-in-out infinite alternate;
+}
+
+/* Falls from above the top edge to below the bottom edge, spinning a full turn. */
+@keyframes fall-drop {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    transform: translateY(118vh) rotate(360deg);
+  }
+}
+
+/* Gentle sway while it falls. */
+@keyframes flutter {
+  0% {
+    transform: translateX(calc(var(--sway-amp, 20px) * -1));
+  }
+  100% {
+    transform: translateX(var(--sway-amp, 20px));
+  }
+}

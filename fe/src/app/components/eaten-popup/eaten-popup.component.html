@@ -1,0 +1,6 @@
+<div class="eaten-overlay" aria-hidden="true">
+  <div *ngFor="let item of items" class="eaten-item">
+    <img class="eaten-pic" [src]="imageFor(item.type)" [alt]="item.type" />
+    <span class="eaten-question">?</span>
+  </div>
+</div>

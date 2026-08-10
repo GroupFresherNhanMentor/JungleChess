@@ -1,0 +1,127 @@
+<div class="auth-page" id="register-page">
+  <!-- Background decoration -->
+  <div class="bg-decoration">
+    <div class="jungle-piece piece-1">🐘</div>
+    <div class="jungle-piece piece-2">🦁</div>
+    <div class="jungle-piece piece-3">🐯</div>
+    <div class="jungle-piece piece-4">🐆</div>
+    <div class="jungle-piece piece-5">🐺</div>
+    <div class="jungle-piece piece-6">🐭</div>
+  </div>
+
+  <div class="auth-card">
+    <!-- Logo & Title -->
+    <div class="auth-header">
+      <div class="auth-logo">🌿</div>
+      <h1 class="auth-title">Tạo Tài Khoản</h1>
+      <p class="auth-subtitle">Tham gia cộng đồng Cờ Thú Online</p>
+    </div>
+
+    <!-- Success message -->
+    <div class="success-banner" *ngIf="successMessage()" role="status">
+      <span>✅</span>
+      {{ successMessage() }}
+    </div>
+
+    <!-- Error message -->
+    <div class="error-banner" *ngIf="errorMessage()" role="alert">
+      <span class="error-icon">⚠️</span>
+      {{ errorMessage() }}
+    </div>
+
+    <!-- Register Form -->
+    <form id="register-form" (submit)="$event.preventDefault(); onRegister()" class="auth-form">
+      <div class="form-group">
+        <label for="register-username">Tên đăng nhập</label>
+        <div class="input-wrapper">
+          <span class="input-icon">👤</span>
+          <input
+            id="register-username"
+            type="text"
+            [(ngModel)]="username"
+            name="username"
+            placeholder="Ít nhất 3 ký tự..."
+            class="form-input"
+            autocomplete="username"
+            minlength="3"
+            [disabled]="isLoading()"
+            required
+          />
+        </div>
+        <span class="field-error" *ngIf="username.length > 0 && username.trim().length < 3">
+          Tên đăng nhập cần ít nhất 3 ký tự.
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label for="register-password">Mật khẩu</label>
+        <div class="input-wrapper">
+          <span class="input-icon">🔒</span>
+          <input
+            id="register-password"
+            [type]="showPassword ? 'text' : 'password'"
+            [(ngModel)]="password"
+            name="password"
+            placeholder="Ít nhất 8 ký tự..."
+            class="form-input"
+            autocomplete="new-password"
+            minlength="8"
+            [disabled]="isLoading()"
+            required
+          />
+          <button
+            type="button"
+            class="toggle-password-btn"
+            (click)="toggleShowPassword()"
+            [title]="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+          >
+            {{ showPassword ? '🙈' : '👁️' }}
+          </button>
+        </div>
+        <span class="field-error" *ngIf="password.length > 0 && password.length < 8">
+          Mật khẩu cần ít nhất 8 ký tự.
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label for="register-confirm-password">Xác nhận mật khẩu</label>
+        <div class="input-wrapper">
+          <span class="input-icon">🔑</span>
+          <input
+            id="register-confirm-password"
+            [type]="showPassword ? 'text' : 'password'"
+            [(ngModel)]="confirmPassword"
+            name="confirmPassword"
+            placeholder="Nhập lại mật khẩu..."
+            class="form-input"
+            [class.input-error]="passwordMismatch"
+            autocomplete="new-password"
+            [disabled]="isLoading()"
+            required
+          />
+        </div>
+        <span class="field-error" *ngIf="passwordMismatch">
+          Mật khẩu xác nhận không khớp.
+        </span>
+      </div>
+
+      <!-- Submit button -->
+      <button
+        id="register-submit-btn"
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="isLoading() || !isFormValid"
+      >
+        <span *ngIf="isLoading()" class="spinner"></span>
+        <span *ngIf="!isLoading()">🎮 Tạo Tài Khoản</span>
+        <span *ngIf="isLoading()">Đang đăng ký...</span>
+      </button>
+    </form>
+
+    <!-- Login link -->
+    <p class="auth-footer-text">
+      Đã có tài khoản?
+      <a id="go-to-login-link" routerLink="/login" class="auth-link">Đăng nhập</a>
+    </p>
+  </div>
+</div>

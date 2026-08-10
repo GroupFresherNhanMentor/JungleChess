@@ -1,0 +1,11 @@
+<div class="piece-3d-wrapper">
+  <div #canvasContainer class="canvas-container"></div>
+
+  <!-- Fallback 2D head image if loading or error -->
+  <img
+    *ngIf="isLoading || hasError"
+    [src]="'assets/images/head_no_background/' + type + '.png'"
+    [alt]="type"
+    class="fallback-img"
+  />
+</div>

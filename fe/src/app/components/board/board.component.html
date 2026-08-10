@@ -71,10 +71,7 @@
               class="piece"
               [ngClass]="p.side === 0 ? 'player0' : 'player1'"
             >
-              <img
-                [src]="'assets/images/head_no_background/' + p.type + '.png'"
-                [alt]="p.type"
-              />
+              <app-piece-3d [type]="p.type" [side]="p.side"></app-piece-3d>
             </div>
           </ng-container>
         </div>
@@ -96,10 +93,7 @@
         '--ghost-ty': g.ty + 'px'
       }"
     >
-      <img
-        [src]="'assets/images/head_no_background/' + g.piece.type + '.png'"
-        [alt]="g.piece.type"
-      />
+      <app-piece-3d [type]="g.piece.type" [side]="g.piece.side"></app-piece-3d>
     </div>
   </div>
 

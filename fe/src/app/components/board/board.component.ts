@@ -31,6 +31,8 @@ interface GhostState {
   isCapture: boolean;
 }
 
+import { Piece3dComponent } from '../piece-3d/piece-3d.component';
+
 const CELL = 68;
 const PIECE = 60;
 const OFFSET = (CELL - PIECE) / 2; // 4px
@@ -41,7 +43,7 @@ const POUNCE_MS = 400;
 @Component({
   selector: 'app-board',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, Piece3dComponent],
   templateUrl: './board.component.html',
   styleUrl: './board.component.css'
 })

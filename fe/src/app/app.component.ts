@@ -134,7 +134,7 @@ export class AppComponent implements OnInit {
     private aiBotService: AiBotService,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loc.currentLang$.subscribe((lang) => {
@@ -427,8 +427,8 @@ export class AppComponent implements OnInit {
     const outcome: 'attacker' | 'defender' = attackerWon ? 'attacker' : 'defender';
     this.statusMessage = attackerWon
       ? this.loc.translate('battleWin', {
-          winner: this.loc.translate(winningSide === 0 ? 'playerStartsBlue' : 'playerStartsRed')
-        })
+        winner: this.loc.translate(winningSide === 0 ? 'playerStartsBlue' : 'playerStartsRed')
+      })
       : this.loc.translate('battleCounter');
 
     this.applyMove(b.from, b.to, outcome);
@@ -760,7 +760,7 @@ export class AppComponent implements OnInit {
 
   private static readonly FIREWORK_COLORS: Record<'blue' | 'red' | 'gold', string[]> = {
     blue: ['#3b82f6', '#60a5fa', '#93c5fd', '#ffffff'],
-    red:  ['#ef4444', '#f97316', '#fbbf24', '#ffd97a'],
+    red: ['#ef4444', '#f97316', '#fbbf24', '#ffd97a'],
     gold: ['#ffd97a', '#f0c268', '#ff9f43', '#ffffff']
   };
 

@@ -49,56 +49,53 @@
     (openRulesModal)="openRulesModal()"
   ></app-game-controls>
 
-  <!-- Page Wrapper to align Game Layout and Side Chat Box -->
-  <div id="game-page-wrapper">
-    <!-- Main Game Layout Container -->
-    <div id="game-layout">
-      <!-- Left Panel -->
-      <app-left-panel
-        [capturedByRed]="capturedByRed"
-        [canUndo]="moveHistory.length > 0"
-        (resetGame)="initGame()"
-        (undoMove)="undoMove()"
-        (randomizeBoard)="randomizeBoard()"
-        (openRules)="openRulesModal()"
-        (backToLobby)="onBackToLobby()"
-      ></app-left-panel>
+  <!-- Main Game Layout Container -->
+  <div id="game-layout">
+    <!-- Left Panel -->
+    <app-left-panel
+      [capturedByRed]="capturedByRed"
+      [canUndo]="moveHistory.length > 0"
+      (resetGame)="initGame()"
+      (undoMove)="undoMove()"
+      (randomizeBoard)="randomizeBoard()"
+      (openRules)="openRulesModal()"
+      (backToLobby)="onBackToLobby()"
+    ></app-left-panel>
 
-      <!-- Main Board Area -->
-      <div id="main-game-area">
-        <app-board
-          [pieces]="pieces"
-          [selectedPos]="selectedPos"
-          [validMoves]="validMoves"
-          [lastMove]="getLastMove()"
-          [movingPiece]="movingPiece"
-          (squareClick)="onSquareClick($event)"
-          (moveAnimationComplete)="onMoveAnimationComplete()"
-        ></app-board>
+    <!-- Main Board Area -->
+    <div id="main-game-area">
+      <app-board
+        [pieces]="pieces"
+        [selectedPos]="selectedPos"
+        [validMoves]="validMoves"
+        [lastMove]="getLastMove()"
+        [movingPiece]="movingPiece"
+        (squareClick)="onSquareClick($event)"
+        (moveAnimationComplete)="onMoveAnimationComplete()"
+      ></app-board>
 
-        <!-- Status Message -->
-        <div id="status">{{ statusMessage }}</div>
+      <!-- Status Message -->
+      <div id="status">{{ statusMessage }}</div>
 
-        <!-- Win Chance Bar -->
-        <app-win-chance-bar [pieces]="pieces"></app-win-chance-bar>
+      <!-- Win Chance Bar -->
+      <app-win-chance-bar [pieces]="pieces"></app-win-chance-bar>
+
+      <!-- In-Game Chat Box centered under Win Chance Bar -->
+      <div id="bottom-chat-wrapper">
+        <app-chat
+          [messages]="chatMessages"
+          [currentTurn]="currentTurn"
+          (sendMessage)="onSendChatMessage($event)"
+        ></app-chat>
       </div>
-
-      <!-- Right Panel -->
-      <app-right-panel
-        [capturedByBlue]="capturedByBlue"
-        [moveHistory]="moveHistory"
-        [currentTurn]="currentTurn"
-      ></app-right-panel>
     </div>
 
-    <!-- Side Chat Box -->
-    <div id="side-chat-wrapper">
-      <app-chat
-        [messages]="chatMessages"
-        [currentTurn]="currentTurn"
-        (sendMessage)="onSendChatMessage($event)"
-      ></app-chat>
-    </div>
+    <!-- Right Panel -->
+    <app-right-panel
+      [capturedByBlue]="capturedByBlue"
+      [moveHistory]="moveHistory"
+      [currentTurn]="currentTurn"
+    ></app-right-panel>
   </div>
 </ng-container>
 
@@ -158,9 +155,4 @@
       ></div>
     </div>
   </ng-container>
-</div>
-
-<!-- Defeat Clown Overlay (PVA loss only) -->
-<div *ngIf="showClown" class="clown-overlay">
-  <div class="clown-face" role="img" aria-label="Thua cuộc">🤡</div>
 </div>

@@ -44,7 +44,6 @@ export interface Tile {
 }
 
 export type GameMode = 'PVP_ONLINE' | 'PVP' | 'PVE' | 'PVA' | 'EVE';
-/** Alias kept for legacy game-container component. */
 export type DetailedGameMode = GameMode;
 export type RoomStatus = 'WAITING' | 'PLAYING' | 'ENDED';
 

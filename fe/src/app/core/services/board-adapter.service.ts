@@ -50,18 +50,29 @@ export class BoardAdapterService {
     const fromPos: Position = { col: fromCol, row: fromRow };
     const toPos: Position = { col: toCol, row: toRow };
 
-    const idx = record.movedPiece.lastIndexOf('_');
-    const sideStr = record.movedPiece.substring(0, idx);
-    const typeStr = record.movedPiece.substring(idx + 1).toLowerCase() as PieceType;
+    const piece = this.parsePiece(record.movedPiece, toPos);
 
-    const piece: Piece = {
+    // The server includes the captured animal (e.g. "PLAYER_2_CAT") when the
+    // move captured something; parse it so the FE can track captures.
+    const capturedPiece = record.capturedPiece
+      ? this.parsePiece(record.capturedPiece, toPos)
+      : null;
+
+    return { from: fromPos, to: toPos, piece, capturedPiece };
+  }
+
+  /** Parse a backend piece code like "PLAYER_1_LION" into a frontend Piece. */
+  private parsePiece(code: string, position: Position): Piece {
+    const idx = code.lastIndexOf('_');
+    const sideStr = code.substring(0, idx);
+    const typeStr = code.substring(idx + 1).toLowerCase() as PieceType;
+
+    return {
       id: `${sideStr}_${typeStr}`,
       type: typeStr,
       side: this.toSide(sideStr),
       rank: PIECE_RANKS[typeStr] ?? 0,
-      position: toPos,
+      position,
     };
-
-    return { from: fromPos, to: toPos, piece };
   }
 }

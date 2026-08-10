@@ -28,11 +28,12 @@
         📖 {{ loc.translate('rulesButton') }}
       </button>
 
-      <button (click)="resetGame.emit()" class="panel-btn reset-btn">
+      <button *ngIf="!onlineMode" (click)="resetGame.emit()" class="panel-btn reset-btn">
         {{ loc.translate('resetButton') }}
       </button>
 
       <button
+        *ngIf="!onlineMode"
         (click)="undoMove.emit()"
         [disabled]="!canUndo"
         class="panel-btn undo-btn"
@@ -40,7 +41,7 @@
         Hoàn nước
       </button>
 
-      <button (click)="randomizeBoard.emit()" class="panel-btn random-btn">
+      <button *ngIf="!onlineMode" (click)="randomizeBoard.emit()" class="panel-btn random-btn">
         Bàn cờ ngẫu nhiên
       </button>
     </div>

@@ -3,34 +3,53 @@
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
-  background: #1a1a2e;
-  color: #eee;
   padding: 24px 16px;
   font-family: sans-serif;
+}
+
+:host {
+  display: block;
+  min-height: 100vh;
 }
 
 /* ── Waiting room ─────────────────────────────────────────────── */
 
 .waiting-room {
   text-align: center;
-  max-width: 400px;
+  max-width: 460px;
+  width: 100%;
+  background-color: var(--wood-panel);
+  border: 2px solid var(--wood-border);
+  border-radius: 12px;
+  padding: 28px 24px;
+  box-shadow: var(--panel-shadow-3d);
+  background-image: var(--panel-grad-top);
+  margin-top: 20px;
 }
 
 .waiting-room h2 {
   font-size: 1.6rem;
   margin-bottom: 8px;
+  color: var(--ink-strong);
+  text-shadow: var(--text-emboss);
 }
 
 .your-side {
-  color: #aaa;
+  color: var(--ink-muted);
   margin-bottom: 16px;
 }
 
+.your-side strong {
+  color: var(--ink-strong);
+}
+
 .player-list {
-  background: #16213e;
+  background-color: var(--wood-inset);
+  border: 1px solid var(--wood-border-soft);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 20px;
+  color: var(--ink);
 }
 
 .player-list ul {
@@ -41,47 +60,11 @@
 
 .player-list li {
   padding: 4px 0;
+  color: var(--ink-strong);
 }
 
-/* ── Game area ────────────────────────────────────────────────── */
-
-.game-area {
-  width: 100%;
-  max-width: 640px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.status-bar {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #16213e;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-}
-
-.room-id {
-  color: #888;
-  font-size: 0.8rem;
-}
-
-.turn-indicator {
-  font-weight: bold;
-  color: #aaa;
-}
-
-.turn-indicator.my-turn {
-  color: #4caf50;
-}
-
-.move-count {
-  color: #888;
-  font-size: 0.8rem;
+.waiting-room p {
+  color: var(--ink-muted);
 }
 
 /* ── Game over ────────────────────────────────────────────────── */
@@ -89,11 +72,25 @@
 .game-over {
   text-align: center;
   padding: 40px;
+  background-color: var(--wood-panel);
+  border: 2px solid var(--wood-border);
+  border-radius: 12px;
+  box-shadow: var(--panel-shadow-3d);
+  background-image: var(--panel-grad-top);
+  max-width: 460px;
+  width: 100%;
+  margin-top: 20px;
 }
 
 .result {
   font-size: 2.5rem;
   margin-bottom: 16px;
+  color: var(--ink-strong);
+  text-shadow: var(--text-emboss);
+}
+
+.game-over p {
+  color: var(--ink-muted);
 }
 
 .end-actions {
@@ -101,38 +98,83 @@
   gap: 12px;
   justify-content: center;
   margin-top: 24px;
+  flex-wrap: wrap;
 }
 
 /* ── Buttons ──────────────────────────────────────────────────── */
 
 button {
   padding: 10px 24px;
-  border: none;
+  border: 1px solid var(--wood-border-soft);
   border-radius: 6px;
   font-size: 1rem;
   cursor: pointer;
   font-weight: 600;
+  color: var(--ink-strong);
 }
 
 .btn-start {
-  background: #4caf50;
-  color: white;
+  background: var(--btn-wood);
+  color: var(--ink-strong);
+  box-shadow: var(--btn-shadow-3d-sml);
   margin-bottom: 12px;
 }
 
+.btn-start:hover {
+  background: var(--btn-wood-hot);
+  box-shadow: var(--btn-shadow-3d);
+}
+
+.btn-start:active {
+  transform: translateY(3px);
+  box-shadow: var(--btn-shadow-3d-active-sml);
+}
+
 .btn-leave {
-  background: #c0392b;
-  color: white;
+  background: var(--btn-wood);
+  box-shadow: var(--btn-shadow-3d-sml);
+}
+
+.btn-leave:hover {
+  background: var(--btn-wood-hot);
+  box-shadow: var(--btn-shadow-3d);
+}
+
+.btn-leave:active {
+  transform: translateY(3px);
+  box-shadow: var(--btn-shadow-3d-active-sml);
 }
 
 .btn-rematch {
-  background: #2980b9;
-  color: white;
+  background: var(--btn-wood);
+  box-shadow: var(--btn-shadow-3d-sml);
+}
+
+.btn-rematch:hover {
+  background: var(--btn-wood-hot);
+  box-shadow: var(--btn-shadow-3d);
+}
+
+.btn-rematch:active {
+  transform: translateY(3px);
+  box-shadow: var(--btn-shadow-3d-active-sml);
 }
 
 .btn-lobby {
-  background: #555;
-  color: white;
+  background: var(--btn-gold);
+  border: 2px solid var(--gold-accent);
+  box-shadow: var(--btn-shadow-3d-sml);
+  font-weight: bold;
+}
+
+.btn-lobby:hover {
+  background: var(--btn-gold-hot);
+  box-shadow: var(--btn-shadow-3d);
+}
+
+.btn-lobby:active {
+  transform: translateY(3px);
+  box-shadow: var(--btn-shadow-3d-active);
 }
 
 /* ── Connecting ───────────────────────────────────────────────── */
@@ -142,10 +184,42 @@ button {
   align-items: center;
   justify-content: center;
   height: 60vh;
-  color: #888;
+  color: var(--ink-muted);
   font-size: 1.2rem;
 }
 
 .game-actions {
   margin-top: 8px;
+}
+
+/* ── Banner right-side controls ───────────────────────────────── */
+
+.banner-right-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logout-btn {
+  font-size: 14px;
+  font-weight: bold;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background-color: var(--wood-panel);
+  color: var(--ink-strong);
+  border: 2px solid var(--wood-border);
+  box-shadow: var(--btn-shadow-3d-sml);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.logout-btn:hover {
+  background-color: var(--wood-panel-solid);
+  border-color: var(--gold-accent-bright);
+  box-shadow: var(--btn-shadow-3d);
+}
+
+.logout-btn:active {
+  transform: translateY(2px);
+  box-shadow: var(--btn-shadow-3d-active-sml);
 }

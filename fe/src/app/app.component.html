@@ -1,1 +1,10 @@
-<router-outlet></router-outlet>
+<app-falling-decor></app-falling-decor>
+
+<div
+  *ngIf="viewTransitioning"
+  class="view-transition-overlay"
+  [class.reverse]="viewTransitionReverse"
+  aria-hidden="true"
+></div>
+
+<router-outlet />

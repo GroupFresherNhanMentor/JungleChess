@@ -1,0 +1,9 @@
+# Bot Worker .gitignore
+target/
+build/
+.settings/
+.classpath
+.project
+.factorypath
+*.jar
+*.class

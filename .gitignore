@@ -19,6 +19,14 @@ be/.settings/
 be/.classpath
 be/.project
 
+# Bot Worker (bot-worker)
+bot-worker/target/
+bot-worker/build/
+bot-worker/.settings/
+bot-worker/.classpath
+bot-worker/.project
+
+
 # IDEs, Editors & System
 .idea/
 .vscode/*

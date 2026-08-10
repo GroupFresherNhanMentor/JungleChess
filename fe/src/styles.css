@@ -815,7 +815,7 @@ img.terrain-water {
 }
 
 /* --- Responsive adjustments --- */
-@media (max-width: 1620px) {
+@media (max-width: 1350px) {
   #game-page-wrapper {
     flex-direction: column;
     align-items: center;

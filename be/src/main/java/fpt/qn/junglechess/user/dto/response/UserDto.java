@@ -21,7 +21,6 @@ import lombok.experimental.FieldDefaults;
 public class UserDto {
 
     UUID id;
-    String employeeId;
     String username;
     String fullName;
     List<String> roles;   // sourced from user_roles JOIN roles

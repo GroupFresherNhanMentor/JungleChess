@@ -22,7 +22,6 @@ import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -35,40 +34,29 @@ public class AuthController {
 
     @PostMapping("/register")
     @Operation(summary = "Register a player account")
-    public Mono<ResponseEntity<ApiResponse<RegisterResponse>>> register(
-            @Valid @RequestBody RegisterRequest request) {
-        return authService.register(request)
-                .map(response -> ResponseEntity.status(201)
-                        .body(ApiResponse.success(response, "Registration successful")));
-    }
-
-    @PostMapping("/guest")
-    @Operation(summary = "Create and log in as a guest player")
-    public Mono<ResponseEntity<ApiResponse<LoginResponse>>> guest() {
-        return authService.guest()
-                .map(response -> ResponseEntity.ok(ApiResponse.success(response, "Guest login successful")));
+    public ResponseEntity<ApiResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.status(201)
+                .body(ApiResponse.success(authService.register(request), "Registration successful"));
     }
 
     @PostMapping("/login")
     @Operation(summary = "User login")
-    public Mono<ResponseEntity<ApiResponse<LoginResponse>>> login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request)
-                .map(response -> ResponseEntity.ok(ApiResponse.success(response, "Login successful")));
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(authService.login(request), "Login successful"));
     }
 
     @PostMapping("/refresh")
     @Operation(summary = "Refresh JWT access token")
-    public Mono<ResponseEntity<ApiResponse<RefreshTokenResponse>>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
-        return authService.refresh(request)
-                .map(response -> ResponseEntity.ok(ApiResponse.success(response, "Token refreshed successfully")));
+    public ResponseEntity<ApiResponse<RefreshTokenResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(authService.refresh(request), "Token refreshed successfully"));
     }
 
     @PostMapping("/logout")
     @Operation(summary = "User logout")
-    public Mono<ResponseEntity<Void>> logout(
+    public ResponseEntity<Void> logout(
             @RequestBody(required = false) RefreshTokenRequest request,
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader) {
-        return authService.logout(request, authHeader)
-                .thenReturn(ResponseEntity.<Void>noContent().build());
+        authService.logout(request, authHeader);
+        return ResponseEntity.noContent().build();
     }
 }

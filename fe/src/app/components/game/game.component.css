@@ -1,0 +1,151 @@
+.game-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  background: #1a1a2e;
+  color: #eee;
+  padding: 24px 16px;
+  font-family: sans-serif;
+}
+
+/* ── Waiting room ─────────────────────────────────────────────── */
+
+.waiting-room {
+  text-align: center;
+  max-width: 400px;
+}
+
+.waiting-room h2 {
+  font-size: 1.6rem;
+  margin-bottom: 8px;
+}
+
+.your-side {
+  color: #aaa;
+  margin-bottom: 16px;
+}
+
+.player-list {
+  background: #16213e;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.player-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+.player-list li {
+  padding: 4px 0;
+}
+
+/* ── Game area ────────────────────────────────────────────────── */
+
+.game-area {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-bar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #16213e;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.room-id {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.turn-indicator {
+  font-weight: bold;
+  color: #aaa;
+}
+
+.turn-indicator.my-turn {
+  color: #4caf50;
+}
+
+.move-count {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+/* ── Game over ────────────────────────────────────────────────── */
+
+.game-over {
+  text-align: center;
+  padding: 40px;
+}
+
+.result {
+  font-size: 2.5rem;
+  margin-bottom: 16px;
+}
+
+.end-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+
+button {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-start {
+  background: #4caf50;
+  color: white;
+  margin-bottom: 12px;
+}
+
+.btn-leave {
+  background: #c0392b;
+  color: white;
+}
+
+.btn-rematch {
+  background: #2980b9;
+  color: white;
+}
+
+.btn-lobby {
+  background: #555;
+  color: white;
+}
+
+/* ── Connecting ───────────────────────────────────────────────── */
+
+.connecting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  color: #888;
+  font-size: 1.2rem;
+}
+
+.game-actions {
+  margin-top: 8px;
+}

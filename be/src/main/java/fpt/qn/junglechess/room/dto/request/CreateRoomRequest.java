@@ -1,5 +1,6 @@
 package fpt.qn.junglechess.room.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import fpt.qn.junglechess.room.model.GameMode;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
@@ -22,8 +23,10 @@ public class CreateRoomRequest {
 
     boolean allowSpectator;
     boolean allowBet;
+
     String botDifficulty;
 
+    @JsonIgnore
     @AssertTrue(message = "allowBet requires allowSpectator to be true")
     public boolean isAllowBetValid() {
         return !allowBet || allowSpectator;

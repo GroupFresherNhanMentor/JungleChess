@@ -6,17 +6,14 @@ import fpt.qn.junglechess.auth.dto.request.RegisterRequest;
 import fpt.qn.junglechess.auth.dto.response.LoginResponse;
 import fpt.qn.junglechess.auth.dto.response.RefreshTokenResponse;
 import fpt.qn.junglechess.auth.dto.response.RegisterResponse;
-import reactor.core.publisher.Mono;
 
 public interface AuthService {
 
-    Mono<RegisterResponse> register(RegisterRequest request);
+    RegisterResponse register(RegisterRequest request);
 
-    Mono<LoginResponse> guest();
+    LoginResponse login(LoginRequest request);
 
-    Mono<LoginResponse> login(LoginRequest request);
+    RefreshTokenResponse refresh(RefreshTokenRequest request);
 
-    Mono<RefreshTokenResponse> refresh(RefreshTokenRequest request);
-
-    Mono<Void> logout(RefreshTokenRequest request, String authHeader);
+    void logout(RefreshTokenRequest request, String authHeader);
 }

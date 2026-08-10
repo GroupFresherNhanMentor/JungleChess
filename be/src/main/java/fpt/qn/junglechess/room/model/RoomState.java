@@ -28,7 +28,6 @@ public class RoomState {
     String[][] board;
     String currentTurn;
     int moveNumber;
-    int botSearchDepth;
     @Builder.Default
     List<PlayerInfo> players = new ArrayList<>();
     @Builder.Default

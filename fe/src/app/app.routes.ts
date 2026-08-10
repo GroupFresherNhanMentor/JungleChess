@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
-
 import { authGuard, guestOnlyGuard } from './core/guards/auth.guard';
+import { GameComponent } from './components/game/game.component';
 
 export const routes: Routes = [
   {
@@ -25,6 +25,11 @@ export const routes: Routes = [
       import('./components/game-container/game-container.component').then(
         (m) => m.GameContainerComponent,
       ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'game/:roomId',
+    component: GameComponent,
     canActivate: [authGuard],
   },
   {

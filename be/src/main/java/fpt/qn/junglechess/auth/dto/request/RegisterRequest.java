@@ -19,6 +19,10 @@ public class RegisterRequest {
     String username;
 
     @NotBlank
-    @Size(min = 8, max = 150)
+    @Size(min = 3, max = 150)
     String password;
+
+    @NotBlank
+    @Size(min = 1, max = 100)
+    String fullName;
 }

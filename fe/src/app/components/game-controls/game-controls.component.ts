@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { GameMode, Language, PieceSide } from '../../core/models/game.models';
+import { Language, PieceSide } from '../../core/models/game.models';
 import { LocalizationService } from '../../core/services/localization.service';
 
 @Component({
@@ -15,8 +15,8 @@ export class GameControlsComponent {
   @Input() currentLang: Language = 'vn';
   @Output() currentLangChange = new EventEmitter<Language>();
 
-  @Input() gameMode: GameMode = 'PVA';
-  @Output() gameModeChange = new EventEmitter<GameMode>();
+  @Input() gameMode: string = 'PVP_ONLINE';
+  @Output() gameModeChange = new EventEmitter<string>();
 
   @Input() firstMoveSide: PieceSide = 0;
   @Output() firstMoveSideChange = new EventEmitter<PieceSide>();

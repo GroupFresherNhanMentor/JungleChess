@@ -13,25 +13,24 @@ import fpt.qn.junglechess.user.dto.request.UpdateUserStatusRequest;
 import fpt.qn.junglechess.user.dto.response.CreateUserResponse;
 import fpt.qn.junglechess.user.dto.response.ResetPasswordResponse;
 import fpt.qn.junglechess.user.dto.response.UserDto;
-import reactor.core.publisher.Mono;
 
 public interface UserService {
 
-    Mono<PageResponse<UserDto>> getUsers(String keyword, SysRole role, UserStatus status, int page, int size);
+    PageResponse<UserDto> getUsers(String keyword, SysRole role, UserStatus status, int page, int size);
 
-    Mono<UserDto> getUserById(UUID id);
+    UserDto getUserById(UUID id);
 
-    Mono<CreateUserResponse> createUser(CreateUserRequest request);
+    CreateUserResponse createUser(CreateUserRequest request);
 
-    Mono<UserDto> updateUser(UUID id, UpdateUserRequest request);
+    UserDto updateUser(UUID id, UpdateUserRequest request);
 
-    Mono<UserDto> updateUserStatus(UUID id, UpdateUserStatusRequest request);
+    UserDto updateUserStatus(UUID id, UpdateUserStatusRequest request);
 
-    Mono<ResetPasswordResponse> resetPasswordByAdmin(UUID id);
+    ResetPasswordResponse resetPasswordByAdmin(UUID id);
 
-    Mono<UserDto> getCurrentUser();
+    UserDto getCurrentUser();
 
-    Mono<UserDto> updateCurrentUser(UpdateCurrentUserRequest request);
+    UserDto updateCurrentUser(UpdateCurrentUserRequest request);
 
-    Mono<Void> changePassword(ChangePasswordRequest request);
+    void changePassword(ChangePasswordRequest request);
 }

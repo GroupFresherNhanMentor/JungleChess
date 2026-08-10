@@ -148,7 +148,21 @@ public class BoardEvaluator {
                     threatWeight = calculateSeeThreatWeight(board, r, c, piece, piece.side().getOpposite());
                 }
 
-                int totalPieceScore = pieceVal + positionalBonus + trapLuringBonus - trapPenalty - threatWeight;
+                // Nemesis Proximity: Elephant vs Enemy Rat urgency fleeing penalty
+                int nemesisPenalty = 0;
+                if (piece.type() == PieceType.ELEPHANT) {
+                    Position enemyRatPos = findPiecePosition(board, piece.side().getOpposite(), PieceType.RAT);
+                    if (enemyRatPos != null) {
+                        int distToRat = Math.abs(r - enemyRatPos.row()) + Math.abs(c - enemyRatPos.col());
+                        if (distToRat == 2) {
+                            nemesisPenalty = 350; // Approaching Rat: retreat!
+                        } else if (distToRat == 3) {
+                            nemesisPenalty = 150; // Nearby Rat warning
+                        }
+                    }
+                }
+
+                int totalPieceScore = pieceVal + positionalBonus + trapLuringBonus - trapPenalty - threatWeight - nemesisPenalty;
 
                 if (piece.side() == side) {
                     score += totalPieceScore;
@@ -197,6 +211,13 @@ public class BoardEvaluator {
             if (attacker != null && defender != null) {
                 int attackerVal  = PIECE_VALUES.getOrDefault(attacker.type(), 0);
                 int defenderVal  = PIECE_VALUES.getOrDefault(defender.type(), 0);
+
+                // Asymmetric trade: If target is worth more than attacker (e.g. Elephant 800 vs Rat 100),
+                // attacker will trade regardless of defender!
+                if (pieceVal > attackerVal) {
+                    return (int) (pieceVal * 0.95);
+                }
+
                 if (defenderVal < attackerVal) {
                     return 0; // Attacker won't make a losing trade
                 }
@@ -204,6 +225,18 @@ public class BoardEvaluator {
         }
 
         return (int) (pieceVal * 0.85);
+    }
+
+    private Position findPiecePosition(Board board, Side side, PieceType type) {
+        for (int r = 0; r < Board.ROWS; r++) {
+            for (int c = 0; c < Board.COLS; c++) {
+                Piece p = board.getPiece(r, c);
+                if (p != null && p.side() == side && p.type() == type) {
+                    return new Position(r, c);
+                }
+            }
+        }
+        return null;
     }
 
     private Piece findLowestValueDefender(Board board, int row, int col, Piece targetPiece, Side defenderSide) {

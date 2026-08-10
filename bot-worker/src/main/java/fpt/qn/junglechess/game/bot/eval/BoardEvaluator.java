@@ -121,19 +121,44 @@ public class BoardEvaluator {
         boolean isDefended = isThreatened(board, r, c, targetPiece, targetPiece.side());
 
         if (isDefended) {
-            // Target piece is defended by a friendly piece
-            // If attacked by a piece of equal or higher value, the trade is bad for attacker upon recapture
+            // Find the lowest-value friendly defender that can recapture after an exchange
+            Piece defender = findLowestValueDefender(board, r, c, targetPiece, targetPiece.side());
             Piece attacker = findStrongestAttacker(board, r, c, targetPiece, attackerSide);
-            if (attacker != null) {
-                int attackerVal = PIECE_VALUES.getOrDefault(attacker.type(), 0);
-                if (attackerVal >= pieceVal) {
-                    // E.g. Lion attacking defended Elephant or Cat attacking defended Dog -> Unfavorable trade
-                    return 0; // No penalty because opponent won't trade
+
+            if (attacker != null && defender != null) {
+                int attackerVal  = PIECE_VALUES.getOrDefault(attacker.type(), 0);
+                int defenderVal  = PIECE_VALUES.getOrDefault(defender.type(), 0);
+                // If the recapturing defender is cheaper than the attacker,
+                // the attacker loses material on the exchange — trade is unfavorable for them.
+                if (defenderVal < attackerVal) {
+                    return 0; // Attacker won't make a losing trade
                 }
             }
         }
 
         return (int) (pieceVal * 0.85);
+    }
+
+    private Piece findLowestValueDefender(Board board, int row, int col, Piece targetPiece, Side defenderSide) {
+        int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+        Piece cheapest = null;
+        int minVal = Integer.MAX_VALUE;
+
+        for (int[] dir : directions) {
+            int er = row + dir[0];
+            int ec = col + dir[1];
+            if (!Position.isValid(er, ec)) continue;
+
+            Piece defender = board.getPiece(er, ec);
+            if (defender != null && defender.side() == defenderSide && !defender.equals(targetPiece)) {
+                int val = PIECE_VALUES.getOrDefault(defender.type(), 0);
+                if (val < minVal) {
+                    minVal = val;
+                    cheapest = defender;
+                }
+            }
+        }
+        return cheapest;
     }
 
     private Piece findStrongestAttacker(Board board, int row, int col, Piece piece, Side attackerSide) {

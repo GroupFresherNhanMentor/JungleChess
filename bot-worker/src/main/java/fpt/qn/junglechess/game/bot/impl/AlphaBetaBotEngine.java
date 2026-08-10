@@ -83,11 +83,11 @@ public class AlphaBetaBotEngine implements BotEngine {
 
             orderMoves(validMoves, guidingMove, killerMoves, 0);
 
-            int bestValue    = Integer.MIN_VALUE;
-            int alpha        = Integer.MIN_VALUE;
-            int beta         = Integer.MAX_VALUE;
-            Move iterBest    = null;
-            boolean aborted  = false;
+            int bestValue        = Integer.MIN_VALUE;
+            int alpha            = Integer.MIN_VALUE;
+            int beta             = Integer.MAX_VALUE;
+            List<Move> tiedMoves = new ArrayList<>();
+            boolean aborted      = false;
 
             for (Move move : validMoves) {
                 if (deadlineExceeded(deadline)) {
@@ -101,10 +101,15 @@ public class AlphaBetaBotEngine implements BotEngine {
 
                 if (value > bestValue) {
                     bestValue = value;
-                    iterBest  = move;
+                    tiedMoves.clear();
+                    tiedMoves.add(move);
+                } else if (value == bestValue) {
+                    tiedMoves.add(move);
                 }
                 alpha = Math.max(alpha, bestValue);
             }
+
+            Move iterBest = tiedMoves.isEmpty() ? null : selectBestDeterministicMove(tiedMoves, side);
 
             // Only promote iterBest to bestMoveFound if the full iteration completed.
             // If the search was aborted mid-iteration, the result is partial and unreliable.
@@ -379,18 +384,30 @@ public class AlphaBetaBotEngine implements BotEngine {
         return score;
     }
 
-    /** Deterministic tie-break for equal-scoring root moves: prefer the move closest to enemy den. */
+    /** Tie-break for equal-scoring root moves: prefer moves closest to enemy den, breaking remaining ties randomly. */
     private Move selectBestDeterministicMove(List<Move> moves, Side side) {
+        if (moves.isEmpty()) return null;
         if (moves.size() == 1) return moves.get(0);
         int enemyDenRow = side == Side.PLAYER_1 ? 8 : 0;
-        Move best = moves.get(0);
-        int bestDist = Math.abs(best.to().row() - enemyDenRow) + Math.abs(best.to().col() - 3);
-        for (int i = 1; i < moves.size(); i++) {
-            Move m = moves.get(i);
+
+        List<Move> closestMoves = new ArrayList<>();
+        int minDist = Integer.MAX_VALUE;
+
+        for (Move m : moves) {
             int dist = Math.abs(m.to().row() - enemyDenRow) + Math.abs(m.to().col() - 3);
-            if (dist < bestDist) { bestDist = dist; best = m; }
+            if (dist < minDist) {
+                minDist = dist;
+                closestMoves.clear();
+                closestMoves.add(m);
+            } else if (dist == minDist) {
+                closestMoves.add(m);
+            }
         }
-        return best;
+
+        if (closestMoves.size() == 1) {
+            return closestMoves.get(0);
+        }
+        return closestMoves.get(random.nextInt(closestMoves.size()));
     }
 
     private int countTotalPieces(Board board) {

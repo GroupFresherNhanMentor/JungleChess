@@ -7,6 +7,7 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
 @Configuration
+@SuppressWarnings("removal")
 public class StompClientConfig {
 
     @Bean

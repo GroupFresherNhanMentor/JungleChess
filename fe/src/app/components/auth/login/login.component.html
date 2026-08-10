@@ -37,7 +37,7 @@
             placeholder="Nhập tên đăng nhập..."
             class="form-input"
             autocomplete="username"
-            [disabled]="isLoading() || isGuestLoading()"
+            [disabled]="isLoading()"
             required
           />
         </div>
@@ -55,7 +55,7 @@
             placeholder="Nhập mật khẩu..."
             class="form-input"
             autocomplete="current-password"
-            [disabled]="isLoading() || isGuestLoading()"
+            [disabled]="isLoading()"
             required
           />
           <button
@@ -69,35 +69,17 @@
         </div>
       </div>
 
-      <!-- Primary: Login button -->
       <button
         id="login-submit-btn"
         type="submit"
         class="btn btn-primary"
-        [disabled]="isLoading() || isGuestLoading() || !username.trim() || !password"
+        [disabled]="isLoading() || !username.trim() || !password"
       >
         <span *ngIf="isLoading()" class="spinner"></span>
         <span *ngIf="!isLoading()">⚔️ Đăng Nhập</span>
         <span *ngIf="isLoading()">Đang đăng nhập...</span>
       </button>
     </form>
-
-    <div class="divider">
-      <span>hoặc</span>
-    </div>
-
-    <!-- Guest: Quick play button -->
-    <button
-      id="guest-login-btn"
-      type="button"
-      class="btn btn-ghost"
-      (click)="onGuestLogin()"
-      [disabled]="isLoading() || isGuestLoading()"
-    >
-      <span *ngIf="isGuestLoading()" class="spinner spinner-dark"></span>
-      <span *ngIf="!isGuestLoading()">🎭 Chơi Ngay (Khách)</span>
-      <span *ngIf="isGuestLoading()">Đang tạo phiên khách...</span>
-    </button>
 
     <!-- Register link -->
     <p class="auth-footer-text">

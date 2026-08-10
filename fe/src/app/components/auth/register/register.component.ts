@@ -18,6 +18,7 @@ export class RegisterComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
+  fullName = '';
   username = '';
   password = '';
   confirmPassword = '';
@@ -33,8 +34,9 @@ export class RegisterComponent {
 
   get isFormValid(): boolean {
     return (
+      this.fullName.trim().length >= 2 &&
       this.username.trim().length >= 3 &&
-      this.password.length >= 8 &&
+      this.password.length >= 3 &&
       this.password === this.confirmPassword
     );
   }
@@ -43,6 +45,7 @@ export class RegisterComponent {
     if (!this.isFormValid) return;
 
     const request: RegisterRequest = {
+      fullName: this.fullName.trim(),
       username: this.username.trim(),
       password: this.password,
     };
@@ -56,7 +59,6 @@ export class RegisterComponent {
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: () => {
-          // Sau đăng ký thành công → tự động đăng nhập
           this.successMessage.set('Đăng ký thành công! Đang đăng nhập...');
           this.authService
             .login({ username: request.username, password: request.password })
@@ -70,7 +72,7 @@ export class RegisterComponent {
           if (code === 'USERNAME_ALREADY_EXISTS') {
             this.errorMessage.set(`Tên đăng nhập "${request.username}" đã được sử dụng. Vui lòng chọn tên khác.`);
           } else if (code === 'VALIDATION_ERROR') {
-            this.errorMessage.set('Dữ liệu không hợp lệ. Kiểm tra lại tên đăng nhập và mật khẩu.');
+            this.errorMessage.set('Dữ liệu không hợp lệ. Kiểm tra lại thông tin đăng ký.');
           } else {
             this.errorMessage.set('Đã có lỗi xảy ra. Vui lòng thử lại.');
           }

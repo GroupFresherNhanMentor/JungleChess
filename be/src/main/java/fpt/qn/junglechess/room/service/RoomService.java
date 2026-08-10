@@ -155,7 +155,7 @@ public class RoomService {
         eventBus.emit(roomId, new PlayersUpdatedEvent(
                 roomId, state.getPlayers(), state.getSpectators(), RoomStatus.WAITING.name()));
         eventBus.emitToSession(sessionId, new RoomJoinedEvent(
-                roomId, side, RoomStatus.WAITING.name(),
+                roomId, side, state.getMode().name(), RoomStatus.WAITING.name(),
                 state.getBoard(), state.getCurrentTurn(),
                 state.getPlayers(), state.getSpectators()));
     }
@@ -188,7 +188,7 @@ public class RoomService {
             roomRepo.saveUserMapping(userId, roomId);
             if (!oldSessionId.equals(sessionId)) roomRepo.deleteSessionMapping(oldSessionId);
             eventBus.emitToSession(sessionId, new RoomJoinedEvent(
-                    roomId, side, state.getStatus().name(),
+                    roomId, side, state.getMode().name(), state.getStatus().name(),
                     state.getBoard(), state.getCurrentTurn(),
                     state.getPlayers(), state.getSpectators()));
             log.info("Bot reconnected: room={} side={}", roomId, side);
@@ -218,7 +218,7 @@ public class RoomService {
         eventBus.emit(roomId, new PlayersUpdatedEvent(
                 roomId, state.getPlayers(), state.getSpectators(), RoomStatus.WAITING.name()));
         eventBus.emitToSession(sessionId, new RoomJoinedEvent(
-                roomId, side, RoomStatus.WAITING.name(),
+                roomId, side, state.getMode().name(), RoomStatus.WAITING.name(),
                 state.getBoard(), state.getCurrentTurn(),
                 state.getPlayers(), state.getSpectators()));
     }
@@ -261,7 +261,7 @@ public class RoomService {
         eventBus.destroySession(oldSessionId);
 
         eventBus.emitToSession(newSessionId, new RoomJoinedEvent(
-                roomId, player.getSide(), state.getStatus().name(),
+                roomId, player.getSide(), state.getMode().name(), state.getStatus().name(),
                 state.getBoard(), state.getCurrentTurn(),
                 state.getPlayers(), state.getSpectators()));
     }
@@ -287,10 +287,10 @@ public class RoomService {
 
         eventBus.emit(roomId, new PlayersUpdatedEvent(
                 roomId, state.getPlayers(), state.getSpectators(), state.getStatus().name()));
-        eventBus.emitToSession(sessionId, new StateUpdatedEvent(
-                roomId, state.getBoard(), state.getCurrentTurn(),
-                state.getHistory().isEmpty() ? null : state.getHistory().get(state.getHistory().size() - 1),
-                state.getStatus().name(), state.getMoveNumber()));
+        eventBus.emitToSession(sessionId, new RoomJoinedEvent(
+                roomId, "SPECTATOR", state.getMode().name(), state.getStatus().name(),
+                state.getBoard(), state.getCurrentTurn(),
+                state.getPlayers(), state.getSpectators()));
     }
 
     // ── Move ──────────────────────────────────────────────────────────────────

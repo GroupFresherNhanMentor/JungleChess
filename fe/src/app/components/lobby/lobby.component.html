@@ -101,6 +101,17 @@
         </select>
       </div>
 
+      <div class="form-group form-group-checkbox">
+        <label>
+          <input type="checkbox"
+                 [checked]="newRoomMode !== 'PVP_ONLINE' || newRoomAllowSpectator"
+                 [disabled]="newRoomMode !== 'PVP_ONLINE'"
+                 (change)="newRoomAllowSpectator = $any($event.target).checked" />
+          Cho phép xem (Spectator)
+        </label>
+        <small *ngIf="newRoomMode !== 'PVP_ONLINE'">Mặc định bật cho PvE/EvE</small>
+      </div>
+
       <div class="modal-actions">
         <button (click)="onCreateRoom()" class="create-btn">Tạo Phòng</button>
         <button (click)="closeCreateModal()" class="cancel-btn">Hủy</button>

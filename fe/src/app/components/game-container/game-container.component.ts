@@ -316,8 +316,8 @@ export class GameContainerComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
-  public onGameModeChange(mode: GameMode): void {
-    this.gameMode = mode;
+  public onGameModeChange(mode: string): void {
+    this.gameMode = mode as GameMode;
     this.initGame();
   }
 

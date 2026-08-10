@@ -8,6 +8,7 @@ import { RSocketService } from './rsocket.service';
 import {
   ApiResponse,
   AuthUser,
+  JwtPayload,
   LoginRequest,
   LoginResponse,
   RefreshTokenRequest,
@@ -68,12 +69,37 @@ export class AuthService {
       .pipe(tap(() => this.router.navigate(['/login'])));
   }
 
+  guest(): Observable<ApiResponse<LoginResponse>> {
+    return this.http.post<ApiResponse<LoginResponse>>(`${API_BASE}/guest`, {}).pipe(
+      tap((res) => {
+        const data = res.data;
+        const user = this.toAuthUser(data.user);
+        this.saveSession(data.accessToken, data.refreshToken, user);
+      }),
+    );
+  }
+
   isAuthenticated(): boolean {
     return this.tokenStorage.isAuthenticated();
   }
 
   getCurrentUser(): AuthUser | null {
     return this._currentUser$.getValue();
+  }
+
+  getAccessToken(): string | null {
+    return this.tokenStorage.getAccessToken();
+  }
+
+  getUserId(): string | null {
+    const token = this.tokenStorage.getAccessToken();
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as JwtPayload;
+      return payload.uid ?? null;
+    } catch {
+      return null;
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

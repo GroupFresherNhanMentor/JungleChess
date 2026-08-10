@@ -1,9 +1,9 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { GameMode, RoomStatus } from '../../core/models/game.models';
+import { GameMode, PieceSide, RoomInfo, RoomStatus } from '../../core/models/game.models';
 import { LobbyRoomEntry } from '../../core/models/room-events.models';
 import { GameRoomService } from '../../core/services/game-room.service';
 import { LobbyRSocketService } from '../../core/services/lobby-rsocket.service';
@@ -16,6 +16,9 @@ import { LobbyRSocketService } from '../../core/services/lobby-rsocket.service';
   styleUrl: './lobby.component.css',
 })
 export class LobbyComponent implements OnInit {
+  /** Kept for compatibility with game-container.component.html binding. Not emitted by this online lobby. */
+  @Output() selectRoom = new EventEmitter<{ room: RoomInfo; side: PieceSide }>();
+
   private readonly lobbyRSocket = inject(LobbyRSocketService);
   private readonly gameRoom = inject(GameRoomService);
   private readonly router = inject(Router);

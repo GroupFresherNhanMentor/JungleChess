@@ -17,9 +17,6 @@ public class BoardEvaluator {
     public static final int WIN_SCORE = 100000;
     public static final int LOSS_SCORE = -100000;
 
-    /** Penalty subtracted from a piece's value when it can be captured next move. */
-    private static final int THREAT_PENALTY = 150;
-
     private final GameRuleEngine gameRuleEngine;
 
     public BoardEvaluator(GameRuleEngine gameRuleEngine) {
@@ -69,32 +66,39 @@ public class BoardEvaluator {
 
                 int pieceVal = PIECE_VALUES.getOrDefault(piece.type(), 0);
 
-                // Den distance bonus (closer to opponent den is better)
                 int enemyDenRow = (piece.side() == Side.PLAYER_1) ? 8 : 0;
                 int enemyDenCol = 3;
                 int distance = Math.abs(r - enemyDenRow) + Math.abs(c - enemyDenCol);
-                int positionalBonus = (14 - distance) * 10;
+
+                // Role-aware positional scoring
+                int positionalBonus = calculateRolePositionalBonus(board, piece, r, c, distance);
+
+                boolean threatened = isThreatened(board, r, c, piece, piece.side().getOpposite());
+
+                // Gated near-den bonus: only reward if 1 step away AND NOT threatened
+                if (distance == 1 && !threatened) {
+                    positionalBonus += 250;
+                }
 
                 // Trap penalty if standing in enemy trap
                 int trapPenalty = 0;
                 if (Board.isTrap(r, c, piece.side().getOpposite())) {
-                    trapPenalty = 150;
+                    trapPenalty = 300;
                 }
 
-                // Threat weight: a piece that can be captured next move is worth 150 less to
-                // its owner. This applies symmetrically.
+                // Trap-luring bonus: enemy piece near our trap while we guard it
+                int trapLuringBonus = 0;
+                if (piece.side() != side && Board.isTrap(r, c, side)) {
+                    trapLuringBonus = 120; // Enemy stepped into our trap!
+                }
+
+                // SEE Threat weight: evaluates whether defending piece makes trade unfavorable for attacker
                 int threatWeight = 0;
-                if (piece.side() == side) {
-                    if (isThreatened(board, r, c, piece, opponent)) {
-                        threatWeight = THREAT_PENALTY;
-                    }
-                } else {
-                    if (isThreatened(board, r, c, piece, side)) {
-                        threatWeight = THREAT_PENALTY;
-                    }
+                if (threatened) {
+                    threatWeight = calculateSeeThreatWeight(board, r, c, piece, piece.side().getOpposite());
                 }
 
-                int totalPieceScore = pieceVal + positionalBonus - trapPenalty - threatWeight;
+                int totalPieceScore = pieceVal + positionalBonus + trapLuringBonus - trapPenalty - threatWeight;
 
                 if (piece.side() == side) {
                     score += totalPieceScore;
@@ -104,12 +108,111 @@ public class BoardEvaluator {
             }
         }
 
+        // Mobility Term: bonus for having more legal move options (active positioning)
+        int myMoves = gameRuleEngine.getValidMoves(board, side).size();
+        int oppMoves = gameRuleEngine.getValidMoves(board, opponent).size();
+        score += (myMoves - oppMoves) * 3;
+
         return score;
+    }
+
+    private int calculateSeeThreatWeight(Board board, int r, int c, Piece targetPiece, Side attackerSide) {
+        int pieceVal = PIECE_VALUES.getOrDefault(targetPiece.type(), 0);
+        boolean isDefended = isThreatened(board, r, c, targetPiece, targetPiece.side());
+
+        if (isDefended) {
+            // Target piece is defended by a friendly piece
+            // If attacked by a piece of equal or higher value, the trade is bad for attacker upon recapture
+            Piece attacker = findStrongestAttacker(board, r, c, targetPiece, attackerSide);
+            if (attacker != null) {
+                int attackerVal = PIECE_VALUES.getOrDefault(attacker.type(), 0);
+                if (attackerVal >= pieceVal) {
+                    // E.g. Lion attacking defended Elephant or Cat attacking defended Dog -> Unfavorable trade
+                    return 0; // No penalty because opponent won't trade
+                }
+            }
+        }
+
+        return (int) (pieceVal * 0.85);
+    }
+
+    private Piece findStrongestAttacker(Board board, int row, int col, Piece piece, Side attackerSide) {
+        int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+        Piece strongest = null;
+        int maxVal = -1;
+
+        for (int[] dir : directions) {
+            int er = row + dir[0];
+            int ec = col + dir[1];
+            if (!Position.isValid(er, ec)) continue;
+
+            Piece attacker = board.getPiece(er, ec);
+            if (attacker != null && attacker.side() == attackerSide) {
+                if (gameRuleEngine.canCapture(attacker, piece)) {
+                    int val = PIECE_VALUES.getOrDefault(attacker.type(), 0);
+                    if (val > maxVal) {
+                        maxVal = val;
+                        strongest = attacker;
+                    }
+                }
+            }
+        }
+
+        return strongest;
+    }
+
+    private int calculateRolePositionalBonus(Board board, Piece piece, int r, int c, int distanceToDen) {
+        int baseMult = 4;
+        int bonus = 0;
+
+        switch (piece.type()) {
+            case RAT -> {
+                baseMult = 3;
+                if (Board.isRiver(r, c)) {
+                    bonus += 50; // River control
+                    // Hunt/pin enemy Elephant
+                    Position enemyElephantPos = findPiecePosition(board, piece.side().getOpposite(), PieceType.ELEPHANT);
+                    if (enemyElephantPos != null) {
+                        int distToEle = Math.abs(r - enemyElephantPos.row()) + Math.abs(c - enemyElephantPos.col());
+                        if (distToEle <= 2) {
+                            bonus += 80;
+                        }
+                    }
+                }
+            }
+            case LION, TIGER -> {
+                baseMult = 6;
+                // Reward advancing past the river
+                boolean crossed = (piece.side() == Side.PLAYER_1) ? r >= 6 : r <= 2;
+                if (crossed) {
+                    bonus += 60;
+                }
+            }
+            case ELEPHANT -> {
+                baseMult = 2; // Elephant advances carefully as a defender/blocker
+            }
+            default -> baseMult = 4;
+        }
+
+        return (14 - distanceToDen) * baseMult + bonus;
+    }
+
+    private Position findPiecePosition(Board board, Side side, PieceType type) {
+        for (int r = 0; r < Board.ROWS; r++) {
+            for (int c = 0; c < Board.COLS; c++) {
+                Piece p = board.getPiece(r, c);
+                if (p != null && p.side() == side && p.type() == type) {
+                    return new Position(r, c);
+                }
+            }
+        }
+        return null;
     }
 
     private boolean isThreatened(Board board, int row, int col, Piece piece, Side attackerSide) {
         int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
         boolean targetInRiver = Board.isRiver(row, col);
+        boolean targetInEnemyTrap = Board.isTrap(row, col, attackerSide);
 
         // 1. Direct adjacent checks
         for (int[] dir : directions) {
@@ -133,7 +236,8 @@ public class BoardEvaluator {
                 continue;
             }
 
-            if (gameRuleEngine.canCapture(attacker, piece)) {
+            // Target in attacker's trap drops rank to 0, so any attacker captures it
+            if (targetInEnemyTrap || gameRuleEngine.canCapture(attacker, piece)) {
                 return true;
             }
         }
@@ -163,7 +267,7 @@ public class BoardEvaluator {
                     Piece attacker = board.getPiece(jr, jc);
                     if (attacker != null && attacker.side() == attackerSide) {
                         if (attacker.type() == PieceType.TIGER || attacker.type() == PieceType.LION) {
-                            if (!Board.isTrap(jr, jc, piece.side()) && gameRuleEngine.canCapture(attacker, piece)) {
+                            if (!Board.isTrap(jr, jc, piece.side()) && (targetInEnemyTrap || gameRuleEngine.canCapture(attacker, piece))) {
                                 return true;
                             }
                         }

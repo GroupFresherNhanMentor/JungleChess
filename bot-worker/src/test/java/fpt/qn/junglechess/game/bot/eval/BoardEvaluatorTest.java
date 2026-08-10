@@ -47,4 +47,24 @@ class BoardEvaluatorTest {
         int score = evaluator.evaluate(board, Side.PLAYER_1);
         assertEquals(BoardEvaluator.LOSS_SCORE, score, "P2 piece in P1 den should return LOSS_SCORE for P1");
     }
+
+    @Test
+    void evaluate_ElephantInEnemyTrapNearEnemyCat_IsThreatened() {
+        Board board = new Board();
+        // P1 Elephant in P2 trap at (8, 2). P2 Cat at (8, 1).
+        Piece elephant = new Piece(Side.PLAYER_1, PieceType.ELEPHANT);
+        Piece cat = new Piece(Side.PLAYER_2, PieceType.CAT);
+
+        board.setPiece(8, 2, elephant);
+        board.setPiece(8, 1, cat);
+
+        // Before fix: Elephant in trap is not recognized as threatened by Cat, so score doesn't apply heavy threat penalty.
+        // With fix: Elephant in enemy trap should have heavy threat penalty applied.
+        int scoreP1 = evaluator.evaluate(board, Side.PLAYER_1);
+        // Elephant value (800) + pos (130) - trap (150) = 780 without threat penalty.
+        // Cat for P2: 200 + pos (130) = 330.
+        // Net score without threat: 780 - 330 = 450.
+        // With proportional threat penalty (80% of 800 = 640), P1 score drops significantly below 0.
+        assertTrue(scoreP1 < 0, "P1 Elephant in P2 trap next to P2 Cat should be heavily penalized due to threat");
+    }
 }

@@ -167,6 +167,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private LoginResponse createLoginResponse(UserDto user, List<String> roles) {
+        user.setRoles(roles);
         return LoginResponse.builder()
                 .accessToken(jwtTokenProvider.generateAccessToken(user.getUsername(), roles, user.getId()))
                 .refreshToken(jwtTokenProvider.generateRefreshToken(user.getUsername()))

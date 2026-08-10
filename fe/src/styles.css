@@ -62,36 +62,147 @@ body {
   padding: 8px 10px;
 }
 
-/* --- Global Top Header & Language Switcher --- */
+/* --- Global Top Header & Controls --- */
 #global-header {
   position: relative;
   width: 100%;
-  max-width: 1100px;
-  margin: 0 auto 15px auto;
+  max-width: 1400px;
+  margin: 0 auto 16px auto;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
+  min-height: 54px;
 }
 
-h1, #game-title {
+#game-title {
   display: block;
   margin: 0;
   text-align: center;
-  color: var(--ink-strong);
-  background-color: var(--wood-panel);
-  border: 2px solid var(--wood-border);
-  box-shadow: var(--shadow-soft);
+  color: #fce8b3;
+  background: linear-gradient(180deg, rgba(124, 79, 45, 0.95), rgba(76, 46, 23, 0.95));
+  border: 2px solid var(--gold-accent);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   padding: 8px 36px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 1.8em;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9);
   width: fit-content;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
 }
 
-#global-lang-switcher {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
+#global-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  z-index: 2;
+}
+
+/* User Profile Badge — 3D Carved Wood & Royal Gold Theme */
+.user-profile-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(180deg, rgba(124, 79, 45, 0.95), rgba(76, 46, 23, 0.95));
+  border: 2px solid var(--gold-accent);
+  border-radius: 12px;
+  padding: 5px 16px 5px 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+
+.user-profile-badge:hover {
+  border-color: var(--gold-accent-bright);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(255, 217, 122, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.user-avatar-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffd97a, #d99a3f);
+  border: 2px solid #5a3a22;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.user-avatar-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.user-meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.25;
+}
+
+.user-role-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #d4a359;
+  text-transform: uppercase;
+}
+
+.user-display-name {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #ffd97a;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9);
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Logout Button — 3D Carved Crimson Wood Theme */
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+  font-weight: 800;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #a83232, #7a1f1f);
+  color: #ffffff;
+  border: 2px solid #e53e3e;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 0 #521515, inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.logout-btn:hover {
+  background: linear-gradient(180deg, #c53030, #9b2c2c);
+  border-color: #fc8181;
+  box-shadow: 0 6px 16px rgba(197, 48, 48, 0.5), 0 3px 0 #521515, inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.logout-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.logout-icon {
+  font-size: 15px;
+}
+
+.logout-text {
+  font-weight: 800;
+  letter-spacing: 0.3px;
 }
 
 .lang-toggle-btn {

@@ -27,6 +27,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       const isPublicAuthEndpoint =
         req.url.includes('/api/auth/login') ||
         req.url.includes('/api/auth/register') ||
+        req.url.includes('/api/auth/bot-register') ||
         req.url.includes('/api/auth/refresh');
 
       if (error.status === 401 && !isPublicAuthEndpoint) {

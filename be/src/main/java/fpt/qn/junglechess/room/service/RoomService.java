@@ -35,6 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -47,17 +48,20 @@ public class RoomService {
     private final GameRuleEngine ruleEngine;
     private final SessionRegistry sessionRegistry;
     private final DisconnectScheduler disconnectScheduler;
-    private final BotWorkerClient botWorkerClient;
+    private final BotAssignmentService botAssignmentService;
+
+    private final ConcurrentHashMap<String, Object> roomJoinLocks = new ConcurrentHashMap<>();
 
     // ── Create ────────────────────────────────────────────────────────────────
 
     public void createRoom(CreateRoomRequest req, String sessionId, String userId) {
         String roomId = "room-" + UuidV7.generate().toString().substring(0, 8);
-        String difficulty = req.getBotDifficulty() != null ? req.getBotDifficulty() : "MEDIUM";
         boolean isEve = req.getMode() == GameMode.EVE;
+        boolean isPve = req.getMode() == GameMode.PVE;
 
-        boolean allowSpectator = isEve || req.isAllowSpectator();
-        boolean allowBet       = isEve || (allowSpectator && req.isAllowBet());
+        // PVE and EVE always allow spectators; PVP respects the request flag
+        boolean allowSpectator = isPve || isEve || req.isAllowSpectator();
+        boolean allowBet       = !isPve && !isEve && (allowSpectator && req.isAllowBet());
         Instant now = Instant.now();
 
         RoomState state = RoomState.builder()
@@ -66,6 +70,7 @@ public class RoomService {
                 .status(RoomStatus.WAITING)
                 .allowSpectator(allowSpectator)
                 .allowBet(allowBet)
+                .creatorSessionId(sessionId)
                 .board(BoardInitializer.standard().toBoardStateArray())
                 .currentTurn(PlayerSide.PLAYER_1.name())
                 .moveNumber(0)
@@ -104,12 +109,16 @@ public class RoomService {
                 RoomStatus.WAITING.name(), allowSpectator, allowBet,
                 state.getPlayers(), state.getSpectators()));
 
-        // Trigger bot-worker for PVE (1 bot) and EVE (2 bots)
-        if (req.getMode() == GameMode.PVE) {
-            botWorkerClient.assign(roomId, PlayerSide.PLAYER_2.name(), difficulty);
+        // Bots are assigned here so they join while room is WAITING;
+        // the creator must click Start to begin the game.
+        String difficulty = req.getBotDifficulty() != null ? req.getBotDifficulty() : "MEDIUM";
+        state.setBotDifficulty(difficulty);
+        roomRepo.save(state);
+        if (isPve) {
+            botAssignmentService.assign(roomId, PlayerSide.PLAYER_2.name(), difficulty);
         } else if (isEve) {
-            botWorkerClient.assign(roomId, PlayerSide.PLAYER_1.name(), difficulty);
-            botWorkerClient.assign(roomId, PlayerSide.PLAYER_2.name(), difficulty);
+            botAssignmentService.assign(roomId, PlayerSide.PLAYER_1.name(), difficulty);
+            botAssignmentService.assign(roomId, PlayerSide.PLAYER_2.name(), difficulty);
         }
     }
 
@@ -119,6 +128,9 @@ public class RoomService {
         RoomState state = roomRepo.findById(roomId);
         if (state == null) throw new RoomNotFoundException(roomId);
         if (state.getStatus() != RoomStatus.WAITING) throw new ActionNotAllowedException("game already started or ended");
+        if (state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE) {
+            throw new ActionNotAllowedException("cannot join as player in PVE/EVE rooms — use watch instead");
+        }
         if (state.getPlayers().size() >= 2) throw new RoomFullException();
 
         // Determine next available side
@@ -151,12 +163,41 @@ public class RoomService {
     // ── Bot join (honors requested side, auto-starts PVE/EVE) ────────────────
 
     public void joinRoomAsBot(String roomId, String sessionId, String requestedSide, String userId) {
+        Object lock = roomJoinLocks.computeIfAbsent(roomId, k -> new Object());
+        synchronized (lock) {
+            joinRoomAsBotInternal(roomId, sessionId, requestedSide, userId);
+        }
+    }
+
+    private void joinRoomAsBotInternal(String roomId, String sessionId, String requestedSide, String userId) {
         RoomState state = roomRepo.findById(roomId);
         if (state == null) throw new RoomNotFoundException(roomId);
+
+        String side = requestedSide != null ? requestedSide : PlayerSide.PLAYER_2.name();
+
+        // Bot reconnect: side already occupied by a bot — update session ID and re-emit state
+        PlayerInfo existingBot = state.getPlayers().stream()
+                .filter(p -> side.equals(p.getSide()) && p.isBot())
+                .findFirst().orElse(null);
+        if (existingBot != null) {
+            String oldSessionId = existingBot.getSessionId();
+            existingBot.setSessionId(sessionId);
+            state.setUpdatedAt(Instant.now());
+            roomRepo.save(state);
+            roomRepo.saveSessionMapping(sessionId, roomId);
+            roomRepo.saveUserMapping(userId, roomId);
+            if (!oldSessionId.equals(sessionId)) roomRepo.deleteSessionMapping(oldSessionId);
+            eventBus.emitToSession(sessionId, new RoomJoinedEvent(
+                    roomId, side, state.getStatus().name(),
+                    state.getBoard(), state.getCurrentTurn(),
+                    state.getPlayers(), state.getSpectators()));
+            log.info("Bot reconnected: room={} side={}", roomId, side);
+            return;
+        }
+
         if (state.getStatus() != RoomStatus.WAITING) throw new ActionNotAllowedException("game already started or ended");
         if (state.getPlayers().size() >= 2) throw new RoomFullException();
 
-        String side = requestedSide != null ? requestedSide : PlayerSide.PLAYER_2.name();
         boolean sideTaken = state.getPlayers().stream().anyMatch(p -> side.equals(p.getSide()));
         if (sideTaken) throw new ActionNotAllowedException("side " + side + " is already taken");
 
@@ -180,11 +221,6 @@ public class RoomService {
                 roomId, side, RoomStatus.WAITING.name(),
                 state.getBoard(), state.getCurrentTurn(),
                 state.getPlayers(), state.getSpectators()));
-
-        // Auto-start when room is full in PVE or EVE
-        if (state.getPlayers().size() == 2 && state.getMode() != GameMode.PVP) {
-            autoStartGame(state);
-        }
     }
 
     // ── Start game (PVP only — explicit start by PLAYER_1) ───────────────────
@@ -193,11 +229,10 @@ public class RoomService {
         RoomState state = roomRepo.findById(roomId);
         if (state == null) throw new RoomNotFoundException(roomId);
         if (state.getStatus() != RoomStatus.WAITING) throw new ActionNotAllowedException("game already started or ended");
-        if (state.getPlayers().size() < 2) throw new ActionNotAllowedException("need 2 players to start");
-        if (state.getMode() != GameMode.PVP) throw new ActionNotAllowedException("PVE/EVE games start automatically");
+        if (state.getPlayers().size() < 2) throw new ActionNotAllowedException("waiting for players to join");
 
-        boolean isCreator = state.getPlayers().stream()
-                .anyMatch(p -> p.getSessionId().equals(sessionId) && PlayerSide.PLAYER_1.name().equals(p.getSide()));
+        // EVE creator is a spectator; PVP/PVE creator is PLAYER_1
+        boolean isCreator = sessionId.equals(state.getCreatorSessionId());
         if (!isCreator) throw new ActionNotAllowedException("only the room creator can start the game");
 
         autoStartGame(state);
@@ -266,8 +301,11 @@ public class RoomService {
         if (state.getStatus() == RoomStatus.ENDED) throw new ActionNotAllowedException("game has ended");
         if (state.getStatus() != RoomStatus.PLAYING) throw new ActionNotAllowedException("game has not started");
 
+        // For bots, multiple players share the same session (one bot-worker connection).
+        // Disambiguate by also matching the current turn so PLAYER_2 bot isn't misidentified as PLAYER_1.
         PlayerInfo player = state.getPlayers().stream()
                 .filter(p -> p.getSessionId().equals(sessionId))
+                .filter(p -> !p.isBot() || p.getSide().equals(state.getCurrentTurn()))
                 .findFirst()
                 .orElseThrow(() -> new ActionNotAllowedException("you are not a player in this room"));
 
@@ -328,6 +366,15 @@ public class RoomService {
         RoomState state = roomRepo.findById(roomId);
         if (state == null) return;
 
+        boolean isCreator = sessionId.equals(state.getCreatorSessionId());
+        boolean isPveOrEve = state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE;
+
+        // PVE/EVE: creator leaving always terminates the room and releases bots
+        if (isCreator && isPveOrEve) {
+            terminatePveEveRoom(state, sessionId);
+            return;
+        }
+
         boolean isSpectator = state.getSpectators().stream()
                 .anyMatch(s -> s.getSessionId().equals(sessionId));
 
@@ -350,31 +397,85 @@ public class RoomService {
         handlePlayerLeave(state, sessionId);
     }
 
+    private void terminatePveEveRoom(RoomState state, String creatorSessionId) {
+        String roomId = state.getRoomId();
+        // Notify bots and spectators so their sessions self-terminate
+        eventBus.emit(roomId, new GameResultEvent(roomId, null, "ROOM_CANCELLED"));
+        // Clean up all player session mappings (bots share one session, dedup with stream)
+        state.getPlayers().stream()
+                .map(PlayerInfo::getSessionId).distinct()
+                .forEach(roomRepo::deleteSessionMapping);
+        state.getPlayers().stream()
+                .map(PlayerInfo::getUserId).filter(id -> id != null).distinct()
+                .forEach(roomRepo::deleteUserMapping);
+        state.getSpectators().forEach(s -> roomRepo.deleteSessionMapping(s.getSessionId()));
+        roomRepo.deleteSessionMapping(creatorSessionId);
+        roomRepo.delete(roomId);
+        refreshLobby();
+        log.info("PVE/EVE room {} terminated by creator leaving", roomId);
+    }
+
+    // ── Sync (client requests current state after subscribing) ───────────────
+
+    public void syncRoom(String roomId, String sessionId) {
+        RoomState state = roomRepo.findById(roomId);
+        if (state == null) return;
+        eventBus.emitToSession(sessionId, new PlayersUpdatedEvent(
+                roomId, state.getPlayers(), state.getSpectators(), state.getStatus().name()));
+    }
+
     // ── Rematch ──────────────────────────────────────────────────────────────
 
     public void rematch(String roomId, String sessionId) {
         RoomState state = roomRepo.findById(roomId);
         if (state == null) throw new RoomNotFoundException(roomId);
-        if (state.getMode() != GameMode.PVP) throw new ActionNotAllowedException("rematch is only available in PVP mode");
         if (state.getStatus() != RoomStatus.ENDED) throw new ActionNotAllowedException("game has not ended");
 
-        boolean bothConnected = state.getPlayers().stream()
-                .allMatch(p -> sessionRegistry.isConnected(p.getSessionId()));
-        if (!bothConnected) throw new ActionNotAllowedException("opponent has disconnected");
+        boolean isCreator = sessionId.equals(state.getCreatorSessionId());
 
+        if (state.getMode() == GameMode.PVP) {
+            boolean bothConnected = state.getPlayers().stream()
+                    .allMatch(p -> sessionRegistry.isConnected(p.getSessionId()));
+            if (!bothConnected) throw new ActionNotAllowedException("opponent has disconnected");
+        } else {
+            if (!isCreator) throw new ActionNotAllowedException("only the room creator can rematch");
+        }
+
+        // Reset board and remove finished bot players so they re-join fresh
         state.setBoard(BoardInitializer.standard().toBoardStateArray());
         state.setCurrentTurn(PlayerSide.PLAYER_1.name());
         state.setMoveNumber(0);
-        state.setStatus(RoomStatus.PLAYING);
+        state.setStatus(RoomStatus.WAITING);
         state.getHistory().clear();
         state.setUpdatedAt(Instant.now());
+
+        if (state.getMode() == GameMode.PVE) {
+            state.getPlayers().removeIf(PlayerInfo::isBot);
+        } else if (state.getMode() == GameMode.EVE) {
+            state.getPlayers().clear();
+        }
 
         roomRepo.save(state);
         refreshLobby();
 
-        eventBus.emit(roomId, new StateUpdatedEvent(
-                roomId, state.getBoard(), state.getCurrentTurn(),
-                null, state.getStatus().name(), 0));
+        eventBus.emit(roomId, new PlayersUpdatedEvent(
+                roomId, state.getPlayers(), state.getSpectators(), RoomStatus.WAITING.name()));
+
+        // Re-assign bots with the same difficulty as the original game
+        String difficulty = state.getBotDifficulty() != null ? state.getBotDifficulty() : "MEDIUM";
+        if (state.getMode() == GameMode.PVE) {
+            botAssignmentService.assign(roomId, PlayerSide.PLAYER_2.name(), difficulty);
+        } else if (state.getMode() == GameMode.EVE) {
+            botAssignmentService.assign(roomId, PlayerSide.PLAYER_1.name(), difficulty);
+            botAssignmentService.assign(roomId, PlayerSide.PLAYER_2.name(), difficulty);
+        } else {
+            // PVP: immediately start again (no bots to wait for)
+            state.setStatus(RoomStatus.PLAYING);
+            roomRepo.save(state);
+            eventBus.emit(roomId, new StateUpdatedEvent(
+                    roomId, state.getBoard(), state.getCurrentTurn(),
+                    null, RoomStatus.PLAYING.name(), 0));
+        }
     }
 
     // ── Disconnect handling ───────────────────────────────────────────────────
@@ -402,7 +503,12 @@ public class RoomService {
         refreshLobby();
         eventBus.emit(state.getRoomId(), new PlayersUpdatedEvent(
                 state.getRoomId(), state.getPlayers(), state.getSpectators(), RoomStatus.PLAYING.name()));
-        log.info("Room {} auto-started (mode={})", state.getRoomId(), state.getMode());
+        // StateUpdatedEvent signals bots (and spectators) of the initial board state and first turn.
+        // Without this, bots only listen for STATE_UPDATED and never learn the game has begun.
+        eventBus.emit(state.getRoomId(), new StateUpdatedEvent(
+                state.getRoomId(), state.getBoard(), state.getCurrentTurn(),
+                null, RoomStatus.PLAYING.name(), state.getMoveNumber()));
+        log.info("Room {} started (mode={})", state.getRoomId(), state.getMode());
     }
 
     private void handleDisconnectNow(String sessionId) {
@@ -423,6 +529,10 @@ public class RoomService {
                 .findFirst().orElse(null);
 
         if (state.getStatus() == RoomStatus.WAITING) {
+            // Notify bots so their sessions self-terminate before we delete the room
+            if (state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE) {
+                eventBus.emit(roomId, new GameResultEvent(roomId, null, "ROOM_CANCELLED"));
+            }
             roomRepo.delete(roomId);
             roomRepo.deleteSessionMapping(sessionId);
             if (userId != null) roomRepo.deleteUserMapping(userId);

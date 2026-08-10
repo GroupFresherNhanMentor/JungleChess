@@ -7,4 +7,6 @@ server:
 
 bot:
   server-url: ${SERVER_URL:ws://localhost:8080/ws}
-  bot-token: ${BOT_TOKEN:}
+  backend-http-url: ${BACKEND_HTTP_URL:http://localhost:8080}
+  bot-username: ${BOT_USERNAME:bot-worker}
+  bot-password: ${BOT_PASSWORD:Bot@worker1}

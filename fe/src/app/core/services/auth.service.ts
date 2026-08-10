@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 
 import { TokenStorageService } from './token-storage.service';
 import { RSocketService } from './rsocket.service';
@@ -50,9 +50,10 @@ export class AuthService {
 
   refresh(refreshToken: string): Observable<RefreshTokenResponse> {
     const body: RefreshTokenRequest = { refreshToken };
-    return this.http.post<RefreshTokenResponse>(`${API_BASE}/refresh`, body).pipe(
-      tap((res) => {
-        this.tokenStorage.saveTokens(res.accessToken, res.refreshToken);
+    return this.http.post<ApiResponse<RefreshTokenResponse>>(`${API_BASE}/refresh`, body).pipe(
+      map((res) => res.data),
+      tap((data) => {
+        this.tokenStorage.saveTokens(data.accessToken, data.refreshToken);
       }),
     );
   }

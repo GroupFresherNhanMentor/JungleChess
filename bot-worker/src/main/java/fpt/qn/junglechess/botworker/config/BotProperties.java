@@ -8,10 +8,19 @@ import org.springframework.stereotype.Component;
 public class BotProperties {
 
     private String serverUrl = "ws://localhost:8080/ws";
-    private String botToken = "";
+    private String backendHttpUrl = "http://localhost:8080";
+    private String botUsername = "";
+    private String botPassword = "";
 
     public String getServerUrl() { return serverUrl; }
     public void setServerUrl(String serverUrl) { this.serverUrl = serverUrl; }
-    public String getBotToken() { return botToken; }
-    public void setBotToken(String botToken) { this.botToken = botToken; }
+
+    public String getBackendHttpUrl() { return backendHttpUrl; }
+    public void setBackendHttpUrl(String backendHttpUrl) { this.backendHttpUrl = backendHttpUrl; }
+
+    public String getBotUsername() { return botUsername; }
+    public void setBotUsername(String botUsername) { this.botUsername = botUsername; }
+
+    public String getBotPassword() { return botPassword; }
+    public void setBotPassword(String botPassword) { this.botPassword = botPassword; }
 }

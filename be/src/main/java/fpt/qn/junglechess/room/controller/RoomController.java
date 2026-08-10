@@ -112,6 +112,11 @@ public class RoomController {
         roomService.rematch(id, sha.getSessionId());
     }
 
+    @MessageMapping("room.{id}.sync")
+    public void sync(@DestinationVariable String id, SimpMessageHeaderAccessor sha) {
+        roomService.syncRoom(id, sha.getSessionId());
+    }
+
     // ── Bot-worker endpoints (slash-notation used by bot-worker service) ───────
 
     @MessageMapping("/room/{id}/bot-join")

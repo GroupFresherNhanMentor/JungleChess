@@ -80,7 +80,7 @@ export class LobbyComponent implements OnInit {
     this.closeCreateModal();
 
     const backendMode = this.frontendModeToBackend(this.newRoomMode);
-    const difficulty = this.newRoomMode === 'PVE' ? this.newRoomDifficulty : undefined;
+    const difficulty = (this.newRoomMode === 'PVE' || this.newRoomMode === 'EVE') ? this.newRoomDifficulty : undefined;
 
     this.gameRoom.createRoom(backendMode, difficulty).subscribe({
       next: roomId => {
@@ -132,11 +132,11 @@ export class LobbyComponent implements OnInit {
   }
 
   canJoin(room: LobbyRoomEntry): boolean {
-    return room.status === 'WAITING' && room.playerCount < 2;
+    return room.mode === 'PVP' && room.status === 'WAITING' && room.playerCount < 2;
   }
 
   canWatch(room: LobbyRoomEntry): boolean {
-    return room.allowSpectator && room.status === 'PLAYING';
+    return room.allowSpectator && room.status !== 'ENDED' && !this.canJoin(room);
   }
 
   private frontendModeToBackend(mode: GameMode): string {

@@ -71,6 +71,16 @@ public class UserCreationTransactionHelper {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public UserDto executeRegistration(String username, String password, String fullName) {
+        return executeRegistrationWithRole(username, password, fullName, fpt.qn.junglechess.jooq.enums.SysRole.USER);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public UserDto executeBotRegistration(String username, String password, String fullName) {
+        return executeRegistrationWithRole(username, password, fullName, fpt.qn.junglechess.jooq.enums.SysRole.BOT);
+    }
+
+    private UserDto executeRegistrationWithRole(String username, String password, String fullName,
+                                                fpt.qn.junglechess.jooq.enums.SysRole role) {
         UUID id = UuidV7.generate();
         UsersRecord record = dsl.newRecord(USERS);
         record.setId(id);
@@ -81,11 +91,8 @@ public class UserCreationTransactionHelper {
 
         UsersRecord saved = dsl.insertInto(USERS).set(record).returning().fetchOne();
 
-        var roleRecord = dsl.select(ROLES.ID)
-                .from(ROLES)
-                .where(ROLES.NAME.eq(fpt.qn.junglechess.jooq.enums.SysRole.USER))
-                .fetchOne();
-        if (roleRecord == null) throw new IllegalStateException("Default USER role is not configured");
+        var roleRecord = dsl.select(ROLES.ID).from(ROLES).where(ROLES.NAME.eq(role)).fetchOne();
+        if (roleRecord == null) throw new IllegalStateException("Role " + role + " is not configured");
 
         dsl.insertInto(USER_ROLES)
                 .set(USER_ROLES.USER_ID, saved.getId())

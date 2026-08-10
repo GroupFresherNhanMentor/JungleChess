@@ -88,10 +88,11 @@
         <select [(ngModel)]="newRoomMode" class="form-select">
           <option value="PVP_ONLINE">PvP Online</option>
           <option value="PVE">Người vs Máy</option>
+          <option value="EVE">Bot vs Bot</option>
         </select>
       </div>
 
-      <div *ngIf="newRoomMode === 'PVE'" class="form-group">
+      <div *ngIf="newRoomMode === 'PVE' || newRoomMode === 'EVE'" class="form-group">
         <label>Độ khó Bot</label>
         <select [(ngModel)]="newRoomDifficulty" class="form-select">
           <option value="EASY">Dễ</option>

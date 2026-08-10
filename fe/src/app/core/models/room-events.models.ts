@@ -18,6 +18,7 @@ export interface RoomJoinedEvent extends RoomEvent {
   type: 'ROOM_JOINED';
   roomId: string;
   yourSide: string;
+  mode: string;
   status: string;
   board: string[][];
   currentTurn: string;

@@ -70,7 +70,7 @@ export class GameRoomService {
 
   // ── Create ────────────────────────────────────────────────────────────────
 
-  createRoom(mode: string, botDifficulty?: string): Observable<string> {
+  createRoom(mode: string, botDifficulty?: string, allowSpectator = false): Observable<string> {
     this.cleanupRoom();
     this.gameState$.next(null);
     const result$ = new Subject<string>();
@@ -97,7 +97,7 @@ export class GameRoomService {
 
     this.stomp.send('/app/room.create', {
       mode,
-      allowSpectator: false,
+      allowSpectator,
       allowBet: false,
       botDifficulty: botDifficulty ?? null,
     });
@@ -164,7 +164,7 @@ export class GameRoomService {
 
     const tempSub = this.stomp.subscribe<RoomEvent>('/user/queue/events', event => {
       this.handleEvent(event);
-      if ((event.type === 'STATE_UPDATED' || event.type === 'ROOM_JOINED') && !result$.closed) {
+      if (event.type === 'ROOM_JOINED' && !result$.closed) {
         this.subscribeToRoom(roomId);
         tempSub.unsubscribe();
         result$.next();
@@ -243,7 +243,7 @@ export class GameRoomService {
           yourSideRaw: e.yourSide,
           isCreator: current?.isCreator ?? false,
           isSpectator: e.yourSide === 'SPECTATOR',
-          mode: current?.mode ?? '',
+          mode: e.mode ?? current?.mode ?? '',
           status: e.status as RoomStatus,
           pieces: this.adapter.toPieces(e.board),
           currentTurn: this.adapter.toSide(e.currentTurn),

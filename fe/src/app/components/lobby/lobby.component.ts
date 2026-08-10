@@ -34,6 +34,7 @@ export class LobbyComponent implements OnInit {
   isCreateModalOpen = false;
   newRoomMode: GameMode = 'PVP_ONLINE';
   newRoomDifficulty: 'EASY' | 'MEDIUM' | 'HARD' = 'MEDIUM';
+  newRoomAllowSpectator = false;
 
   isJoining = false;
   joinRoomId = '';
@@ -68,6 +69,7 @@ export class LobbyComponent implements OnInit {
   openCreateModal(): void {
     this.newRoomMode = 'PVP_ONLINE';
     this.newRoomDifficulty = 'MEDIUM';
+    this.newRoomAllowSpectator = false;
     this.isCreateModalOpen = true;
   }
 
@@ -81,8 +83,10 @@ export class LobbyComponent implements OnInit {
 
     const backendMode = this.frontendModeToBackend(this.newRoomMode);
     const difficulty = (this.newRoomMode === 'PVE' || this.newRoomMode === 'EVE') ? this.newRoomDifficulty : undefined;
+    // PVE/EVE always allow spectators (enforced on backend too); PVP respects checkbox
+    const allowSpectator = this.newRoomMode !== 'PVP_ONLINE' || this.newRoomAllowSpectator;
 
-    this.gameRoom.createRoom(backendMode, difficulty).subscribe({
+    this.gameRoom.createRoom(backendMode, difficulty, allowSpectator).subscribe({
       next: roomId => {
         this.isLoading = false;
         this.router.navigate(['/game', roomId]);

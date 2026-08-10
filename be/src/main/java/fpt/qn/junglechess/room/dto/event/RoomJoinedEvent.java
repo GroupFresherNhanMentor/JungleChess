@@ -16,18 +16,20 @@ public class RoomJoinedEvent extends RoomEvent {
 
     String roomId;
     String yourSide;
+    String mode;
     String status;
     String[][] board;
     String currentTurn;
     List<PlayerInfo> players;
     List<SpectatorInfo> spectators;
 
-    public RoomJoinedEvent(String roomId, String yourSide, String status,
+    public RoomJoinedEvent(String roomId, String yourSide, String mode, String status,
                            String[][] board, String currentTurn,
                            List<PlayerInfo> players, List<SpectatorInfo> spectators) {
         super("ROOM_JOINED");
         this.roomId = roomId;
         this.yourSide = yourSide;
+        this.mode = mode;
         this.status = status;
         this.board = board;
         this.currentTurn = currentTurn;

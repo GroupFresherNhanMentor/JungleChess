@@ -6,7 +6,6 @@ import fpt.qn.junglechess.game.model.Board;
 import fpt.qn.junglechess.game.model.Move;
 import fpt.qn.junglechess.game.model.Side;
 import fpt.qn.junglechess.game.rule.GameRuleEngine;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -14,18 +13,18 @@ import java.util.List;
 import java.util.Random;
 
 @Component
-@RequiredArgsConstructor
 public class AlphaBetaBotEngine implements BotEngine {
 
     private final GameRuleEngine gameRuleEngine;
     private final BoardEvaluator boardEvaluator;
     private final Random random;
 
-    /**
-     * Works on a clone of {@code board} so the caller's state is never mutated,
-     * regardless of timeouts or unexpected errors. Search stops when the deadline
-     * (in nanoseconds) is exceeded and the best move found so far is returned.
-     */
+    public AlphaBetaBotEngine(GameRuleEngine gameRuleEngine, BoardEvaluator boardEvaluator, Random random) {
+        this.gameRuleEngine = gameRuleEngine;
+        this.boardEvaluator = boardEvaluator;
+        this.random = random;
+    }
+
     @Override
     public Move nextMove(Board board, Side side, int maxDepth, long timeoutMillis) {
         Board workingBoard = board.cloneBoard();
@@ -40,13 +39,11 @@ public class AlphaBetaBotEngine implements BotEngine {
         Move bestMoveFound = null;
         List<Move> tiedBestMoves = new ArrayList<>();
 
-        // Iterative deepening search from depth 1 up to maxDepth
         for (int currentDepth = 1; currentDepth <= maxDepth; currentDepth++) {
             if (deadlineExceeded(deadline)) {
                 break;
             }
 
-            // Move ordering: put previous iteration's best move first, followed by captures
             orderMoves(validMoves, bestMoveFound);
 
             int bestValue = Integer.MIN_VALUE;
@@ -80,7 +77,6 @@ public class AlphaBetaBotEngine implements BotEngine {
                 bestMoveFound = tiedBestMoves.get(random.nextInt(tiedBestMoves.size()));
             }
 
-            // Stop early if a guaranteed winning move is found
             if (bestValue >= BoardEvaluator.WIN_SCORE) {
                 break;
             }

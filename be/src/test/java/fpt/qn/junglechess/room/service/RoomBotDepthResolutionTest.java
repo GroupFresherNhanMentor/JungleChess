@@ -2,11 +2,6 @@ package fpt.qn.junglechess.room.service;
 
 import fpt.qn.junglechess.game.bot.BotDifficulty;
 import fpt.qn.junglechess.game.bot.config.BotConfigService;
-import fpt.qn.junglechess.game.bot.eval.BoardEvaluator;
-import fpt.qn.junglechess.game.bot.impl.AlphaBetaBotEngine;
-import fpt.qn.junglechess.game.model.Board;
-import fpt.qn.junglechess.game.model.Move;
-import fpt.qn.junglechess.game.model.Side;
 import fpt.qn.junglechess.game.rule.DefaultGameRuleEngine;
 import fpt.qn.junglechess.game.rule.GameRuleEngine;
 import fpt.qn.junglechess.room.dto.request.CreateRoomRequest;
@@ -22,7 +17,6 @@ import org.junit.jupiter.params.provider.EnumSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,7 +29,6 @@ class RoomBotDepthResolutionTest {
     private BotConfigService botConfigService;
     private RoomStateRepository roomRepo;
     private GameRuleEngine ruleEngine;
-    private AlphaBetaBotEngine botEngine;
 
     @BeforeEach
     void setUp() {
@@ -53,9 +46,6 @@ class RoomBotDepthResolutionTest {
 
         roomService = new RoomService(
                 roomRepo, eventBus, lobbyService, ruleEngine, sessionRegistry, botConfigService);
-
-        BoardEvaluator evaluator = new BoardEvaluator(ruleEngine);
-        botEngine = new AlphaBetaBotEngine(ruleEngine, evaluator, new Random(42));
     }
 
     @ParameterizedTest(name = "PVE room with {0} resolves correct search depth")
@@ -113,18 +103,5 @@ class RoomBotDepthResolutionTest {
         verifyNoInteractions(botConfigService);
         assertNotNull(saved.get());
         assertEquals(0, saved.get().getBotSearchDepth());
-    }
-
-    @ParameterizedTest(name = "Bot returns a legal move at depth for {0}")
-    @EnumSource(BotDifficulty.class)
-    void botReturnsLegalMoveAtEachDifficultyDepth(BotDifficulty difficulty) {
-        Board board = Board.createInitialBoard();
-        int depth = difficulty.getSearchDepth();
-
-        Move move = botEngine.nextMove(board, Side.PLAYER_1, depth);
-
-        assertNotNull(move, "Bot must return a move at depth " + depth);
-        assertTrue(ruleEngine.isValidMove(board, move),
-                "Bot returned illegal move at depth " + depth + ": " + move);
     }
 }

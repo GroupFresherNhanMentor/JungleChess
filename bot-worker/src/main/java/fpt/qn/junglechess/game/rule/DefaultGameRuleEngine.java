@@ -1,0 +1,150 @@
+package fpt.qn.junglechess.game.rule;
+
+import fpt.qn.junglechess.game.model.*;
+
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Component
+public class DefaultGameRuleEngine implements GameRuleEngine {
+
+    private static final int[][] DIRECTIONS = {
+        {-1, 0}, // Up
+        {1, 0},  // Down
+        {0, -1}, // Left
+        {0, 1}   // Right
+    };
+
+    @Override
+    public List<Move> getValidMoves(Board board, Side side) {
+        List<Move> validMoves = new ArrayList<>();
+
+        for (int r = 0; r < Board.ROWS; r++) {
+            for (int c = 0; c < Board.COLS; c++) {
+                Piece piece = board.getPiece(r, c);
+                if (piece != null && piece.side() == side) {
+                    Position from = new Position(r, c);
+                    generateMovesForPiece(board, from, piece, validMoves);
+                }
+            }
+        }
+
+        return validMoves;
+    }
+
+    private void generateMovesForPiece(Board board, Position from, Piece piece, List<Move> validMoves) {
+        for (int[] dir : DIRECTIONS) {
+            int targetRow = from.row() + dir[0];
+            int targetCol = from.col() + dir[1];
+
+            Position nextPos = new Position(targetRow, targetCol);
+            if (!nextPos.isValid()) {
+                continue;
+            }
+
+            // Den restriction: cannot enter own Den
+            if (Board.isDen(nextPos, piece.side())) {
+                continue;
+            }
+
+            // Check River Jump for Tiger and Lion
+            if (Board.isRiver(nextPos)) {
+                if (piece.type() == PieceType.TIGER || piece.type() == PieceType.LION) {
+                    handleRiverJump(board, from, piece, dir, validMoves);
+                    continue;
+                } else if (piece.type() != PieceType.RAT) {
+                    // Only Rat, Tiger, Lion can interact with river
+                    continue;
+                }
+            }
+
+            // Standard step to nextPos
+            checkAndAddMove(board, from, nextPos, piece, validMoves, null);
+        }
+    }
+
+    private void handleRiverJump(Board board, Position from, Piece piece, int[] dir, List<Move> validMoves) {
+        int r = from.row() + dir[0];
+        int c = from.col() + dir[1];
+        boolean blockedByRat = false;
+
+        while (Position.isValid(r, c) && Board.isRiver(r, c)) {
+            Piece riverPiece = board.getPiece(r, c);
+            if (riverPiece != null && riverPiece.type() == PieceType.RAT) {
+                blockedByRat = true;
+                break;
+            }
+            r += dir[0];
+            c += dir[1];
+        }
+
+        if (!blockedByRat && Position.isValid(r, c)) {
+            Position landPos = new Position(r, c);
+            if (!Board.isDen(landPos, piece.side())) {
+                checkAndAddMove(board, from, landPos, piece, validMoves, SpecialEvent.RIVER_JUMP);
+            }
+        }
+    }
+
+    private void checkAndAddMove(Board board, Position from, Position to, Piece movedPiece, List<Move> validMoves, SpecialEvent forcedEvent) {
+        Piece targetPiece = board.getPiece(to);
+        Side friendlySide = movedPiece.side();
+
+        if (targetPiece == null) {
+            // Free square
+            validMoves.add(new Move(from, to, movedPiece, null, forcedEvent));
+            return;
+        }
+
+        if (targetPiece.side() == friendlySide) {
+            // Cannot capture own piece
+            return;
+        }
+
+        // Target piece is enemy piece
+        SpecialEvent event = forcedEvent;
+
+        // Check Trap neutralization rule: Enemy in friendly trap drops rank to 0
+        boolean isEnemyInFriendlyTrap = Board.isTrap(to, friendlySide);
+        if (isEnemyInFriendlyTrap) {
+            event = SpecialEvent.TRAP_NEUTRALIZED;
+            validMoves.add(new Move(from, to, movedPiece, targetPiece, event));
+            return;
+        }
+
+        // River boundary rules for Rat & Elephant
+        boolean attackerInRiver = Board.isRiver(from);
+        boolean targetInRiver = Board.isRiver(to);
+
+        if (attackerInRiver && !targetInRiver) {
+            // Rat in river cannot capture piece on land
+            return;
+        }
+
+        if (!attackerInRiver && targetInRiver) {
+            // Piece on land cannot capture Rat in river
+            return;
+        }
+
+        // Capture Rank Check
+        if (canCapture(movedPiece, targetPiece)) {
+            validMoves.add(new Move(from, to, movedPiece, targetPiece, event));
+        }
+    }
+
+    @Override
+    public boolean canCapture(Piece attacker, Piece defender) {
+        // Exception: Rat vs Elephant
+        if (attacker.type() == PieceType.RAT && defender.type() == PieceType.ELEPHANT) {
+            return true;
+        }
+        if (attacker.type() == PieceType.ELEPHANT && defender.type() == PieceType.RAT) {
+            return false;
+        }
+
+        // Standard Rank Check
+        return attacker.getRank() >= defender.getRank();
+    }
+}

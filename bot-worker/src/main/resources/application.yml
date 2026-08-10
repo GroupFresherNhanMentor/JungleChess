@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: jc-bot-worker
+
+bot:
+  room-id: ${ROOM_ID:room-test}
+  server-url: ${SERVER_URL:ws://localhost:8080/ws}
+  side: ${SIDE:PLAYER_2}
+  difficulty: ${DIFFICULTY:MEDIUM}
+  bot-token: ${BOT_TOKEN:}

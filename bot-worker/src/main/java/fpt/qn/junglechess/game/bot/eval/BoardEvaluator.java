@@ -6,14 +6,12 @@ import fpt.qn.junglechess.game.model.PieceType;
 import fpt.qn.junglechess.game.model.Position;
 import fpt.qn.junglechess.game.model.Side;
 import fpt.qn.junglechess.game.rule.GameRuleEngine;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.EnumMap;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 public class BoardEvaluator {
 
     public static final int WIN_SCORE = 100000;
@@ -23,6 +21,10 @@ public class BoardEvaluator {
     private static final int THREAT_PENALTY = 150;
 
     private final GameRuleEngine gameRuleEngine;
+
+    public BoardEvaluator(GameRuleEngine gameRuleEngine) {
+        this.gameRuleEngine = gameRuleEngine;
+    }
 
     private static final Map<PieceType, Integer> PIECE_VALUES = new EnumMap<>(PieceType.class);
 
@@ -80,9 +82,7 @@ public class BoardEvaluator {
                 }
 
                 // Threat weight: a piece that can be captured next move is worth 150 less to
-                // its owner. This applies symmetrically — our own exposed piece (subtracted
-                // from our score) and an opponent piece we threaten (subtracted from the
-                // opponent's contribution, i.e. added to our score via the `score -=` below).
+                // its owner. This applies symmetrically.
                 int threatWeight = 0;
                 if (piece.side() == side) {
                     if (isThreatened(board, r, c, piece, opponent)) {
@@ -107,16 +107,6 @@ public class BoardEvaluator {
         return score;
     }
 
-    /**
-     * True if a piece of {@code attackerSide} adjacent to {@code (row, col)} can capture
-     * {@code piece} on its next move. Reuses {@link GameRuleEngine#canCapture} so the bot
-     * never duplicates rule logic. Own-side trap squares are ignored here: an enemy standing
-     * on our trap is neutralized (rank 0) and cannot capture anything.
-     *
-     * <p>Called for both the side's own pieces (penalty applies when a hostile attacker
-     * threatens them) and the opponent's pieces (bonus applies when the side's own attacker
-     * threatens them), so evaluation is symmetric.
-     */
     private boolean isThreatened(Board board, int row, int col, Piece piece, Side attackerSide) {
         int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
         boolean targetInRiver = Board.isRiver(row, col);
@@ -134,13 +124,11 @@ public class BoardEvaluator {
                 continue;
             }
 
-            // Attacker standing on the threatened piece's trap is neutralized (rank 0) — cannot capture.
             if (Board.isTrap(er, ec, piece.side())) {
                 continue;
             }
 
             boolean attackerInRiver = Board.isRiver(er, ec);
-            // River boundary rules: river Rat cannot capture land piece, land piece cannot capture river Rat
             if (attackerInRiver != targetInRiver) {
                 continue;
             }
@@ -153,29 +141,29 @@ public class BoardEvaluator {
         // 2. River jump threat checks for Tiger & Lion (only applicable when target is on land)
         if (!targetInRiver) {
             for (int[] dir : directions) {
-                int r = row + dir[0];
-                int c = col + dir[1];
+                int jr = row + dir[0];
+                int jc = col + dir[1];
 
-                if (!Position.isValid(r, c) || !Board.isRiver(r, c)) {
+                if (!Position.isValid(jr, jc) || !Board.isRiver(jr, jc)) {
                     continue;
                 }
 
                 boolean blockedByRat = false;
-                while (Position.isValid(r, c) && Board.isRiver(r, c)) {
-                    Piece riverPiece = board.getPiece(r, c);
+                while (Position.isValid(jr, jc) && Board.isRiver(jr, jc)) {
+                    Piece riverPiece = board.getPiece(jr, jc);
                     if (riverPiece != null && riverPiece.type() == PieceType.RAT) {
                         blockedByRat = true;
                         break;
                     }
-                    r += dir[0];
-                    c += dir[1];
+                    jr += dir[0];
+                    jc += dir[1];
                 }
 
-                if (!blockedByRat && Position.isValid(r, c)) {
-                    Piece attacker = board.getPiece(r, c);
+                if (!blockedByRat && Position.isValid(jr, jc)) {
+                    Piece attacker = board.getPiece(jr, jc);
                     if (attacker != null && attacker.side() == attackerSide) {
                         if (attacker.type() == PieceType.TIGER || attacker.type() == PieceType.LION) {
-                            if (!Board.isTrap(r, c, piece.side()) && gameRuleEngine.canCapture(attacker, piece)) {
+                            if (!Board.isTrap(jr, jc, piece.side()) && gameRuleEngine.canCapture(attacker, piece)) {
                                 return true;
                             }
                         }

@@ -1,0 +1,45 @@
+:host {
+  display: block;
+}
+
+.falling-decor {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Above the board pieces (z 10) & ghost (z 20) so leaves cross in front of
+     them; far below battle overlay (1000), firework/clown (1500+) and menus. */
+  z-index: 25;
+}
+
+/* Outer layer: falls straight down, carries the gust push.
+   Independent `translate` (not transform) so it can't fight the fall/rotation.
+   The outer never scales so trasition on translate is easy to read. */
+.fall-item {
+  position: absolute;
+  top: -8%;
+  line-height: 1;
+  will-change: transform, translate;
+  animation: fall-drop var(--fall-dur, 12s) linear var(--fall-delay, 0s) infinite;
+  translate: var(--wind-x, 0px) var(--wind-y, 0px);
+  /* 1.4s ease-out on the gust-delay so the push sweeps across the cluster
+     rather than snapping; when wind returns to 0 the leaf drifts back. */
+  transition: translate 1.4s ease-out var(--gust-delay, 0s);
+}
+
+@keyframes fall-drop {
+  0%   { transform: rotate(0deg); }
+  100% { transform: translate(0, 118vh) rotate(360deg); }
+}
+
+/* Inner layer: continuous left-right flutter, always visibly swaying.
+   translateX runs -sway-amp ↔ +sway-amp forever on its own timeline. */
+.fall-flutter {
+  display: inline-block;
+  animation: flutter var(--sway-dur, 2.4s) ease-in-out var(--fall-delay, 0s) infinite alternate;
+}
+
+@keyframes flutter {
+  from { translate: calc(var(--sway-amp, 30px) * -1) 0; }
+  to   { translate: var(--sway-amp, 30px) 0; }
+}

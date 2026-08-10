@@ -1,0 +1,70 @@
+:host {
+  display: block;
+}
+
+.eaten-overlay {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1300;
+}
+
+/* A single popped-out animal: springs from the bottom-left corner, wobbles
+   in with a big meme "?", then fades away. Fixed 2s; the element is removed
+   from the list by app.component once the animation is done. */
+.eaten-item {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  animation: eaten-hop 2s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+.eaten-pic {
+  width: 130px;
+  height: 130px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.4));
+  animation: eaten-tumble 2s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+
+.eaten-question {
+  font-size: 64px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: var(--text-stroke-3d), 0 3px 0 var(--edge-deep),
+    0 6px 12px rgba(0, 0, 0, 0.5);
+  margin: 0 0 18px 6px;
+  animation: eaten-shake 0.55s ease-in-out 0s 3;
+}
+
+/* Hop in from off the bottom-left corner toward mid-left screen, hold in the
+   middle so it is clearly visible, then fade out. */
+@keyframes eaten-hop {
+  0%   { transform: translate(-30vw, 20vh) scale(0.15); opacity: 0; }
+  30%  { transform: translate(-12vw, 26vh) scale(1.2);  opacity: 1; }
+  45%  { transform: translate(-6vw, 30vh) scale(0.95);  opacity: 1; }
+  70%  { transform: translate(-2vw, 33vh) scale(1.08);  opacity: 1; }
+  80%  { transform: translate(-1vw, 34vh) scale(1);     opacity: 1; }
+  95%  { opacity: 1; }
+  100% { transform: translate(1vw, 36vh) scale(0.9);    opacity: 0; }
+}
+
+/* Slight spin as it flies in, ending near-upright. */
+@keyframes eaten-tumble {
+  0%   { transform: rotate(-35deg) scale(0.9); }
+  70%  { transform: rotate(8deg) scale(1); }
+  100% { transform: rotate(0deg) scale(0.95); }
+}
+
+/* Meme "?" pop + wobble. */
+@keyframes eaten-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg) scale(1); }
+  20%      { transform: translateX(-7px) rotate(-6deg) scale(1.15); }
+  40%      { transform: translateX(7px) rotate(6deg) scale(0.95); }
+  60%      { transform: translateX(-5px) rotate(-4deg) scale(1.1); }
+  80%      { transform: translateX(5px) rotate(3deg) scale(1); }
+}

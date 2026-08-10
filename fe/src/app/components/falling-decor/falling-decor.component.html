@@ -1,0 +1,20 @@
+<div class="falling-decor" aria-hidden="true">
+  <span
+    *ngFor="let item of items; trackBy: trackById"
+    class="fall-item"
+    [style.left.%]="item.left"
+    [style.font-size.px]="item.size"
+    [style.--fall-dur.s]="item.duration"
+    [style.--fall-delay.s]="item.delay"
+    [style.--wind-x.px]="item.windX"
+    [style.--wind-y.px]="item.windY"
+    [style.--gust-delay.s]="item.gustDelay"
+    [style.opacity]="item.opacity"
+  >
+    <span
+      class="fall-flutter"
+      [style.--sway-amp.px]="item.swayAmp"
+      [style.--sway-dur.s]="item.swayDur"
+    >{{ item.char }}</span>
+  </span>
+</div>

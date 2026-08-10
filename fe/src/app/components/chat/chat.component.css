@@ -8,7 +8,8 @@
   border: 2px solid var(--wood-border);
   border-radius: 10px;
   padding: 12px;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--panel-shadow-3d);
+  background-image: var(--panel-grad-top);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -21,6 +22,7 @@
   margin-bottom: 10px;
   text-align: center;
   color: var(--ink-strong);
+  text-shadow: var(--text-emboss);
 }
 
 .chat-messages-list {
@@ -98,9 +100,9 @@
 
 .quick-emotes {
   display: flex;
+  flex-wrap: wrap;
   gap: 5px;
   margin: 8px 0;
-  overflow-x: auto;
   padding-bottom: 3px;
 }
 
@@ -112,12 +114,18 @@
   background-color: var(--wood-panel-solid);
   cursor: pointer;
   white-space: nowrap;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  box-shadow: var(--btn-shadow-3d-sml);
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease;
 }
 
 .emote-btn:hover {
   background-color: var(--wood-panel-light);
   border-color: var(--gold-accent);
+}
+
+.emote-btn:active {
+  transform: translateY(2px);
+  box-shadow: var(--btn-shadow-3d-active-sml);
 }
 
 .chat-input-form {
@@ -152,17 +160,25 @@
   border-radius: 5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease;
+  box-shadow: var(--btn-shadow-3d-sml);
+  transition: background 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease;
 }
 
 .send-btn:hover:not(:disabled) {
   background: var(--btn-gold-hot);
 }
 
+.send-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: var(--btn-shadow-3d-active-sml);
+}
+
 .send-btn:disabled {
   background-color: var(--wood-inset);
   color: var(--ink-muted);
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 /* --- Emoji Picker --- */
@@ -183,12 +199,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  box-shadow: var(--btn-shadow-3d-sml);
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease;
 }
 
 .emoji-toggle-btn:hover {
   background-color: var(--wood-panel-light);
   border-color: var(--gold-accent);
+}
+
+.emoji-toggle-btn:active {
+  transform: translateY(2px);
+  box-shadow: var(--btn-shadow-3d-active-sml);
 }
 
 .emoji-dropdown {
@@ -201,7 +223,7 @@
   background-color: var(--wood-panel-solid);
   border: 2px solid var(--wood-border);
   border-radius: 8px;
-  box-shadow: var(--shadow-lift);
+  box-shadow: var(--panel-shadow-3d);
   padding: 8px;
   display: grid;
   grid-template-columns: repeat(8, 1fr);

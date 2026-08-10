@@ -27,7 +27,9 @@
   border: 2px solid var(--wood-border);
   padding: 8px 28px;
   border-radius: 10px;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--panel-shadow-3d);
+  background-image: var(--panel-grad-top);
+  text-shadow: var(--text-emboss);
 }
 
 /* --- Single-Row Sleek Toolbar --- */
@@ -41,7 +43,8 @@
   border-radius: 10px;
   margin-bottom: 20px;
   gap: 12px;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--panel-shadow-3d);
+  background-image: var(--panel-grad-top);
   box-sizing: border-box;
 }
 
@@ -115,13 +118,19 @@
   border-radius: 6px;
   background-color: var(--wood-panel-solid);
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease;
   box-sizing: border-box;
+  box-shadow: var(--btn-shadow-3d-sml);
 }
 
 .refresh-btn:hover {
   background-color: var(--wood-panel-light);
   border-color: var(--gold-accent);
+}
+
+.refresh-btn:active {
+  transform: translateY(2px);
+  box-shadow: var(--btn-shadow-3d-active-sml);
 }
 
 .create-btn, .join-code-btn {
@@ -142,8 +151,8 @@
   background: var(--btn-gold);
   color: var(--ink-strong);
   border: 2px solid var(--gold-accent);
-  box-shadow: var(--shadow-soft);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  box-shadow: var(--btn-shadow-3d);
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease;
 }
 
 .create-btn:hover {
@@ -151,16 +160,34 @@
   border-color: var(--gold-accent-bright);
 }
 
+.create-btn:active {
+  transform: translateY(3px);
+  box-shadow: var(--btn-shadow-3d-active);
+}
+
+.create-btn:disabled {
+  box-shadow: none;
+  transform: none;
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .join-code-btn {
   background: var(--btn-wood);
   color: var(--ink-strong);
   border: 1px solid var(--wood-border-soft);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  box-shadow: var(--btn-shadow-3d);
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease;
 }
 
 .join-code-btn:hover {
   background: var(--btn-wood-hot);
   border-color: var(--gold-accent);
+}
+
+.join-code-btn:active {
+  transform: translateY(3px);
+  box-shadow: var(--btn-shadow-3d-active);
 }
 
 .secondary-btn {
@@ -172,11 +199,17 @@
   border: 1px solid var(--wood-border-soft);
   border-radius: 6px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  box-shadow: var(--btn-shadow-3d-sml);
+  transition: background 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease;
 }
 
 .secondary-btn:hover {
   background: var(--btn-wood-hot);
+}
+
+.secondary-btn:active {
+  transform: translateY(2px);
+  box-shadow: var(--btn-shadow-3d-active-sml);
 }
 
 /* --- Room Grid & Cards --- */
@@ -194,7 +227,8 @@
   padding: 40px 20px;
   text-align: center;
   border-radius: 10px;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--panel-shadow-3d);
+  background-image: var(--panel-grad-top);
 }
 
 .no-rooms-card .empty-icon {
@@ -218,7 +252,8 @@
   border: 2px solid var(--wood-border);
   border-radius: 10px;
   padding: 16px;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--card-shadow-3d);
+  background-image: var(--panel-grad-top);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -227,7 +262,7 @@
 
 .room-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lift);
+  box-shadow: var(--card-shadow-3d-hover);
 }
 
 .room-card-header {
@@ -286,6 +321,7 @@
   margin: 0 0 8px 0;
   font-size: 1.15em;
   color: var(--ink-strong);
+  text-shadow: var(--text-emboss);
 }
 
 .room-code-row {
@@ -355,14 +391,14 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease;
 }
 
 .join-btn {
   background: var(--btn-gold);
   color: var(--ink-strong);
   border: 2px solid var(--gold-accent);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--btn-shadow-3d);
 }
 
 .join-btn:hover {
@@ -370,16 +406,26 @@
   border-color: var(--gold-accent-bright);
 }
 
+.join-btn:active {
+  transform: translateY(3px);
+  box-shadow: var(--btn-shadow-3d-active);
+}
+
 .spectate-btn {
   background: var(--btn-wood);
   color: var(--ink-strong);
   border: 1px solid var(--wood-border-soft);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--btn-shadow-3d);
 }
 
 .spectate-btn:hover {
   background: var(--btn-wood-hot);
   border-color: var(--gold-accent);
+}
+
+.spectate-btn:active {
+  transform: translateY(3px);
+  box-shadow: var(--btn-shadow-3d-active);
 }
 
 /* --- Modals Styling --- */
@@ -403,7 +449,7 @@
   width: 90%;
   max-width: 480px;
   padding: 20px;
-  box-shadow: var(--shadow-lift);
+  box-shadow: var(--panel-shadow-3d);
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -418,12 +464,15 @@
   margin-bottom: 16px;
   border-bottom: 2px solid var(--wood-border);
   padding-bottom: 10px;
+  box-shadow: inset 0 2px 0 var(--bevel-highlight);
+  background-image: var(--panel-grad-top);
 }
 
 .modal-header h2 {
   margin: 0;
   font-size: 1.2em;
   color: var(--ink-strong);
+  text-shadow: var(--text-emboss);
 }
 
 .modal-close-btn {
@@ -501,7 +550,7 @@
   padding: 10px 18px;
   border-radius: 8px;
   font-size: 0.85em;
-  box-shadow: var(--shadow-lift);
+  box-shadow: var(--panel-shadow-3d);
   z-index: 2000;
   animation: fadeIn 0.2s ease-out;
 }

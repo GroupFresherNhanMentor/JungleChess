@@ -21,7 +21,7 @@
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-lift);
+  box-shadow: var(--panel-shadow-3d);
   overflow: hidden;
   animation: slideUp 0.2s ease-out;
 }
@@ -33,12 +33,15 @@
   padding: 16px 20px;
   background-color: var(--wood-panel-light);
   border-bottom: 2px solid var(--wood-border);
+  box-shadow: inset 0 2px 0 var(--bevel-highlight);
+  background-image: var(--panel-grad-top);
 }
 
 .modal-header h2 {
   margin: 0;
   font-size: 1.25em;
   color: var(--ink-strong);
+  text-shadow: var(--text-emboss);
 }
 
 .modal-close-btn {
@@ -89,11 +92,17 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease;
+  box-shadow: var(--btn-shadow-3d);
+  transition: background 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease;
 }
 
 .modal-action-btn:hover {
   background: var(--btn-gold-hot);
+}
+
+.modal-action-btn:active {
+  transform: translateY(3px);
+  box-shadow: var(--btn-shadow-3d-active);
 }
 
 @keyframes fadeIn {

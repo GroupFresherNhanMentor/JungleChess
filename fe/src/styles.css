@@ -36,6 +36,70 @@
   /* Shadows */
   --shadow-soft: 0 2px 8px rgba(30, 15, 5, 0.35);
   --shadow-lift: 0 6px 18px rgba(30, 15, 5, 0.45);
+
+  /* =========================================================
+     Stylized 3D tokens (hard edges, bevels, top-light wash)
+     ========================================================= */
+  /* Hard edge colors (text extrusion & button bases) */
+  --edge-dark:          #2a1a08;
+  --edge-deep:          #1d1105;
+  --btn-edge:           #3d250c;
+  --btn-edge-hot:       #2f1d09;
+
+  /* Bevels (inset top-light highlight + bottom shade) */
+  --bevel-highlight:        rgba(255, 244, 214, 0.16);
+  --bevel-highlight-strong: rgba(255, 240, 200, 0.28);
+  --bevel-shade:            rgba(0, 0, 0, 0.22);
+  --bevel-shade-strong:     rgba(0, 0, 0, 0.32);
+
+  /* Top-light gradient wash (additive — lets jungle backdrop bleed through) */
+  --panel-grad-top: linear-gradient(180deg, rgba(255, 240, 210, 0.14), rgba(255, 255, 255, 0) 38%);
+
+  /* --- Button 3D shadow stacks --- */
+  --btn-shadow-3d:         0 4px 0 var(--btn-edge),
+                           0 6px 14px rgba(30, 15, 5, 0.4),
+                           inset 0 2px 0 var(--bevel-highlight-strong),
+                           inset 0 -2px 0 var(--bevel-shade);
+  --btn-shadow-3d-sml:     0 3px 0 var(--btn-edge),
+                           0 4px 10px rgba(30, 15, 5, 0.35),
+                           inset 0 1px 0 var(--bevel-highlight),
+                           inset 0 -1px 0 var(--bevel-shade);
+  --btn-shadow-3d-active:  0 1px 0 var(--btn-edge),
+                           inset 0 2px 3px rgba(0, 0, 0, 0.18),
+                           inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+  --btn-shadow-3d-active-sml: 0 1px 0 var(--btn-edge),
+                           inset 0 1px 2px rgba(0, 0, 0, 0.2);
+
+  /* --- Panel / card 3D shadow stacks --- */
+  --panel-shadow-3d:     inset 0 2px 0 var(--bevel-highlight),
+                         inset 0 -2px 0 var(--bevel-shade),
+                         0 1px 0 rgba(255, 255, 255, 0.06),
+                         0 6px 16px rgba(30, 15, 5, 0.35);
+  --card-shadow-3d:       0 5px 0 rgba(0, 0, 0, 0.22),
+                          0 10px 22px rgba(30, 15, 5, 0.42),
+                          inset 0 2px 0 var(--bevel-highlight),
+                          inset 0 -2px 0 var(--bevel-shade);
+  --card-shadow-3d-hover: 0 6px 0 rgba(0, 0, 0, 0.24),
+                          0 16px 30px rgba(30, 15, 5, 0.5),
+                          inset 0 2px 0 var(--bevel-highlight),
+                          inset 0 -2px 0 var(--bevel-shade);
+
+  /* --- Text extrusion / stroke ---
+     Dark text on wood panels blooms if given a heavy dark stack, so use a
+     light "emboss" (top highlight + faint under-shade) for those, and keep
+     the heavy dark extrusion for light text on dark panels. */
+  --text-shadow-3d:    0 1px 0 var(--edge-dark),
+                       0 2px 0 var(--edge-dark),
+                       0 3px 0 var(--edge-dark),
+                       0 4px 0 var(--edge-dark),
+                       0 5px 4px rgba(0, 0, 0, 0.45);
+  --text-shadow-3d-sm: 0 1px 0 var(--edge-dark),
+                       0 2px 0 var(--edge-dark),
+                       0 2px 3px rgba(0, 0, 0, 0.4);
+  --text-emboss:       0 -1px 0 rgba(255, 240, 210, 0.35),
+                       0 1px 1px rgba(0, 0, 0, 0.35);
+  --text-stroke-3d:    -1px 0 0 var(--edge-dark), 1px 0 0 var(--edge-dark),
+                       0 -1px 0 var(--edge-dark), 0 1px 0 var(--edge-dark);
 }
 
 app-root {
@@ -78,10 +142,12 @@ body {
   display: block;
   margin: 0;
   text-align: center;
-  color: #fce8b3;
-  background: linear-gradient(180deg, rgba(124, 79, 45, 0.95), rgba(76, 46, 23, 0.95));
-  border: 2px solid var(--gold-accent);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  color: var(--ink-strong);
+  background-color: var(--wood-panel);
+  border: 2px solid var(--wood-border);
+  box-shadow: var(--panel-shadow-3d);
+  background-image: var(--panel-grad-top);
+  text-shadow: var(--text-emboss);
   padding: 8px 36px;
   border-radius: 12px;
   font-size: 1.8em;
@@ -216,7 +282,7 @@ body {
   background-color: var(--wood-panel);
   color: var(--ink-strong);
   border: 2px solid var(--gold-accent);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--btn-shadow-3d-sml);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -225,6 +291,11 @@ body {
   background-color: var(--wood-panel-solid);
   border-color: var(--gold-accent-bright);
   transform: scale(1.04);
+}
+
+.lang-toggle-btn:active {
+  transform: translateY(2px) scale(1.0);
+  box-shadow: var(--btn-shadow-3d-active-sml);
 }
 
 .lang-flag {
@@ -249,7 +320,8 @@ body {
   width: 98%;
   max-width: 1000px;
   box-sizing: border-box;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--panel-shadow-3d);
+  background-image: var(--panel-grad-top);
 }
 
 .back-lobby-header-btn {
@@ -261,8 +333,8 @@ body {
   border: 2px solid var(--gold-accent);
   border-radius: 6px;
   cursor: pointer;
-  box-shadow: var(--shadow-soft);
-  transition: background 0.15s ease, transform 0.1s ease;
+  box-shadow: var(--btn-shadow-3d);
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .back-lobby-header-btn:hover {
@@ -270,7 +342,8 @@ body {
 }
 
 .back-lobby-header-btn:active {
-  transform: translateY(1px);
+  transform: translateY(3px);
+  box-shadow: var(--btn-shadow-3d-active);
 }
 
 .room-banner-details {
@@ -320,10 +393,11 @@ body {
   max-width: 1000px;
   box-sizing: border-box;
   gap: 10px 24px;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--panel-shadow-3d);
+  background-image: var(--panel-grad-top);
 }
 
-#game-controls > div:not(#ai-controls):not(#action-buttons-group) {
+#game-controls > div:not(#ai-controls):not(.panel-button-group) {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -424,7 +498,8 @@ body {
   border: 2px solid var(--wood-border);
   padding: 12px;
   border-radius: 12px;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--panel-shadow-3d);
+  background-image: var(--panel-grad-top);
   margin: 0 auto;
 }
 
@@ -623,11 +698,12 @@ img.terrain-water {
 /* --- Side Panels General --- */
 .captured-panel, #move-history {
   background-color: var(--wood-panel); border: 2px solid var(--wood-border); border-radius: 8px;
-  padding: 10px; box-shadow: var(--shadow-soft); box-sizing: border-box;
+  padding: 10px; box-shadow: var(--panel-shadow-3d); background-image: var(--panel-grad-top); box-sizing: border-box;
 }
 
 .captured-panel h2, #move-history h2 {
   font-size: 1em; margin-top: 0; margin-bottom: 8px; text-align: center; color: var(--ink-strong);
+  text-shadow: var(--text-emboss);
 }
 .pieces-container {
   display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start;
@@ -676,15 +752,15 @@ img.terrain-water {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 14px;
     width: 100%;
 }
 
-#action-buttons-group.panel-button-group {
+.panel-button-group {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 14px;
     width: 100%;
 }
 
@@ -699,7 +775,7 @@ img.terrain-water {
   background: var(--btn-wood);
   color: var(--ink-strong);
   border: 1px solid var(--wood-border-soft);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--btn-shadow-3d);
   width: 90%;
   max-width: 200px;
   min-width: 150px;
@@ -717,8 +793,8 @@ img.terrain-water {
 #left-panel-actions .panel-button-group > button:active {
   background: var(--btn-wood);
   border-color: var(--gold-accent);
-  transform: translateY(1px);
-  box-shadow: none;
+  transform: translateY(3px);
+  box-shadow: var(--btn-shadow-3d-active);
 }
 
 #left-panel-actions > button:disabled,
@@ -737,7 +813,7 @@ img.terrain-water {
   background: var(--btn-gold) !important;
   color: var(--ink-strong) !important;
   font-weight: bold !important;
-  box-shadow: var(--shadow-soft) !important;
+  box-shadow: var(--btn-shadow-3d) !important;
   border: 2px solid var(--gold-accent) !important;
 }
 
@@ -745,14 +821,24 @@ img.terrain-water {
   background: var(--btn-gold-hot) !important;
 }
 
+#left-panel-actions .back-lobby-btn:active {
+  box-shadow: var(--btn-shadow-3d-active) !important;
+  transform: translateY(3px);
+}
+
+#left-panel-actions .back-lobby-btn:disabled {
+  box-shadow: none !important;
+  transform: none;
+}
+
 /* --- Game Rules Panel --- */
 #game-rules {
   background-color: var(--wood-panel); border: 2px solid var(--wood-border); border-radius: 8px;
-  padding: 15px 20px; box-shadow: var(--shadow-soft); box-sizing: border-box;
+  padding: 15px 20px; box-shadow: var(--panel-shadow-3d); background-image: var(--panel-grad-top); box-sizing: border-box;
   width: 98%; max-width: 1000px; margin: 20px auto 0 auto; font-size: 0.9em;
   max-height: 400px; overflow-y: auto; line-height: 1.5;
 }
-#game-rules h2 { font-size: 1.1em; margin-top: 0; margin-bottom: 12px; text-align: center; color: var(--ink-strong); }
+#game-rules h2 { font-size: 1.1em; margin-top: 0; margin-bottom: 12px; text-align: center; color: var(--ink-strong); text-shadow: var(--text-emboss); }
 #game-rules ul { margin: 0; padding-left: 20px; list-style-position: outside; }
 #game-rules ul ul { padding-left: 15px; margin-top: 4px; margin-bottom: 8px; }
 #game-rules li { margin-bottom: 8px; color: var(--ink); }
@@ -771,7 +857,8 @@ img.terrain-water {
   font-size: 1em; font-weight: bold; background-color: var(--wood-panel); color: var(--ink-strong);
   text-align: center; min-height: 1.2em; width: 95%; max-width: calc(476px + 2 * 24px);
   padding: 6px 10px; border-radius: 6px; border: 2px solid var(--wood-border);
-  box-shadow: var(--shadow-soft); margin: 8px auto 0 auto;
+  box-shadow: var(--panel-shadow-3d); background-image: var(--panel-grad-top);
+  text-shadow: var(--text-emboss); margin: 8px auto 0 auto;
 }
 .turn-info {
   font-size: 0.9em; font-weight: bold; text-align: center; margin-top: 10px; padding: 5px;
@@ -802,7 +889,7 @@ img.terrain-water {
   font-size: 44px;
   font-weight: 900;
   color: #ffffff;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  text-shadow: var(--text-stroke-3d), 0 2px 8px rgba(0, 0, 0, 0.7);
   letter-spacing: 1px;
 }
 .announce-banner.blue .announce-title { color: #93c5fd; }
@@ -833,6 +920,53 @@ img.terrain-water {
 #win-chance-bar-red { background-color: var(--clan-red); flex-grow: 1; border-radius: 0 9px 9px 0; }
 #win-chance-bar-blue[style*="width: 100%"] { border-radius: 9px; }
 #win-chance-bar-blue[style*="width: 0%"] + #win-chance-bar-red { border-radius: 9px; }
+
+/* --- Lobby ↔ Game camera-zoom transition ---
+   The same forest backdrop, zoomed like a camera moving into the scene, while
+   the target view fades in on top. Sits above the lobby, below effects. */
+.view-transition-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1350;
+  pointer-events: none;
+  background-image: url('/assets/images/background/Final_background_biggerView_upscaled.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  animation: view-zoom 1s cubic-bezier(0.33, 0.9, 0.4, 1) forwards;
+}
+/* Default: zoom INTO the scene (lobby → game). */
+@keyframes view-zoom {
+  0%   { transform: scale(1);    opacity: 1; }
+  70%  { transform: scale(1.45); opacity: 1; }
+  100% { transform: scale(1.7);  opacity: 0; }
+}
+/* Reverse: zoom OUT of the scene back to the lobby. */
+.view-transition-overlay.reverse {
+  animation: view-zoom-out 1s cubic-bezier(0.33, 0.9, 0.4, 1) forwards;
+}
+@keyframes view-zoom-out {
+  0%   { transform: scale(1.7);  opacity: 1; }
+  70%  { transform: scale(1.1);  opacity: 1; }
+  100% { transform: scale(1);    opacity: 0; }
+}
+
+/* --- Screen shake after a capture --- */
+.screen-shake {
+  animation: screen-shake 0.55s linear;
+}
+@keyframes screen-shake {
+  0%, 100% { transform: translate(0, 0); }
+  10%      { transform: translate(-9px, 4px); }
+  20%      { transform: translate(8px, -5px); }
+  30%      { transform: translate(-7px, 3px); }
+  40%      { transform: translate(6px, -3px); }
+  50%      { transform: translate(-5px, 2px); }
+  60%      { transform: translate(4px, -2px); }
+  70%      { transform: translate(-3px, 1px); }
+  80%      { transform: translate(2px, -1px); }
+  90%      { transform: translate(-1px, 1px); }
+}
 
 /* --- Victory Fireworks Overlay --- */
 .fireworks-overlay {
@@ -958,6 +1092,7 @@ img.terrain-water {
    #left-panel-actions > button,
    #left-panel-actions .panel-button-group > button {
       width: 100%;
+      box-shadow: var(--btn-shadow-3d-sml);
    }
 
    #move-history { max-height: 200px; }
@@ -1001,6 +1136,12 @@ img.terrain-water {
     #left-panel-actions > button,
     #left-panel-actions .panel-button-group > button {
         padding: 6px 10px; font-size: 13px;
+        box-shadow: var(--btn-shadow-3d-sml);
+    }
+    #left-panel-actions > button:active,
+    #left-panel-actions .panel-button-group > button:active {
+        transform: translateY(2px);
+        box-shadow: var(--btn-shadow-3d-active-sml);
     }
    .captured-piece { width: 24px; height: 24px; }
    .pieces-container { max-width: calc(5 * 24px + 4 * 4px + 4px); min-height: calc(3 * 24px + 2 * 4px); margin-left: auto; margin-right: auto; justify-content: center; }

@@ -1,1 +1,181 @@
-<router-outlet></router-outlet>
+<!-- Ambient falling autumn leaves & flowers (all views, behind content) -->
+<app-falling-decor></app-falling-decor>
+
+<!-- Lobby ↔ Game camera-zoom transition: the forest background zooms in /
+     out while the target view fades in on top of it. -->
+<div
+  *ngIf="viewTransitioning"
+  class="view-transition-overlay"
+  [class.reverse]="viewTransitionReverse"
+  aria-hidden="true"
+></div>
+
+<!-- Global Top Header with Title and Fixed Language Selector (lobby only) -->
+<header id="global-header" *ngIf="activeView === 'LOBBY'">
+  <h1 id="game-title">{{ loc.translate('gameTitle') }}</h1>
+
+  <div id="global-lang-switcher">
+    <button
+      (click)="toggleLanguage()"
+      class="lang-toggle-btn"
+      [title]="currentLang === 'vn' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'"
+    >
+      <span class="lang-flag">{{ currentLang === 'vn' ? '🇻🇳' : '🇬🇧' }}</span>
+      <span class="lang-code">{{ currentLang === 'vn' ? 'VN' : 'EN' }}</span>
+    </button>
+  </div>
+</header>
+
+<!-- View 1: Lobby Screen -->
+<ng-container *ngIf="activeView === 'LOBBY'">
+  <app-lobby (selectRoom)="onSelectRoomFromLobby($event)"></app-lobby>
+</ng-container>
+
+<!-- View 2: Active Game Room Screen -->
+<ng-container *ngIf="activeView === 'GAME'">
+  <!-- Active Room Banner Header -->
+  <div id="active-room-banner" *ngIf="currentRoom">
+    <button (click)="onBackToLobby()" class="back-lobby-header-btn">
+      {{ loc.translate('backToLobbyBtn') }}
+    </button>
+    <div class="room-banner-details">
+      <span class="room-badge">{{ currentRoom.mode }}</span>
+      <span class="room-code-tag">[{{ currentRoom.roomId }}]</span>
+      <span class="room-title-text">{{ currentRoom.roomName }}</span>
+    </div>
+  </div>
+
+  <!-- Game Controls Bar -->
+  <app-game-controls
+    [currentLang]="currentLang"
+    (currentLangChange)="currentLang = $event"
+    [gameMode]="gameMode"
+    (gameModeChange)="onGameModeChange($event)"
+    [firstMoveSide]="firstMoveSide"
+    (firstMoveSideChange)="onFirstMoveSideChange($event)"
+    [aiDepth]="aiDepth"
+    (aiDepthChange)="aiDepth = $event"
+    [aiTimeLimit]="aiTimeLimit"
+    (aiTimeLimitChange)="aiTimeLimit = $event"
+    [actualAiDepth]="actualAiDepth"
+    (openRulesModal)="openRulesModal()"
+  ></app-game-controls>
+
+  <!-- Page Wrapper to align Game Layout and Side Chat Box -->
+  <div id="game-page-wrapper">
+    <!-- Main Game Layout Container -->
+    <div id="game-layout">
+      <!-- Left Panel -->
+      <app-left-panel
+        [capturedByRed]="capturedByRed"
+        [canUndo]="moveHistory.length > 0"
+        (resetGame)="initGame()"
+        (undoMove)="undoMove()"
+        (randomizeBoard)="randomizeBoard()"
+        (openRules)="openRulesModal()"
+        (backToLobby)="onBackToLobby()"
+      ></app-left-panel>
+
+      <!-- Main Board Area -->
+      <div id="main-game-area">
+        <app-board
+          [pieces]="pieces"
+          [selectedPos]="selectedPos"
+          [validMoves]="validMoves"
+          [lastMove]="getLastMove()"
+          [movingPiece]="movingPiece"
+          (squareClick)="onSquareClick($event)"
+          (moveAnimationComplete)="onMoveAnimationComplete()"
+        ></app-board>
+
+        <!-- Status Message -->
+        <div id="status">{{ statusMessage }}</div>
+
+        <!-- Win Chance Bar -->
+        <app-win-chance-bar [pieces]="pieces"></app-win-chance-bar>
+      </div>
+
+      <!-- Right Panel -->
+      <app-right-panel
+        [capturedByBlue]="capturedByBlue"
+        [moveHistory]="moveHistory"
+        [currentTurn]="currentTurn"
+      ></app-right-panel>
+    </div>
+
+    <!-- Side Chat Box -->
+    <div id="side-chat-wrapper">
+      <app-chat
+        [messages]="chatMessages"
+        [currentTurn]="currentTurn"
+        (sendMessage)="onSendChatMessage($event)"
+      ></app-chat>
+    </div>
+  </div>
+</ng-container>
+
+<!-- Rules Popup Modal -->
+<app-game-rules-modal
+  [isOpen]="isRulesModalOpen"
+  (close)="closeRulesModal()"
+></app-game-rules-modal>
+
+<!-- Turn / Win Announcement Banner (fixed center overlay) -->
+<div
+  *ngIf="banner as b"
+  class="announce-banner"
+  [class.blue]="b.side === 0"
+  [class.red]="b.side === 1"
+  [class.neutral]="b.side === undefined"
+>
+  <div class="announce-title">{{ b.title }}</div>
+  <div *ngIf="b.subtitle" class="announce-subtitle">{{ b.subtitle }}</div>
+</div>
+
+<!-- Equal-Rank Battle Arena (fixed full-screen overlay) -->
+<app-battle-overlay
+  *ngIf="battle as b"
+  [attacker]="b.attacker"
+  [defender]="b.defender"
+  [attackerIsAI]="b.attacker.side === 1 && (gameMode === 'PVA' || detailedGameMode === 'EVE')"
+  [defenderIsAI]="b.defender.side === 1 && (gameMode === 'PVA' || detailedGameMode === 'EVE')"
+  (battleResult)="onBattleResult($event)"
+></app-battle-overlay>
+
+<!-- Victory Fireworks Overlay (winner-side colors) -->
+<div
+  *ngIf="fireworkBursts.length > 0"
+  class="fireworks-overlay"
+  [class.blue]="fireworkSide === 0"
+  [class.red]="fireworkSide === 1"
+>
+  <div class="fireworks-congrats" aria-live="polite">
+    <div class="fireworks-title">{{ fireworkTitle }}</div>
+    <div class="fireworks-subtitle">{{ fireworkSubtitle }}</div>
+  </div>
+
+  <ng-container *ngFor="let burst of fireworkBursts">
+    <div
+      class="firework-burst"
+      [ngStyle]="{ left: burst.x + 'vw', top: burst.y + 'vh' }"
+    >
+      <div
+        *ngFor="let p of burst.particles"
+        class="firework-particle"
+        [style.--dx]="p.dx + 'px'"
+        [style.--dy]="p.dy + 'px'"
+        [style.--delay]="p.delay + 'ms'"
+        [style.--size]="p.size + 'px'"
+        [style.--pcolor]="p.color"
+      ></div>
+    </div>
+  </ng-container>
+</div>
+
+<!-- Defeat Clown Overlay (PVA loss only) -->
+<div *ngIf="showClown" class="clown-overlay">
+  <div class="clown-face" role="img" aria-label="Thua cuộc">🤡</div>
+</div>
+
+<!-- Eaten-animal meme popup (player's piece was captured) -->
+<app-eaten-popup [items]="eatenPopups"></app-eaten-popup>

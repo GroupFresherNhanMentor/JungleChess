@@ -1,7 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, Subject, first } from 'rxjs';
 import { StompSubscription } from '@stomp/stompjs';
-import { Move, Piece, PieceSide, Position, RoomStatus } from '../models/game.models';
+import { BotInfo, Move, Piece, PieceSide, Position, RoomStatus } from '../models/game.models';
 import {
   GameResultEvent,
   LobbyRoomEntry,
@@ -16,6 +17,7 @@ import {
 import { RSocketService } from './rsocket.service';
 import { BoardAdapterService } from './board-adapter.service';
 import { GameRuleService } from './game-rule.service';
+import { AuthService } from './auth.service';
 
 export interface OnlineGameState {
   roomId: string;
@@ -43,6 +45,8 @@ export class GameRoomService {
 
   private personalSub: StompSubscription | null = null;
   private roomSub: StompSubscription | null = null;
+  private http = inject(HttpClient);
+  private authService = inject(AuthService);
 
   constructor(
     private stomp: RSocketService,
@@ -70,7 +74,17 @@ export class GameRoomService {
 
   // ── Create ────────────────────────────────────────────────────────────────
 
-  createRoom(mode: string, botDifficulty?: string, allowSpectator = false): Observable<string> {
+  getOnlineBots(): Observable<BotInfo[]> {
+    return this.http.get<BotInfo[]>('/api/bots/online');
+  }
+
+  createRoom(
+    mode: string,
+    botDifficulty?: string,
+    allowSpectator = false,
+    player1BotId?: string,
+    player2BotId?: string,
+  ): Observable<string> {
     this.cleanupRoom();
     this.gameState$.next(null);
     const result$ = new Subject<string>();
@@ -100,6 +114,8 @@ export class GameRoomService {
       allowSpectator,
       allowBet: false,
       botDifficulty: botDifficulty ?? null,
+      player1BotId: player1BotId ?? null,
+      player2BotId: player2BotId ?? null,
     });
 
     return result$.asObservable();
@@ -237,11 +253,12 @@ export class GameRoomService {
         const e = event as RoomJoinedEvent;
         this.currentRoomId = e.roomId;
         const current = this.gameState$.value;
+        const myUserId = this.authService.getUserId();
         this.gameState$.next({
           roomId: e.roomId,
           yourSide: this.adapter.toSide(e.yourSide),
           yourSideRaw: e.yourSide,
-          isCreator: current?.isCreator ?? false,
+          isCreator: !!myUserId && myUserId === e.creatorUserId,
           isSpectator: e.yourSide === 'SPECTATOR',
           mode: e.mode ?? current?.mode ?? '',
           status: e.status as RoomStatus,

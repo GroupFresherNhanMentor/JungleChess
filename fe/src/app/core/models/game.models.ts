@@ -60,6 +60,11 @@ export interface RoomInfo {
   aiDepth?: number;
 }
 
+export interface BotInfo {
+  id: string;
+  name: string;
+}
+
 export type Language = 'en' | 'vn';
 
 export const PIECE_RANKS: Record<PieceType, number> = {

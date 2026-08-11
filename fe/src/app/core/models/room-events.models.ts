@@ -20,6 +20,7 @@ export interface RoomJoinedEvent extends RoomEvent {
   yourSide: string;
   mode: string;
   status: string;
+  creatorUserId: string;
   board: string[][];
   currentTurn: string;
   players: ServerPlayerInfo[];

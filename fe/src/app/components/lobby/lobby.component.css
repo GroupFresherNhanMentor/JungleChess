@@ -745,3 +745,15 @@
     justify-content: flex-end;
   }
 }
+.bot-loading {
+  font-size: 0.85rem;
+  color: #888;
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.no-bots-msg {
+  font-size: 0.85rem;
+  color: #e57373;
+  margin: 4px 0 0;
+}

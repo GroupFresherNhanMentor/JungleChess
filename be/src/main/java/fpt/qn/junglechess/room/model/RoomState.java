@@ -26,7 +26,10 @@ public class RoomState {
     boolean allowSpectator;
     boolean allowBet;
     String creatorSessionId;
+    String creatorUserId;
     String botDifficulty;
+    String player1BotId;
+    String player2BotId;
     String[][] board;
     String currentTurn;
     int moveNumber;

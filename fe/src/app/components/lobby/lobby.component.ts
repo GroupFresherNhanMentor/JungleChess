@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { GameMode, PieceSide, RoomInfo, RoomStatus } from '../../core/models/game.models';
+import { BotInfo, GameMode, PieceSide, RoomInfo, RoomStatus } from '../../core/models/game.models';
 import { AuthService } from '../../core/services/auth.service';
 import { LobbyRoomEntry } from '../../core/models/room-events.models';
 import { GameRoomService } from '../../core/services/game-room.service';
@@ -35,6 +35,11 @@ export class LobbyComponent implements OnInit {
   newRoomMode: GameMode = 'PVP_ONLINE';
   newRoomDifficulty: 'EASY' | 'MEDIUM' | 'HARD' = 'MEDIUM';
   newRoomAllowSpectator = false;
+
+  onlineBots: BotInfo[] = [];
+  selectedPlayer1BotId = '';
+  selectedPlayer2BotId = '';
+  isLoadingBots = false;
 
   isJoining = false;
   joinRoomId = '';
@@ -70,7 +75,30 @@ export class LobbyComponent implements OnInit {
     this.newRoomMode = 'PVP_ONLINE';
     this.newRoomDifficulty = 'MEDIUM';
     this.newRoomAllowSpectator = false;
+    this.selectedPlayer1BotId = '';
+    this.selectedPlayer2BotId = '';
     this.isCreateModalOpen = true;
+    this.fetchOnlineBots();
+  }
+
+  private fetchOnlineBots(): void {
+    this.isLoadingBots = true;
+    this.gameRoom.getOnlineBots().subscribe({
+      next: bots => {
+        this.onlineBots = bots;
+        this.selectedPlayer1BotId = bots[0]?.id ?? '';
+        this.selectedPlayer2BotId = bots[0]?.id ?? '';
+        this.isLoadingBots = false;
+      },
+      error: () => {
+        this.onlineBots = [];
+        this.isLoadingBots = false;
+      },
+    });
+  }
+
+  get needsBotSelection(): boolean {
+    return this.newRoomMode === 'PVE' || this.newRoomMode === 'EVE';
   }
 
   closeCreateModal(): void {
@@ -83,10 +111,12 @@ export class LobbyComponent implements OnInit {
 
     const backendMode = this.frontendModeToBackend(this.newRoomMode);
     const difficulty = (this.newRoomMode === 'PVE' || this.newRoomMode === 'EVE') ? this.newRoomDifficulty : undefined;
-    // PVE/EVE always allow spectators (enforced on backend too); PVP respects checkbox
     const allowSpectator = this.newRoomMode !== 'PVP_ONLINE' || this.newRoomAllowSpectator;
+    const player1BotId = this.newRoomMode === 'EVE' ? (this.selectedPlayer1BotId || undefined) : undefined;
+    const player2BotId = (this.newRoomMode === 'PVE' || this.newRoomMode === 'EVE')
+      ? (this.selectedPlayer2BotId || undefined) : undefined;
 
-    this.gameRoom.createRoom(backendMode, difficulty, allowSpectator).subscribe({
+    this.gameRoom.createRoom(backendMode, difficulty, allowSpectator, player1BotId, player2BotId).subscribe({
       next: roomId => {
         this.isLoading = false;
         this.router.navigate(['/game', roomId]);

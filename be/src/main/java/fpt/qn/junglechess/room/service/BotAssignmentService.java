@@ -24,12 +24,25 @@ public class BotAssignmentService {
         try {
             messaging.convertAndSendToUser(
                     botWorkerUsername,
-                    "/queue/assign",
+                    "/queue/bot-invite",
                     Map.of("roomId", roomId, "side", side, "difficulty", difficulty != null ? difficulty : "MEDIUM")
             );
             log.info("Bot assignment sent via WebSocket: room={}, side={}, difficulty={}", roomId, side, difficulty);
         } catch (Exception e) {
             log.error("Failed to send bot assignment for room {} ({}): {}", roomId, side, e.getMessage());
+        }
+    }
+
+    public void inviteBot(String botUsername, String roomId, String side, String difficulty) {
+        try {
+            messaging.convertAndSendToUser(
+                    botUsername,
+                    "/queue/bot-invite",
+                    Map.of("roomId", roomId, "side", side, "difficulty", difficulty != null ? difficulty : "MEDIUM")
+            );
+            log.info("Bot invite sent: bot={}, room={}, side={}, difficulty={}", botUsername, roomId, side, difficulty);
+        } catch (Exception e) {
+            log.error("Failed to invite bot {} for room {} ({}): {}", botUsername, roomId, side, e.getMessage());
         }
     }
 }

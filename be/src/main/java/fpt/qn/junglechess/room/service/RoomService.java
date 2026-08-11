@@ -71,6 +71,7 @@ public class RoomService {
                 .allowSpectator(allowSpectator)
                 .allowBet(allowBet)
                 .creatorSessionId(sessionId)
+                .creatorUserId(userId)
                 .board(BoardInitializer.standard().toBoardStateArray())
                 .currentTurn(PlayerSide.PLAYER_1.name())
                 .moveNumber(0)
@@ -113,12 +114,39 @@ public class RoomService {
         // the creator must click Start to begin the game.
         String difficulty = req.getBotDifficulty() != null ? req.getBotDifficulty() : "MEDIUM";
         state.setBotDifficulty(difficulty);
-        roomRepo.save(state);
         if (isPve) {
-            botAssignmentService.assign(roomId, PlayerSide.PLAYER_2.name(), difficulty);
+            String p2Username = resolveBot(req.getPlayer2BotId(), state, false);
+            roomRepo.save(state);
+            sendBotInvite(p2Username, req.getPlayer2BotId(), roomId, PlayerSide.PLAYER_2.name(), difficulty);
         } else if (isEve) {
-            botAssignmentService.assign(roomId, PlayerSide.PLAYER_1.name(), difficulty);
-            botAssignmentService.assign(roomId, PlayerSide.PLAYER_2.name(), difficulty);
+            String p1Username = resolveBot(req.getPlayer1BotId(), state, true);
+            String p2Username = resolveBot(req.getPlayer2BotId(), state, false);
+            roomRepo.save(state);
+            sendBotInvite(p1Username, req.getPlayer1BotId(), roomId, PlayerSide.PLAYER_1.name(), difficulty);
+            sendBotInvite(p2Username, req.getPlayer2BotId(), roomId, PlayerSide.PLAYER_2.name(), difficulty);
+        } else {
+            roomRepo.save(state);
+        }
+    }
+
+    /** Resolves a bot userId to its username and stores the botId in RoomState. Returns null if not found. */
+    private String resolveBot(String botId, RoomState state, boolean isPlayer1) {
+        if (botId == null) return null;
+        String username = sessionRegistry.getUsernameByUserId(botId);
+        if (username != null) {
+            if (isPlayer1) state.setPlayer1BotId(botId);
+            else state.setPlayer2BotId(botId);
+        }
+        return username;
+    }
+
+    /** Sends invite to a specific bot by username, or falls back to the default bot-worker assignment. */
+    private void sendBotInvite(String botUsername, String botId, String roomId, String side, String difficulty) {
+        if (botUsername != null) {
+            botAssignmentService.inviteBot(botUsername, roomId, side, difficulty);
+        } else {
+            // botId given but bot not connected, or no botId → fall back to default worker
+            botAssignmentService.assign(roomId, side, difficulty);
         }
     }
 
@@ -156,7 +184,7 @@ public class RoomService {
                 roomId, state.getPlayers(), state.getSpectators(), RoomStatus.WAITING.name()));
         eventBus.emitToSession(sessionId, new RoomJoinedEvent(
                 roomId, side, state.getMode().name(), RoomStatus.WAITING.name(),
-                state.getBoard(), state.getCurrentTurn(),
+                state.getCreatorUserId(), state.getBoard(), state.getCurrentTurn(),
                 state.getPlayers(), state.getSpectators()));
     }
 
@@ -189,7 +217,7 @@ public class RoomService {
             if (!oldSessionId.equals(sessionId)) roomRepo.deleteSessionMapping(oldSessionId);
             eventBus.emitToSession(sessionId, new RoomJoinedEvent(
                     roomId, side, state.getMode().name(), state.getStatus().name(),
-                    state.getBoard(), state.getCurrentTurn(),
+                    state.getCreatorUserId(), state.getBoard(), state.getCurrentTurn(),
                     state.getPlayers(), state.getSpectators()));
             log.info("Bot reconnected: room={} side={}", roomId, side);
             return;
@@ -219,7 +247,7 @@ public class RoomService {
                 roomId, state.getPlayers(), state.getSpectators(), RoomStatus.WAITING.name()));
         eventBus.emitToSession(sessionId, new RoomJoinedEvent(
                 roomId, side, state.getMode().name(), RoomStatus.WAITING.name(),
-                state.getBoard(), state.getCurrentTurn(),
+                state.getCreatorUserId(), state.getBoard(), state.getCurrentTurn(),
                 state.getPlayers(), state.getSpectators()));
     }
 
@@ -261,7 +289,7 @@ public class RoomService {
             eventBus.destroySession(oldSessionId);
             eventBus.emitToSession(newSessionId, new RoomJoinedEvent(
                     roomId, player.getSide(), state.getMode().name(), state.getStatus().name(),
-                    state.getBoard(), state.getCurrentTurn(),
+                    state.getCreatorUserId(), state.getBoard(), state.getCurrentTurn(),
                     state.getPlayers(), state.getSpectators()));
             return;
         }
@@ -282,7 +310,7 @@ public class RoomService {
             eventBus.destroySession(oldSessionId);
             eventBus.emitToSession(newSessionId, new RoomJoinedEvent(
                     roomId, "SPECTATOR", state.getMode().name(), state.getStatus().name(),
-                    state.getBoard(), state.getCurrentTurn(),
+                    state.getCreatorUserId(), state.getBoard(), state.getCurrentTurn(),
                     state.getPlayers(), state.getSpectators()));
             return;
         }
@@ -313,7 +341,7 @@ public class RoomService {
                 roomId, state.getPlayers(), state.getSpectators(), state.getStatus().name()));
         eventBus.emitToSession(sessionId, new RoomJoinedEvent(
                 roomId, "SPECTATOR", state.getMode().name(), state.getStatus().name(),
-                state.getBoard(), state.getCurrentTurn(),
+                state.getCreatorUserId(), state.getBoard(), state.getCurrentTurn(),
                 state.getPlayers(), state.getSpectators()));
     }
 
@@ -489,6 +517,7 @@ public class RoomService {
         state.setMoveNumber(0);
         state.setStatus(RoomStatus.WAITING);
         state.getHistory().clear();
+        state.getPositionHistory().clear();
         state.setUpdatedAt(Instant.now());
 
         if (state.getMode() == GameMode.PVE) {
@@ -503,13 +532,19 @@ public class RoomService {
         eventBus.emit(roomId, new PlayersUpdatedEvent(
                 roomId, state.getPlayers(), state.getSpectators(), RoomStatus.WAITING.name()));
 
-        // Re-assign bots with the same difficulty as the original game
+        // Re-invite bots with the same difficulty and the same bot IDs as the original game
         String difficulty = state.getBotDifficulty() != null ? state.getBotDifficulty() : "MEDIUM";
         if (state.getMode() == GameMode.PVE) {
-            botAssignmentService.assign(roomId, PlayerSide.PLAYER_2.name(), difficulty);
+            String p2Username = state.getPlayer2BotId() != null
+                    ? sessionRegistry.getUsernameByUserId(state.getPlayer2BotId()) : null;
+            sendBotInvite(p2Username, state.getPlayer2BotId(), roomId, PlayerSide.PLAYER_2.name(), difficulty);
         } else if (state.getMode() == GameMode.EVE) {
-            botAssignmentService.assign(roomId, PlayerSide.PLAYER_1.name(), difficulty);
-            botAssignmentService.assign(roomId, PlayerSide.PLAYER_2.name(), difficulty);
+            String p1Username = state.getPlayer1BotId() != null
+                    ? sessionRegistry.getUsernameByUserId(state.getPlayer1BotId()) : null;
+            String p2Username = state.getPlayer2BotId() != null
+                    ? sessionRegistry.getUsernameByUserId(state.getPlayer2BotId()) : null;
+            sendBotInvite(p1Username, state.getPlayer1BotId(), roomId, PlayerSide.PLAYER_1.name(), difficulty);
+            sendBotInvite(p2Username, state.getPlayer2BotId(), roomId, PlayerSide.PLAYER_2.name(), difficulty);
         } else {
             // PVP: immediately start again (no bots to wait for)
             state.setStatus(RoomStatus.PLAYING);

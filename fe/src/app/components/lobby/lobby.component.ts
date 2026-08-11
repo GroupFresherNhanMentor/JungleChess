@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { LobbyRoomEntry } from '../../core/models/room-events.models';
 import { GameRoomService } from '../../core/services/game-room.service';
 import { LobbyRSocketService } from '../../core/services/lobby-rsocket.service';
+import { RSocketService } from '../../core/services/rsocket.service';
 
 @Component({
   selector: 'app-lobby',
@@ -23,6 +24,7 @@ export class LobbyComponent implements OnInit {
   private readonly lobbyRSocket = inject(LobbyRSocketService);
   private readonly gameRoom = inject(GameRoomService);
   private readonly authService = inject(AuthService);
+  private readonly rsocket = inject(RSocketService);
   private readonly router = inject(Router);
 
   readonly rooms = toSignal(this.lobbyRSocket.rooms$, { initialValue: [] as LobbyRoomEntry[] });
@@ -106,6 +108,14 @@ export class LobbyComponent implements OnInit {
   }
 
   onCreateRoom(): void {
+    if (this.isLoading) return;
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
     this.isLoading = true;
     this.closeCreateModal();
 
@@ -116,14 +126,22 @@ export class LobbyComponent implements OnInit {
     const player2BotId = (this.newRoomMode === 'PVE' || this.newRoomMode === 'EVE')
       ? (this.selectedPlayer2BotId || undefined) : undefined;
 
-    this.gameRoom.createRoom(backendMode, difficulty, allowSpectator, player1BotId, player2BotId).subscribe({
-      next: roomId => {
-        this.isLoading = false;
-        this.router.navigate(['/game', roomId]);
+    this.rsocket.connect(token).subscribe({
+      next: () => {
+        this.gameRoom.createRoom(backendMode, difficulty, allowSpectator, player1BotId, player2BotId).subscribe({
+          next: roomId => {
+            this.isLoading = false;
+            this.router.navigate(['/game', roomId]);
+          },
+          error: err => {
+            this.isLoading = false;
+            this.showToast('Failed to create room: ' + (err?.message ?? err));
+          },
+        });
       },
       error: err => {
         this.isLoading = false;
-        this.showToast('Failed to create room: ' + (err?.message ?? err));
+        this.showToast('Failed to connect: ' + (err?.message ?? err));
       },
     });
   }

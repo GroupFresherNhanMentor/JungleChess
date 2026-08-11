@@ -15,8 +15,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * Pure Minimax Engine with Alpha-Beta Pruning.
@@ -33,6 +35,8 @@ public class AlphaBetaBotEngine implements BotEngine {
     private static final int P1_DEN_ROW = 0, P1_DEN_COL = 3;
     private static final int P2_DEN_ROW = 8, P2_DEN_COL = 3;
     private static final int MAX_QS_DEPTH = 4;
+    private static final int OPENING_MOVES_THRESHOLD = 6;
+    private static final int OPENING_MARGIN = 25;
 
     public AlphaBetaBotEngine(GameRuleEngine gameRuleEngine, BoardEvaluator boardEvaluator) {
         this.gameRuleEngine = gameRuleEngine;
@@ -60,6 +64,7 @@ public class AlphaBetaBotEngine implements BotEngine {
         AtomicLong nodesSearched = new AtomicLong(0);
         Move bestMoveFound = validMoves.get(0);
         int bestScoreFound = 0;
+        SearchResult lastValidResult = null;
 
         // Iterative Deepening Minimax Loop
         for (int currentDepth = 1; currentDepth <= maxDepth; currentDepth++) {
@@ -94,17 +99,54 @@ public class AlphaBetaBotEngine implements BotEngine {
             }
 
             if (!res.aborted() && res.bestMove() != null) {
+                lastValidResult = res;
                 bestMoveFound = res.bestMove();
                 bestScoreFound = res.bestScore();
             }
         }
 
+        if (lastValidResult != null) {
+            bestMoveFound = selectOpeningMove(lastValidResult, context);
+        }
+
+        context.incrementMoveNumber();
+
         long durationMs = (System.nanoTime() - startTime) / 1_000_000L;
         long nps = durationMs > 0 ? (nodesSearched.get() * 1000L / durationMs) : nodesSearched.get();
-        log.info("[BotEngine] Depth: {} | Move: {}->{} | Score: {} | Nodes: {} (NPS: {})",
-                maxDepth, bestMoveFound.from(), bestMoveFound.to(), bestScoreFound, nodesSearched.get(), nps);
+        log.info("[BotEngine] Depth: {} | Move: {}->{} | Score: {} | MoveNum: {} | Seed: {} | Nodes: {} (NPS: {})",
+                maxDepth, bestMoveFound.from(), bestMoveFound.to(), bestScoreFound, context.getMoveNumber(), context.getRngSeed(), nodesSearched.get(), nps);
 
         return bestMoveFound;
+    }
+
+    private Move selectOpeningMove(SearchResult res, BotContext context) {
+        int moveNum = context.getMoveNumber();
+        int bestScore = res.bestScore();
+
+        if (moveNum >= OPENING_MOVES_THRESHOLD || res.allMoveScores() == null || res.allMoveScores().isEmpty()) {
+            return res.bestMove();
+        }
+
+        if (bestScore >= BoardEvaluator.WIN_SCORE - 1000 || bestScore <= BoardEvaluator.LOSS_SCORE + 1000) {
+            return res.bestMove();
+        }
+
+        int lowerBound = bestScore - OPENING_MARGIN;
+        List<Move> candidates = res.allMoveScores().stream()
+                .filter(ms -> ms.score() >= lowerBound)
+                .map(MoveScore::move)
+                .collect(Collectors.toList());
+
+        if (candidates.isEmpty()) {
+            return res.bestMove();
+        }
+
+        Move chosen = candidates.get(context.getOpeningRng().nextInt(candidates.size()));
+        if (!chosen.equals(res.bestMove())) {
+            log.info("[BotEngine] Opening Diversification (Move {}): Selected alternate move {}->{} from {} candidates within margin {}",
+                    moveNum + 1, chosen.from(), chosen.to(), candidates.size(), OPENING_MARGIN);
+        }
+        return chosen;
     }
 
     private SearchResult searchRootLevel(Board workingBoard, List<Move> validMoves, Side side,
@@ -113,6 +155,7 @@ public class AlphaBetaBotEngine implements BotEngine {
         Move iterBestMove = null;
         int iterBestScore = Integer.MIN_VALUE;
         boolean aborted = false;
+        List<MoveScore> allMoveScores = new ArrayList<>();
 
         for (Move move : validMoves) {
             if (deadlineExceeded(deadline)) {
@@ -131,6 +174,7 @@ public class AlphaBetaBotEngine implements BotEngine {
             }
 
             workingBoard.undoMove(move);
+            allMoveScores.add(new MoveScore(move, score));
 
             if (score > iterBestScore) {
                 iterBestScore = score;
@@ -138,10 +182,12 @@ public class AlphaBetaBotEngine implements BotEngine {
             }
         }
 
-        return new SearchResult(iterBestMove, iterBestScore, aborted);
+        return new SearchResult(iterBestMove, iterBestScore, aborted, allMoveScores);
     }
 
-    private record SearchResult(Move bestMove, int bestScore, boolean aborted) {}
+    private record MoveScore(Move move, int score) {}
+
+    private record SearchResult(Move bestMove, int bestScore, boolean aborted, List<MoveScore> allMoveScores) {}
 
     /**
      * Pure Minimax Search with Alpha-Beta Pruning, Killer Moves & History Heuristic.

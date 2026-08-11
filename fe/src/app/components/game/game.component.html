@@ -27,7 +27,10 @@
       <p class="players-joined">👥 Players joined: <strong>{{ state()?.players?.length ?? 0 }}</strong> / 2</p>
       <ul>
         <li *ngFor="let p of state()?.players">
-          {{ p.side }} <span *ngIf="p.isBot" class="bot-tag">(Bot)</span>
+          <span class="player-side-dot" [class.red-dot]="p.side === 'PLAYER_1'" [class.blue-dot]="p.side === 'PLAYER_2'"></span>
+          <strong>{{ p.displayName || p.side }}</strong>
+          <span class="side-tag">({{ p.side === 'PLAYER_1' ? 'Red' : 'Blue' }})</span>
+          <span *ngIf="p.isBot" class="bot-tag">🤖 Bot</span>
         </li>
       </ul>
     </div>
@@ -60,6 +63,7 @@
         [capturedByRed]="capturedByRed()"
         [canUndo]="false"
         [onlineMode]="true"
+        [playerName]="player1Name"
         (openRules)="openRules()"
         (backToLobby)="onBackToLobby()"
       ></app-left-panel>
@@ -81,7 +85,8 @@
           <ng-container *ngIf="state() as s">
             <ng-container *ngIf="s.status === 'PLAYING'">
               <span>
-                {{ isMyTurn ? 'Your turn' : "Opponent's turn" }} ({{ turnLabel }}) — Move #{{ s.moveNumber }}
+                <span [style.color]="s.currentTurn === 1 ? 'red' : 'blue'">{{ turnPlayerName }}</span>
+                {{ isMyTurn ? '(your turn)' : "(opponent's turn)" }} — Move #{{ s.moveNumber }}
               </span>
             </ng-container>
             <ng-container *ngIf="s.status === 'ENDED'">
@@ -99,6 +104,8 @@
         [capturedByBlue]="capturedByBlue()"
         [moveHistory]="moveHistory()"
         [currentTurn]="state()?.currentTurn ?? 0"
+        [playerName]="player2Name"
+        [turnPlayerName]="turnPlayerName"
       ></app-right-panel>
     </div>
   </div>

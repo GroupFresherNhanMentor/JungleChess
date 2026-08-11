@@ -113,8 +113,8 @@ public class StompConnectionService {
                         // Re-subscribe all room topics
                         subscriptions.forEach((topic, handler) -> s.subscribe(topic, handler));
 
-                        // Subscribe to bot assignment queue (server pushes assign messages here)
-                        s.subscribe("/user/queue/assign", new StompFrameHandler() {
+                        // Subscribe to bot invite queue (server pushes room invitations here)
+                        s.subscribe("/user/queue/bot-invite", new StompFrameHandler() {
                             @Override
                             public Type getPayloadType(StompHeaders headers) { return Map.class; }
 

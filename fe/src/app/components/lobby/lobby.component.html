@@ -118,6 +118,30 @@
         </select>
       </div>
 
+      <!-- EVE: bot for PLAYER_1 (Red) -->
+      <div *ngIf="newRoomMode === 'EVE'" class="form-group">
+        <label>Bot Đỏ (Quân 1)</label>
+        <div *ngIf="isLoadingBots" class="bot-loading">Đang tải danh sách bot...</div>
+        <ng-container *ngIf="!isLoadingBots">
+          <select *ngIf="onlineBots.length > 0" [(ngModel)]="selectedPlayer1BotId" class="form-select">
+            <option *ngFor="let bot of onlineBots" [value]="bot.id">{{ bot.name }}</option>
+          </select>
+          <p *ngIf="onlineBots.length === 0" class="no-bots-msg">Không có bot nào đang kết nối</p>
+        </ng-container>
+      </div>
+
+      <!-- PVE / EVE: bot for PLAYER_2 (Blue) -->
+      <div *ngIf="newRoomMode === 'PVE' || newRoomMode === 'EVE'" class="form-group">
+        <label>{{ newRoomMode === 'EVE' ? 'Bot Xanh (Quân 2)' : 'Chọn Bot đối thủ' }}</label>
+        <div *ngIf="isLoadingBots" class="bot-loading">Đang tải danh sách bot...</div>
+        <ng-container *ngIf="!isLoadingBots">
+          <select *ngIf="onlineBots.length > 0" [(ngModel)]="selectedPlayer2BotId" class="form-select">
+            <option *ngFor="let bot of onlineBots" [value]="bot.id">{{ bot.name }}</option>
+          </select>
+          <p *ngIf="onlineBots.length === 0" class="no-bots-msg">Không có bot nào đang kết nối</p>
+        </ng-container>
+      </div>
+
       <div class="form-group form-group-checkbox">
         <label>
           <input type="checkbox" [checked]="newRoomMode !== 'PVP_ONLINE' || newRoomAllowSpectator"
@@ -128,7 +152,10 @@
       </div>
 
       <div class="modal-actions">
-        <button (click)="onCreateRoom()" class="modal-create-btn">Tạo Phòng</button>
+        <button (click)="onCreateRoom()" class="modal-create-btn"
+                [disabled]="isLoading || isLoadingBots || (needsBotSelection && onlineBots.length === 0)">
+          Tạo Phòng
+        </button>
         <button (click)="closeCreateModal()" class="modal-cancel-btn">Hủy</button>
       </div>
     </div>

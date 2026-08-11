@@ -20,6 +20,7 @@ export interface RoomJoinedEvent extends RoomEvent {
   yourSide: string;
   mode: string;
   status: string;
+  creatorUserId: string;
   board: string[][];
   currentTurn: string;
   players: ServerPlayerInfo[];
@@ -69,6 +70,7 @@ export interface ServerPlayerInfo {
   side: string;
   isBot: boolean;
   userId: string;
+  displayName: string;
 }
 
 export interface ServerSpectatorInfo {

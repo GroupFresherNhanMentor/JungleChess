@@ -2,8 +2,10 @@ package fpt.qn.junglechess.room.service;
 
 import org.springframework.stereotype.Component;
 
+import fpt.qn.junglechess.room.dto.response.BotOnlineInfo;
 import fpt.qn.junglechess.security.JwtUserPrincipal;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -50,5 +52,22 @@ public class SessionRegistry {
 
     public StompSessionContext findById(String sessionId) {
         return sessions.get(sessionId);
+    }
+
+    public String getUsernameByUserId(String userId) {
+        String sessionId = userToSession.get(userId);
+        if (sessionId == null) return null;
+        StompSessionContext ctx = sessions.get(sessionId);
+        return ctx != null && ctx.principal() != null ? ctx.principal().username() : null;
+    }
+
+    public List<BotOnlineInfo> getConnectedBots() {
+        return sessions.values().stream()
+                .filter(ctx -> ctx.principal() != null
+                        && ctx.principal().roles().contains("BOT"))
+                .map(ctx -> new BotOnlineInfo(
+                        ctx.principal().userId().toString(),
+                        ctx.principal().username()))
+                .toList();
     }
 }

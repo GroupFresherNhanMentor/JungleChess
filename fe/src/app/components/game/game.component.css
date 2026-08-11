@@ -330,3 +330,26 @@ button {
   align-items: center;
   gap: 12px;
 }
+
+.player-side-dot, .side-color-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.red-dot { background: #e53935; }
+.blue-dot { background: #1565c0; }
+
+.side-tag {
+  font-size: 0.78em;
+  color: #888;
+  margin-left: 4px;
+}
+
+.player-name-label {
+  font-weight: 600;
+}
+.red-name { color: #c62828; }
+.blue-name { color: #1565c0; }

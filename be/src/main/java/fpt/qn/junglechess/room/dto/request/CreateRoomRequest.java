@@ -26,6 +26,12 @@ public class CreateRoomRequest {
 
     String botDifficulty;
 
+    /** UUID of the bot to assign as PLAYER_1 (EVE only). Null falls back to the default bot-worker. */
+    String player1BotId;
+
+    /** UUID of the bot to assign as PLAYER_2 (PVE and EVE). Null falls back to the default bot-worker. */
+    String player2BotId;
+
     @JsonIgnore
     @AssertTrue(message = "allowBet requires allowSpectator to be true")
     public boolean isAllowBetValid() {

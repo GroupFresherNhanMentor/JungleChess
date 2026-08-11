@@ -294,6 +294,21 @@ export class GameComponent implements OnInit, OnDestroy {
     return s.isCreator;
   }
 
+  get player1Name(): string {
+    return this.state()?.players.find(p => p.side === 'PLAYER_1')?.displayName ?? 'Player 1';
+  }
+
+  get player2Name(): string {
+    return this.state()?.players.find(p => p.side === 'PLAYER_2')?.displayName ?? 'Player 2';
+  }
+
+  get turnPlayerName(): string {
+    const s = this.state();
+    if (!s) return '';
+    // currentTurn: 1 = PLAYER_1 (Red), 0 = PLAYER_2 (Blue)
+    return s.currentTurn === 1 ? this.player1Name : this.player2Name;
+  }
+
   get sideLabel(): string {
     const raw = this.state()?.yourSideRaw;
     if (raw === 'PLAYER_1') return 'Red (PLAYER_1)';

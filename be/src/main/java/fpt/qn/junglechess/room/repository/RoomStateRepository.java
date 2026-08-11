@@ -2,12 +2,15 @@ package fpt.qn.junglechess.room.repository;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fpt.qn.junglechess.room.model.GameMode;
 import fpt.qn.junglechess.room.model.RoomState;
+import fpt.qn.junglechess.room.model.RoomStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -91,6 +94,27 @@ public class RoomStateRepository {
                     }
                 })
                 .filter(Objects::nonNull)
+                .filter(room -> {
+                    if (room.getStatus() == RoomStatus.ENDED) {
+                        redisTemplate.delete(ROOM_PREFIX + room.getRoomId());
+                        return false;
+                    }
+                    Instant now = Instant.now();
+                    // Purge WAITING rooms created more than 2 minutes ago
+                    if (room.getStatus() == RoomStatus.WAITING) {
+                        if (room.getCreatedAt() == null || room.getCreatedAt().plus(Duration.ofMinutes(2)).isBefore(now)) {
+                            redisTemplate.delete(ROOM_PREFIX + room.getRoomId());
+                            return false;
+                        }
+                    }
+                    boolean hasPlayers = room.getPlayers() != null && !room.getPlayers().isEmpty();
+                    boolean hasSpectators = room.getSpectators() != null && !room.getSpectators().isEmpty();
+                    if (!hasPlayers && !hasSpectators) {
+                        redisTemplate.delete(ROOM_PREFIX + room.getRoomId());
+                        return false;
+                    }
+                    return true;
+                })
                 .toList();
     }
 }

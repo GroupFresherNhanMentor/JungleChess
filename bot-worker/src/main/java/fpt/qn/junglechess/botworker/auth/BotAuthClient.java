@@ -29,10 +29,25 @@ public class BotAuthClient {
     }
 
     /**
-     * Registers the bot account with BOT role.
-     * Throws if the username is already taken — the developer must configure a unique BOT_USERNAME.
+     * Tries to login first (account already exists from a previous run).
+     * If login fails, registers a new account and logs in.
+     * If registration returns 409 (someone else owns that username), throws with a clear message.
      */
-    public void register() {
+    public BotTokens loginOrRegister() {
+        try {
+            BotTokens tokens = login();
+            log.info("Bot logged in as '{}'", props.getBotUsername());
+            return tokens;
+        } catch (Exception loginEx) {
+            log.info("Login failed ({}), attempting registration...", loginEx.getMessage());
+            register();
+            BotTokens tokens = login();
+            log.info("Bot registered and logged in as '{}'", props.getBotUsername());
+            return tokens;
+        }
+    }
+
+    private void register() {
         String url = props.getBackendHttpUrl() + "/api/auth/bot-register";
         Map<String, String> body = Map.of(
                 "username", props.getBotUsername(),
@@ -44,7 +59,7 @@ public class BotAuthClient {
             log.info("Bot account '{}' registered successfully", props.getBotUsername());
         } catch (HttpClientErrorException.Conflict e) {
             throw new IllegalStateException(
-                    "Username '" + props.getBotUsername() + "' is already taken. " +
+                    "Username '" + props.getBotUsername() + "' is already taken by another account. " +
                     "Please set a unique BOT_USERNAME for your bot and restart.");
         }
     }

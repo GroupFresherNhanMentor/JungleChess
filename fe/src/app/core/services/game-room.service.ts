@@ -238,6 +238,10 @@ export class GameRoomService {
     if (!content || !content.trim()) return;
     this.stomp.send(`/app/room.${roomId}.chat`, { content: content.trim() });
   }
+  
+  undoMove(roomId: string): void {
+    this.stomp.send(`/app/room.${roomId}.undo`);
+  }
 
   // ── Internal ──────────────────────────────────────────────────────────────
 

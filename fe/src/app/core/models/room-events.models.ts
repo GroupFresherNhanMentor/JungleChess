@@ -86,12 +86,15 @@ export interface ServerPlayerInfo {
   side: string;
   isBot: boolean;
   userId: string;
-  displayName: string;
+  displayName?: string;
+  username?: string;
 }
 
 export interface ServerSpectatorInfo {
   sessionId: string;
   userId: string;
+  username?: string;
+  displayName?: string;
 }
 
 export interface LobbySnapshot {

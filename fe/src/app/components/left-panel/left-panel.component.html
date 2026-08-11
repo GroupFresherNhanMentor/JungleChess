@@ -41,11 +41,11 @@
         [disabled]="!canUndo"
         class="panel-btn undo-btn"
       >
-        Hoàn nước
+        {{ loc.translate('undoButton') }}
       </button>
 
       <button *ngIf="!onlineMode" (click)="randomizeBoard.emit()" class="panel-btn random-btn">
-        Bàn cờ ngẫu nhiên
+        {{ loc.translate('randomizeBoardButton') }}
       </button>
     </div>
   </div>

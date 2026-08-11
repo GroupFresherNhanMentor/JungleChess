@@ -385,7 +385,7 @@
   flex-wrap: wrap;
   gap: 8px;
   font-size: 0.88em;
-  color: #e9b45c;
+  color: #e9b45c !important;
 }
 
 .meta-item {
@@ -396,12 +396,13 @@
   border: 1px solid var(--wood-border-soft);
   border-radius: 6px;
   padding: 4px 10px;
-  color: #e9b45c;
+  color: #e9b45c !important;
   font-size: 0.85em;
 }
 
+.meta-item *,
 .meta-icon {
-  font-size: 0.95em;
+  color: #e9b45c !important;
 }
 
 .spectate-tag {

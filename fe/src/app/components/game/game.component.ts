@@ -67,6 +67,12 @@ export class GameComponent implements OnInit, OnDestroy {
   readonly resultWon = signal(false);
   readonly resultText = signal('');
 
+  // Resign & Leave confirmation dialog
+  readonly confirmModalOpen = signal(false);
+  readonly confirmModalTitle = signal('');
+  readonly confirmModalMessage = signal('');
+  readonly confirmAction = signal<'resign' | 'leave' | null>(null);
+
   private roomId = '';
   private hasLeftRoom = false;
   private routeEventsSub: { unsubscribe: () => void } | null = null;
@@ -276,8 +282,42 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   onBackToLobby(): void {
+    const s = this.state();
+    if (s && (s.status === 'PLAYING' || s.status === 'WAITING')) {
+      this.confirmModalTitle.set(this.loc.currentLanguage === 'vn' ? 'Rời Phòng?' : 'Leave Room?');
+      this.confirmModalMessage.set(this.loc.currentLanguage === 'vn' ? 'Bạn có chắc chắn muốn rời khỏi phòng chơi không?' : 'Are you sure you want to leave the room?');
+      this.confirmAction.set('leave');
+      this.confirmModalOpen.set(true);
+      return;
+    }
     this.leaveCurrentRoom();
     this.router.navigate(['/lobby']);
+  }
+
+  onResign(): void {
+    const s = this.state();
+    if (s && s.status === 'PLAYING') {
+      this.confirmModalTitle.set(this.loc.currentLanguage === 'vn' ? 'Xác Nhận Đầu Hàng?' : 'Confirm Resignation?');
+      this.confirmModalMessage.set(this.loc.currentLanguage === 'vn' ? 'Bạn có chắc chắn muốn đầu hàng trận đấu này không?' : 'Are you sure you want to resign from this match?');
+      this.confirmAction.set('resign');
+      this.confirmModalOpen.set(true);
+      return;
+    }
+    if (this.roomId) {
+      this.leaveCurrentRoom();
+      this.router.navigate(['/lobby']);
+    }
+  }
+
+  onConfirmAction(): void {
+    this.confirmModalOpen.set(false);
+    this.leaveCurrentRoom();
+    this.router.navigate(['/lobby']);
+  }
+
+  onCancelAction(): void {
+    this.confirmModalOpen.set(false);
+    this.confirmAction.set(null);
   }
 
   requestRematch(): void {

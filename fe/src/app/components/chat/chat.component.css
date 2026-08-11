@@ -20,7 +20,7 @@
   margin-top: 0;
   margin-bottom: 10px;
   text-align: center;
-  color: var(--ink-strong);
+  color: #e9b45c !important;
 }
 
 .chat-messages-list {
@@ -42,6 +42,7 @@
   color: var(--ink-muted);
   text-align: center;
   margin: auto;
+  font-style: italic;
 }
 
 .chat-message-item {
@@ -96,9 +97,11 @@
 }
 
 .msg-body {
-  color: var(--ink-strong);
+  color: #e9b45c !important;;
   word-break: break-word;
   padding-left: 2px;
+  font-weight: 400;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
 }
 
 .quick-emotes {
@@ -133,7 +136,8 @@
 }
 
 .chat-input {
-  flex-grow: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 13px;
   padding: 7px 10px;
   border: 1px solid var(--wood-border-soft);
@@ -150,25 +154,39 @@
 }
 
 .send-btn {
-  font-size: 13px;
-  padding: 7px 14px;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--btn-gold);
   color: var(--ink-strong);
-  border: 2px solid var(--gold-accent);
+  border: 1px solid var(--gold-accent);
   border-radius: 5px;
-  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, transform 0.1s ease;
+  box-sizing: border-box;
+}
+
+.send-icon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
 }
 
 .send-btn:hover:not(:disabled) {
   background: var(--btn-gold-hot);
+  transform: scale(1.05);
 }
 
 .send-btn:disabled {
   background-color: var(--wood-inset);
   color: var(--ink-muted);
+  border-color: var(--wood-border-soft);
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* --- Emoji Picker --- */

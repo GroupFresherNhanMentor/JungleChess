@@ -28,6 +28,7 @@ import fpt.qn.junglechess.room.model.MoveRecord;
 import fpt.qn.junglechess.room.model.PlayerInfo;
 import fpt.qn.junglechess.room.model.RoomState;
 import fpt.qn.junglechess.room.model.RoomStatus;
+import java.util.List;
 import fpt.qn.junglechess.room.model.SpectatorInfo;
 import fpt.qn.junglechess.room.repository.RoomStateRepository;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +56,25 @@ public class RoomService {
     // ── Create ────────────────────────────────────────────────────────────────
 
     public void createRoom(CreateRoomRequest req, String sessionId, String userId, String displayName) {
+        // Auto purge any previous WAITING room created by this user
+        if (userId != null) {
+            try {
+                List<RoomState> existing = roomRepo.findAllActive();
+                for (RoomState r : existing) {
+                    if (r.getStatus() == RoomStatus.WAITING) {
+                        boolean isUserCreator = (r.getCreatorSessionId() != null && r.getCreatorSessionId().equals(sessionId)) ||
+                                (r.getPlayers() != null && r.getPlayers().stream().anyMatch(p -> userId.equals(p.getUserId())));
+                        if (isUserCreator) {
+                            roomRepo.delete(r.getRoomId());
+                            log.info("Purged previous unstarted room {} for user {}", r.getRoomId(), userId);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to purge old waiting room for user {}: {}", userId, e.getMessage());
+            }
+        }
+
         String roomId = "room-" + UuidV7.generate().toString().substring(0, 8);
         boolean isEve = req.getMode() == GameMode.EVE;
         boolean isPve = req.getMode() == GameMode.PVE;

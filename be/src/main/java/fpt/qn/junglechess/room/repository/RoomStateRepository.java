@@ -2,7 +2,9 @@ package fpt.qn.junglechess.room.repository;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fpt.qn.junglechess.room.model.GameMode;
 import fpt.qn.junglechess.room.model.RoomState;
+import fpt.qn.junglechess.room.model.RoomStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
@@ -85,6 +87,19 @@ public class RoomStateRepository {
                     }
                 })
                 .filter(Objects::nonNull)
+                .filter(room -> {
+                    if (room.getStatus() == RoomStatus.ENDED) {
+                        redisTemplate.delete(ROOM_PREFIX + room.getRoomId());
+                        return false;
+                    }
+                    boolean hasHumanPlayer = room.getPlayers() != null && room.getPlayers().stream().anyMatch(p -> !p.isBot());
+                    boolean hasSpectators = room.getSpectators() != null && !room.getSpectators().isEmpty();
+                    if (!hasHumanPlayer && !hasSpectators && room.getMode() != GameMode.EVE) {
+                        redisTemplate.delete(ROOM_PREFIX + room.getRoomId());
+                        return false;
+                    }
+                    return true;
+                })
                 .toList();
     }
 }

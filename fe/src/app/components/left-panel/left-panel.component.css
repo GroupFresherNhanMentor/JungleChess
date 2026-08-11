@@ -16,3 +16,17 @@
   color: var(--clan-blue-bright) !important;
   font-weight: 600 !important;
 }
+
+.leave-btn {
+  background-color: rgba(180, 30, 30, 0.18) !important;
+  border-color: #c0392b !important;
+  color: #ff6b6b !important;
+  font-weight: 600 !important;
+  margin-top: 8px;
+}
+
+.leave-btn:hover {
+  background-color: rgba(180, 30, 30, 0.35) !important;
+  border-color: #e74c3c !important;
+  color: #ff9999 !important;
+}

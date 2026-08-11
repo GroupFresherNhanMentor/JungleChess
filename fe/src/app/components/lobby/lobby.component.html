@@ -60,9 +60,11 @@
 
         <div class="room-id-block">
           <span class="code-label">Mã phòng</span>
-          <div class="room-code-row">
+          <div class="room-code-row" (click)="copyRoomCode(room.roomId, $event)" title="Click để sao chép mã phòng">
             <code class="room-id">{{ room.roomId }}</code>
-            <span class="copy-hint">🔗</span>
+            <button class="copy-code-btn" (click)="copyRoomCode(room.roomId, $event)" [title]="copiedRoomId === room.roomId ? 'Đã sao chép!' : 'Sao chép mã phòng'">
+              {{ copiedRoomId === room.roomId ? '✅' : '📋' }}
+            </button>
           </div>
         </div>
       </div>

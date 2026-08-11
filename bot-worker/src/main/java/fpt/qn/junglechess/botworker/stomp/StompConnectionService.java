@@ -67,14 +67,13 @@ public class StompConnectionService {
 
     private void loginAndConnect() {
         try {
-            authClient.register();
-            log.info("Logging in as bot user '{}'", props.getBotUsername());
-            BotTokens tokens = authClient.login();
+            log.info("Attempting login as bot user '{}'", props.getBotUsername());
+            BotTokens tokens = authClient.loginOrRegister();
             currentAccessToken = tokens.accessToken();
             currentRefreshToken = tokens.refreshToken();
             doConnect();
         } catch (Exception e) {
-            log.error("Bot login failed: {}", e.getMessage());
+            log.error("Bot startup failed: {}", e.getMessage());
             scheduleReconnect();
         }
     }

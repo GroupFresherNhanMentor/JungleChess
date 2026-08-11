@@ -22,7 +22,9 @@ function canCapture(atkRank, atkSide, fromIdx, defRank, defSide, toIdx, cells) {
   if (isTrap(toIdx, atkSide)) return true;
 
   // Rat in river cannot capture land piece
-  if (atkRank === 1 && isRiver(fromIdx) && !isRiver(toIdx)) return false;
+  if (isRiver(fromIdx) && !isRiver(toIdx)) return false;
+  // Land piece cannot capture piece in river
+  if (!isRiver(fromIdx) && isRiver(toIdx)) return false;
 
   // RAT vs ELEPHANT special
   if (atkRank === 1 && defRank === 8) return true;

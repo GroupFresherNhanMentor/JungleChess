@@ -61,10 +61,12 @@
       <!-- Left Panel -->
       <app-left-panel
         [capturedByRed]="capturedByRed()"
-        [canUndo]="false"
+        [canUndo]="canUndo"
+        [showUndo]="state()?.mode === 'PVE'"
         [onlineMode]="true"
         [playerName]="player1Name"
         (openRules)="openRules()"
+        (undoMove)="onUndoMove()"
         (backToLobby)="onBackToLobby()"
       ></app-left-panel>
 

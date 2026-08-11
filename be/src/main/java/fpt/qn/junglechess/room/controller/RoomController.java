@@ -71,25 +71,25 @@ public class RoomController {
     public void create(@Payload CreateRoomRequest req, SimpMessageHeaderAccessor sha) {
         String sessionId = sha.getSessionId();
         JwtUserPrincipal principal = extractPrincipal(sha);
-        roomService.createRoom(req, sessionId, principal.userId().toString());
+        roomService.createRoom(req, sessionId, principal.userId().toString(), principal.username());
     }
 
     @MessageMapping("room.{id}.join")
     public void join(@DestinationVariable String id, SimpMessageHeaderAccessor sha) {
         JwtUserPrincipal principal = extractPrincipal(sha);
-        roomService.joinRoom(id, sha.getSessionId(), principal.userId().toString());
+        roomService.joinRoom(id, sha.getSessionId(), principal.userId().toString(), principal.username());
     }
 
     @MessageMapping("room.{id}.rejoin")
     public void rejoin(@DestinationVariable String id, SimpMessageHeaderAccessor sha) {
         JwtUserPrincipal principal = extractPrincipal(sha);
-        roomService.rejoinRoom(id, sha.getSessionId(), principal.userId().toString());
+        roomService.rejoinRoom(id, sha.getSessionId(), principal.userId().toString(), principal.username());
     }
 
     @MessageMapping("room.{id}.watch")
     public void watch(@DestinationVariable String id, SimpMessageHeaderAccessor sha) {
         JwtUserPrincipal principal = extractPrincipal(sha);
-        roomService.watchRoom(id, sha.getSessionId(), principal.userId().toString());
+        roomService.watchRoom(id, sha.getSessionId(), principal.userId().toString(), principal.username());
     }
 
     @MessageMapping("room.{id}.start")

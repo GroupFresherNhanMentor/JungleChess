@@ -14,11 +14,24 @@ class BotAuthClient:
         self.username = username
         self.password = password
 
-    def register(self):
+    def login_or_register(self) -> "BotTokens":
         """
-        Registers the bot account with BOT role.
-        Raises if the username is already taken — the developer must configure a unique BOT_USERNAME.
+        Tries to login first (account already exists from a previous run).
+        If login fails, registers a new account and logs in.
+        If registration returns 409 (someone else owns that username), raises with a clear message.
         """
+        try:
+            tokens = self.login()
+            logger.info(f"Bot logged in as '{self.username}'")
+            return tokens
+        except Exception as login_ex:
+            logger.info(f"Login failed ({login_ex}), attempting registration...")
+            self._register()
+            tokens = self.login()
+            logger.info(f"Bot registered and logged in as '{self.username}'")
+            return tokens
+
+    def _register(self):
         url = f"{self.backend_url}/api/auth/bot-register"
         body = {"username": self.username, "password": self.password, "fullName": "Bot Worker Python"}
         resp = requests.post(url, json=body, timeout=10)
@@ -26,13 +39,13 @@ class BotAuthClient:
             logger.info(f"Bot account '{self.username}' registered successfully")
         elif resp.status_code == 409:
             raise RuntimeError(
-                f"Username '{self.username}' is already taken. "
+                f"Username '{self.username}' is already taken by another account. "
                 f"Please set a unique BOT_USERNAME for your bot and restart."
             )
         else:
             resp.raise_for_status()
 
-    def login(self) -> BotTokens:
+    def login(self) -> "BotTokens":
         url = f"{self.backend_url}/api/auth/login"
         body = {
             "username": self.username,

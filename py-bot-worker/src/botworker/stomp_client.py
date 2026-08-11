@@ -69,8 +69,7 @@ class StompConnectionService:
         attempt = 0
         while not self.stop_requested:
             try:
-                self.auth_client.register()
-                tokens = self.auth_client.login()
+                tokens = self.auth_client.login_or_register()
                 self.access_token = tokens.access_token
                 self.refresh_token = tokens.refresh_token
                 attempt = 0

@@ -339,6 +339,9 @@ public class RoomService {
             state.setWinner("DRAW");
         }
 
+        // Deduplicate spectator entries for this user/session
+        state.getSpectators().removeIf(s -> (userId != null && userId.equals(s.getUserId())) || sessionId.equals(s.getSessionId()));
+
         SpectatorInfo spectator = SpectatorInfo.builder()
                 .sessionId(sessionId)
                 .userId(userId)
@@ -464,11 +467,12 @@ public class RoomService {
             return;
         }
 
+        String userId = sessionRegistry.getUserId(sessionId);
         boolean isSpectator = state.getSpectators().stream()
-                .anyMatch(s -> s.getSessionId().equals(sessionId));
+                .anyMatch(s -> s.getSessionId().equals(sessionId) || (userId != null && userId.equals(s.getUserId())));
 
         if (isSpectator) {
-            state.getSpectators().removeIf(s -> s.getSessionId().equals(sessionId));
+            state.getSpectators().removeIf(s -> s.getSessionId().equals(sessionId) || (userId != null && userId.equals(s.getUserId())));
             state.setUpdatedAt(Instant.now());
             roomRepo.save(state);
             roomRepo.deleteSessionMapping(sessionId);

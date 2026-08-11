@@ -10,6 +10,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -92,9 +93,17 @@ public class RoomStateRepository {
                         redisTemplate.delete(ROOM_PREFIX + room.getRoomId());
                         return false;
                     }
-                    boolean hasHumanPlayer = room.getPlayers() != null && room.getPlayers().stream().anyMatch(p -> !p.isBot());
+                    Instant now = Instant.now();
+                    // Purge WAITING rooms created more than 2 minutes ago
+                    if (room.getStatus() == RoomStatus.WAITING) {
+                        if (room.getCreatedAt() == null || room.getCreatedAt().plus(Duration.ofMinutes(2)).isBefore(now)) {
+                            redisTemplate.delete(ROOM_PREFIX + room.getRoomId());
+                            return false;
+                        }
+                    }
+                    boolean hasPlayers = room.getPlayers() != null && !room.getPlayers().isEmpty();
                     boolean hasSpectators = room.getSpectators() != null && !room.getSpectators().isEmpty();
-                    if (!hasHumanPlayer && !hasSpectators && room.getMode() != GameMode.EVE) {
+                    if (!hasPlayers && !hasSpectators) {
                         redisTemplate.delete(ROOM_PREFIX + room.getRoomId());
                         return false;
                     }

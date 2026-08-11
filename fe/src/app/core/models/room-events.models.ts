@@ -77,6 +77,8 @@ export interface ServerPlayerInfo {
 export interface ServerSpectatorInfo {
   sessionId: string;
   userId: string;
+  username?: string;
+  displayName?: string;
 }
 
 export interface LobbySnapshot {

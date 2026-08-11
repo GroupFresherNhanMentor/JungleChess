@@ -641,13 +641,14 @@ public class RoomService {
             String roomId = roomRepo.findRoomIdBySession(sessionId);
             if (roomId != null) {
                 RoomState state = roomRepo.findById(roomId);
-                boolean isPveOrEve = state != null &&
-                        (state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE);
-                if (isPveOrEve) {
-                    // Keep the room alive so the creator can reload/rejoin.
-                    // Bots continue playing via their own connection.
+                // Keep the room alive so the user can reload/rejoin.
+                // Only remove the session mapping so a fresh WebSocket session
+                // (browser refresh, reconnection) can rejoin the same room.
+                if (state != null &&
+                        (state.getStatus() == RoomStatus.WAITING || state.getStatus() == RoomStatus.PLAYING)) {
                     roomRepo.deleteSessionMapping(sessionId);
-                    log.info("PVE/EVE creator disconnected — room {} preserved for rejoin", roomId);
+                    log.info("Session {} disconnected — room {} preserved for rejoin (status={})",
+                            sessionId, roomId, state.getStatus());
                 } else {
                     leaveRoom(roomId, sessionId);
                 }

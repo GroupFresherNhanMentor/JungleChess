@@ -237,12 +237,12 @@ button {
   font-size: 1rem;
   cursor: pointer;
   font-weight: 600;
-  color: var(--ink-strong);
+  color: #e9b45c;
 }
 
 .btn-start {
   background: var(--btn-wood);
-  color: var(--ink-strong);
+  color: #e9b45c;
   box-shadow: var(--btn-shadow-3d-sml);
   margin-bottom: 12px;
 }
@@ -259,11 +259,14 @@ button {
 
 .btn-leave {
   background: var(--btn-wood);
+  color: #e9b45c;
   box-shadow: var(--btn-shadow-3d-sml);
 }
 
 .btn-leave:hover {
   background: var(--btn-wood-hot);
+  border-color: var(--gold-accent);
+  color: #e9b45c;
   box-shadow: var(--btn-shadow-3d);
 }
 
@@ -274,6 +277,7 @@ button {
 
 .btn-rematch {
   background: var(--btn-wood);
+  color: #e9b45c;
   box-shadow: var(--btn-shadow-3d-sml);
 }
 

@@ -4,6 +4,7 @@ import { StompSubscription } from '@stomp/stompjs';
 import { LobbyRoomEntry, LobbySnapshot } from '../models/room-events.models';
 import { RSocketService } from './rsocket.service';
 import { AuthService } from './auth.service';
+import { GameRoomService } from './game-room.service';
 
 @Injectable({ providedIn: 'root' })
 export class LobbyRSocketService {
@@ -11,6 +12,7 @@ export class LobbyRSocketService {
 
   private readonly stomp = inject(RSocketService);
   private readonly auth = inject(AuthService);
+  private readonly gameRoom = inject(GameRoomService);
 
   private lobbySub: StompSubscription | null = null;
   private privateLobbySub: StompSubscription | null = null;
@@ -21,6 +23,9 @@ export class LobbyRSocketService {
 
     this.stomp.connect(token).subscribe({
       next: () => {
+        // Pre-warm personal event queue so room creation/join response is instant
+        this.gameRoom.setupPersonalSubscription();
+
         // Subscribe to live lobby updates
         this.lobbySub?.unsubscribe();
         this.lobbySub = this.stomp.subscribe<LobbySnapshot>('/topic/lobby', snapshot => {

@@ -13,6 +13,8 @@ import { BoardComponent, MoveAnimation } from '../board/board.component';
 import { LeftPanelComponent } from '../left-panel/left-panel.component';
 import { RightPanelComponent } from '../right-panel/right-panel.component';
 import { WinChanceBarComponent } from '../win-chance-bar/win-chance-bar.component';
+import { ChatComponent } from '../chat/chat.component';
+import { ChatMessage } from '../../core/models/game.models';
 import { GameRulesModalComponent } from '../game-rules-modal/game-rules-modal.component';
 import { EatenPopupComponent, EatenItem } from '../eaten-popup/eaten-popup.component';
 
@@ -27,6 +29,7 @@ import { EatenPopupComponent, EatenItem } from '../eaten-popup/eaten-popup.compo
     WinChanceBarComponent,
     GameRulesModalComponent,
     EatenPopupComponent,
+    ChatComponent,
   ],
   templateUrl: './game.component.html',
   styleUrl: './game.component.css',
@@ -345,6 +348,7 @@ export class GameComponent implements OnInit, OnDestroy {
   get canUndo(): boolean {
     const s = this.state();
     return !!s && s.mode === 'PVE' && s.status === 'PLAYING' && (s.moveNumber ?? 0) > 0;
+  }
   get redPlayer(): PlayerDisplayInfo {
     const s = this.state();
     if (!s) return { name: 'Phe Đỏ', isBot: false, isYou: false };
@@ -494,6 +498,25 @@ export class GameComponent implements OnInit, OnDestroy {
   /** Close the result popup (user chose to continue). */
   closeResultPopup(): void {
     this.resultPopupOpen.set(false);
+  }
+
+  get convertedChatMessages(): ChatMessage[] {
+    const s = this.state();
+    if (!s || !s.chatMessages) return [];
+    return s.chatMessages.map((m) => ({
+      id: m.id,
+      sender: m.senderName,
+      side: m.senderSide === 'PLAYER_1' ? 1 : m.senderSide === 'PLAYER_2' ? 0 : undefined,
+      text: m.content,
+      timestamp: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }));
+  }
+
+  onSendChat(content: string): void {
+    const s = this.state();
+    if (s?.roomId) {
+      this.gameRoom.sendChatMessage(s.roomId, content);
+    }
   }
 
   // ── Private ───────────────────────────────────────────────────────────────

@@ -27,6 +27,18 @@
   margin-top: 20px;
 }
 
+.right-column-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 280px;
+}
+
+.waiting-chat-wrap {
+  margin-top: 16px;
+  text-align: left;
+}
+
 .waiting-room h2 {
   font-size: 1.6rem;
   margin-bottom: 8px;

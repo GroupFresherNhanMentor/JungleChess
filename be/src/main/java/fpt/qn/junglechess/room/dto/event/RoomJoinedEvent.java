@@ -2,6 +2,7 @@ package fpt.qn.junglechess.room.dto.event;
 
 import java.util.List;
 
+import fpt.qn.junglechess.room.model.ChatMessageRecord;
 import fpt.qn.junglechess.room.model.PlayerInfo;
 import fpt.qn.junglechess.room.model.SpectatorInfo;
 import lombok.AccessLevel;
@@ -23,10 +24,13 @@ public class RoomJoinedEvent extends RoomEvent {
     String currentTurn;
     List<PlayerInfo> players;
     List<SpectatorInfo> spectators;
+    List<ChatMessageRecord> recentChat;
+
 
     public RoomJoinedEvent(String roomId, String yourSide, String mode, String status,
                            String creatorUserId, String[][] board, String currentTurn,
-                           List<PlayerInfo> players, List<SpectatorInfo> spectators) {
+                           List<PlayerInfo> players, List<SpectatorInfo> spectators,
+                           List<ChatMessageRecord> recentChat) {
         super("ROOM_JOINED");
         this.roomId = roomId;
         this.yourSide = yourSide;
@@ -37,5 +41,6 @@ public class RoomJoinedEvent extends RoomEvent {
         this.currentTurn = currentTurn;
         this.players = players;
         this.spectators = spectators;
+        this.recentChat = recentChat != null ? recentChat : List.of();
     }
 }

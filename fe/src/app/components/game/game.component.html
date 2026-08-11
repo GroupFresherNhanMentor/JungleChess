@@ -113,6 +113,14 @@
         {{ loc.translate('backToLobbyBtn') }}
       </button>
     </div>
+
+    <div class="waiting-chat-wrap">
+      <app-chat
+        [messages]="convertedChatMessages"
+        [currentTurn]="state()?.currentTurn ?? 0"
+        (sendMessage)="onSendChat($event)"
+      ></app-chat>
+    </div>
   </div>
 
   <!-- Game Board (rich layout) — stays visible after the game ends -->
@@ -162,14 +170,21 @@
         <app-win-chance-bar [pieces]="state()?.pieces ?? []"></app-win-chance-bar>
       </div>
 
-      <!-- Right Panel -->
-      <app-right-panel
-        [capturedByBlue]="capturedByBlue()"
-        [moveHistory]="moveHistory()"
-        [currentTurn]="state()?.currentTurn ?? 0"
-        [playerName]="player2Name"
-        [turnPlayerName]="turnPlayerName"
-      ></app-right-panel>
+      <!-- Right Panel & Chat -->
+      <div class="right-column-container">
+        <app-right-panel
+          [capturedByBlue]="capturedByBlue()"
+          [moveHistory]="moveHistory()"
+          [currentTurn]="state()?.currentTurn ?? 0"
+          [playerName]="player2Name"
+          [turnPlayerName]="turnPlayerName"
+        ></app-right-panel>
+        <app-chat
+          [messages]="convertedChatMessages"
+          [currentTurn]="state()?.currentTurn ?? 0"
+          (sendMessage)="onSendChat($event)"
+        ></app-chat>
+      </div>
     </div>
   </div>
 

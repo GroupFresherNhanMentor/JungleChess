@@ -4,9 +4,7 @@
   <div id="active-room-banner" *ngIf="state() as s">
     <div class="room-banner-details">
       <span class="room-badge">{{ s.mode }}</span>
-      <span class="room-code-tag" (click)="copyRoomCode(s.roomId)" style="cursor: pointer;" title="Click để sao chép mã phòng">
-        [{{ s.roomId }}]
-      </span>
+      <span class="room-code-tag">[{{ s.roomId }}]</span>
     </div>
     <div class="banner-right-controls">
       <button (click)="toggleLanguage()" class="lang-toggle-btn">

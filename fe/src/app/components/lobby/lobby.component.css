@@ -49,7 +49,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: nowrap; /* Single line */
+  flex-wrap: nowrap;
+  /* Single line */
 }
 
 .toolbar-right {
@@ -129,7 +130,8 @@
   border-color: var(--gold-accent);
 }
 
-.create-btn, .join-code-btn {
+.create-btn,
+.join-code-btn {
   height: 36px;
   display: inline-flex;
   align-items: center;
@@ -253,47 +255,71 @@
 
 .room-mode-badge {
   font-size: 0.75em;
-  font-weight: bold;
-  padding: 3px 8px;
+  font-weight: 800;
+  padding: 4px 12px;
   border-radius: 12px;
   text-transform: uppercase;
+  letter-spacing: 0.8px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mode-pvp_online {
-  background-color: var(--clan-blue-bg);
-  color: var(--clan-blue-bright);
+  background: linear-gradient(180deg, #2563eb, #1e40af);
+  color: #eff6ff !important;
+  border: 1.5px solid #60a5fa;
 }
 
 .mode-pve {
-  background-color: rgba(255, 193, 7, 0.15);
-  color: #f0c268;
+  background: linear-gradient(180deg, #d97706, #92400e);
+  color: #fffbeb !important;
+  border: 1.5px solid #f59e0b;
 }
 
 .mode-eve {
-  background-color: rgba(168, 85, 247, 0.18);
-  color: #c39cf6;
+  background: linear-gradient(180deg, #9333ea, #6b21a8);
+  color: #faf5ff !important;
+  border: 1.5px solid #c084fc;
 }
 
 .mode-pvp_local {
-  background-color: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
+  background: linear-gradient(180deg, #16a34a, #15803d);
+  color: #f0fdf4 !important;
+  border: 1.5px solid #4ade80;
 }
 
 .room-status-tag {
   font-size: 0.75em;
-  font-weight: bold;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tag-waiting {
-  background-color: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
+  background: linear-gradient(180deg, #16a34a, #15803d);
+  color: #f0fdf4 !important;
+  border: 1.5px solid #4ade80;
 }
 
 .tag-playing {
-  background-color: var(--clan-red-bg);
-  color: var(--clan-red-bright);
+  background: linear-gradient(180deg, #dc2626, #991b1b);
+  color: #fef2f2 !important;
+  border: 1.5px solid #f87171;
+}
+
+.tag-ended {
+  background: linear-gradient(180deg, #4b5563, #374151);
+  color: #f3f4f6 !important;
+  border: 1.5px solid #9ca3af;
 }
 
 .room-title {
@@ -314,21 +340,11 @@
   gap: 8px;
   font-size: 0.85em;
   color: #e9b45c;
-  cursor: pointer;
-  width: fit-content;
 }
 
 .copy-hint {
   font-size: 1.05em;
-  opacity: 0.75;
-  cursor: pointer;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-}
-
-.copy-hint:hover,
-.room-code-row:hover .copy-hint {
-  opacity: 1;
-  transform: scale(1.15);
+  opacity: 0.7;
 }
 
 .room-details {
@@ -394,7 +410,9 @@
   margin-top: auto;
 }
 
-.join-btn, .spectate-btn, .watch-btn {
+.join-btn,
+.spectate-btn,
+.watch-btn {
   width: 100%;
   font-size: 0.95em;
   font-weight: bold;
@@ -462,8 +480,13 @@
 }
 
 @keyframes modal-fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-card {
@@ -480,8 +503,15 @@
 }
 
 @keyframes modal-pop {
-  from { opacity: 0; transform: translateY(16px) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .code-modal {
@@ -668,8 +698,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 900px) {
@@ -677,9 +714,11 @@
     flex-direction: column;
     align-items: stretch;
   }
+
   .toolbar-left {
     flex-wrap: wrap;
   }
+
   .toolbar-right {
     justify-content: flex-end;
   }

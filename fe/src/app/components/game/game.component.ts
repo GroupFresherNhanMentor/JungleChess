@@ -93,6 +93,30 @@ export class GameComponent implements OnInit, OnDestroy {
         }
         return;
       }
+      // Move number rolled back (Undo executed on server)
+      if (moveNumber < this.lastAnimatedMoveNumber) {
+        this.lastAnimatedMoveNumber = moveNumber;
+        this.movingPiece.set(null);
+        const trimmedHistory = this.moveHistory().slice(0, moveNumber);
+        this.moveHistory.set(trimmedHistory);
+
+        const redCaptures: Piece[] = [];
+        const blueCaptures: Piece[] = [];
+        for (const m of trimmedHistory) {
+          if (m.capturedPiece) {
+            if (m.piece.side === 0) {
+              blueCaptures.push(m.capturedPiece);
+            } else {
+              redCaptures.push(m.capturedPiece);
+            }
+          }
+        }
+        this.capturedByBlue.set(blueCaptures);
+        this.capturedByRed.set(redCaptures);
+        this.clearSelection();
+        return;
+      }
+
       if (moveNumber <= this.lastAnimatedMoveNumber) return;
       this.lastAnimatedMoveNumber = moveNumber;
 
@@ -288,6 +312,13 @@ export class GameComponent implements OnInit, OnDestroy {
     });
   }
 
+  onUndoMove(): void {
+    const s = this.state();
+    if (s && s.mode === 'PVE' && s.status === 'PLAYING' && (s.moveNumber ?? 0) > 0) {
+      this.gameRoom.undoMove(s.roomId);
+    }
+  }
+
   onLogout(): void {
     this.authService.logout().subscribe({
       error: () => this.router.navigate(['/login']),
@@ -311,6 +342,9 @@ export class GameComponent implements OnInit, OnDestroy {
 
   // ── Template helpers ──────────────────────────────────────────────────────
 
+  get canUndo(): boolean {
+    const s = this.state();
+    return !!s && s.mode === 'PVE' && s.status === 'PLAYING' && (s.moveNumber ?? 0) > 0;
   get redPlayer(): PlayerDisplayInfo {
     const s = this.state();
     if (!s) return { name: 'Phe Đỏ', isBot: false, isYou: false };

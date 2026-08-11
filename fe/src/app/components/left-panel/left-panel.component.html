@@ -36,16 +36,16 @@
       </button>
 
       <button
-        *ngIf="!onlineMode"
+        *ngIf="!onlineMode || showUndo"
         (click)="undoMove.emit()"
         [disabled]="!canUndo"
         class="panel-btn undo-btn"
       >
-        Hoàn nước
+        {{ loc.translate('undoButton') }}
       </button>
 
       <button *ngIf="!onlineMode" (click)="randomizeBoard.emit()" class="panel-btn random-btn">
-        Bàn cờ ngẫu nhiên
+        {{ loc.translate('randomizeBoardButton') }}
       </button>
 
       <button *ngIf="onlineMode" (click)="backToLobby.emit()" class="panel-btn leave-btn">

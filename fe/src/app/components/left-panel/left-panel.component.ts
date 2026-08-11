@@ -17,6 +17,7 @@ export class LeftPanelComponent {
   @Input() onlineMode: boolean = false;
   /** Display name of the PLAYER_1 (Red) player. */
   @Input() playerName = '';
+  @Input() showUndo: boolean = false;
 
   @Output() resetGame = new EventEmitter<void>();
   @Output() undoMove = new EventEmitter<void>();

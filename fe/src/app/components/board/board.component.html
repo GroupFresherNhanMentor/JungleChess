@@ -75,6 +75,9 @@
                 [src]="'assets/images/head_no_background/' + p.type + '.png'"
                 [alt]="p.type"
               />
+              <span class="piece-rank-badge" [title]="'Cấp độ ' + getPieceRank(p.type)">
+                {{ getPieceRank(p.type) }}
+              </span>
             </div>
           </ng-container>
         </div>
@@ -100,6 +103,7 @@
         [src]="'assets/images/head_no_background/' + g.piece.type + '.png'"
         [alt]="g.piece.type"
       />
+      <span class="piece-rank-badge">{{ getPieceRank(g.piece.type) }}</span>
     </div>
   </div>
 

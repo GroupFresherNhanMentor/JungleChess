@@ -106,6 +106,14 @@ export class LobbyComponent implements OnInit {
   }
 
   onCreateRoom(): void {
+    if (this.isLoading) return;
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
     this.isLoading = true;
     this.closeCreateModal();
 

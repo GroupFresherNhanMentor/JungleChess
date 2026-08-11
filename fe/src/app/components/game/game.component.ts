@@ -1,13 +1,14 @@
-import { Component, OnInit, OnDestroy, inject, signal, effect, HostBinding } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, effect, HostBinding, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, NavigationStart, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Move, Piece, PieceType, Position } from '../../core/models/game.models';
+import { Move, Piece, PieceType, PlayerDisplayInfo, Position } from '../../core/models/game.models';
 import { GameRoomService, OnlineGameState } from '../../core/services/game-room.service';
 import { GameRuleService } from '../../core/services/game-rule.service';
 import { AudioService } from '../../core/services/audio.service';
 import { LocalizationService } from '../../core/services/localization.service';
 import { AuthService } from '../../core/services/auth.service';
+import { RSocketService } from '../../core/services/rsocket.service';
 import { BoardComponent, MoveAnimation } from '../board/board.component';
 import { LeftPanelComponent } from '../left-panel/left-panel.component';
 import { RightPanelComponent } from '../right-panel/right-panel.component';
@@ -38,6 +39,7 @@ export class GameComponent implements OnInit, OnDestroy {
   private readonly audioService = inject(AudioService);
   readonly loc = inject(LocalizationService);
   private readonly authService = inject(AuthService);
+  private readonly rsocket = inject(RSocketService);
 
   readonly state = toSignal(this.gameRoom.gameState$, {
     initialValue: null as OnlineGameState | null,
@@ -63,6 +65,8 @@ export class GameComponent implements OnInit, OnDestroy {
   readonly resultText = signal('');
 
   private roomId = '';
+  private hasLeftRoom = false;
+  private routeEventsSub: { unsubscribe: () => void } | null = null;
   private animCounter = 0;
   private lastAnimatedMoveNumber = -1;
   private eatenSeq = 0;
@@ -145,18 +149,49 @@ export class GameComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.roomId = this.route.snapshot.params['roomId'];
 
+    this.routeEventsSub = this.router.events.subscribe(event => {
+      if (event instanceof NavigationStart && !event.url.startsWith(`/game/${this.roomId}`)) {
+        this.leaveCurrentRoom();
+      }
+    });
+
     if (this.gameRoom.currentRoomId === this.roomId && this.gameRoom.gameState$.value) {
       // already connected from createRoom/joinRoom navigation
     } else {
       // Browser refresh or direct URL — rejoin
-      this.gameRoom.rejoinRoom(this.roomId).subscribe({
-        error: () => this.router.navigate(['/']),
+      const token = this.authService.getAccessToken();
+      if (!token) {
+        this.router.navigate(['/']);
+        return;
+      }
+
+      this.rsocket.connect(token).subscribe({
+        next: () => {
+          this.gameRoom.setupPersonalSubscription();
+          this.gameRoom.rejoinRoom(this.roomId).subscribe({
+            error: (err) => {
+              console.error('[Game] rejoin failed:', err);
+              this.router.navigate(['/']);
+            },
+          });
+        },
+        error: (err) => {
+          console.error('[Game] WebSocket connection failed:', err);
+          this.router.navigate(['/']);
+        },
       });
     }
   }
 
   ngOnDestroy(): void {
     this.clearAllTimers();
+    this.routeEventsSub?.unsubscribe();
+  }
+
+  private leaveCurrentRoom(): void {
+    if (!this.roomId || this.hasLeftRoom) return;
+    this.hasLeftRoom = true;
+    this.gameRoom.leaveRoom(this.roomId);
   }
 
   // ── Board interaction ─────────────────────────────────────────────────────
@@ -214,7 +249,7 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   onBackToLobby(): void {
-    this.gameRoom.leaveRoom(this.roomId);
+    this.leaveCurrentRoom();
     this.router.navigate(['/lobby']);
   }
 
@@ -276,6 +311,52 @@ export class GameComponent implements OnInit, OnDestroy {
 
   // ── Template helpers ──────────────────────────────────────────────────────
 
+  get redPlayer(): PlayerDisplayInfo {
+    const s = this.state();
+    if (!s) return { name: 'Phe Đỏ', isBot: false, isYou: false };
+    const p = s.players.find(x => x.side === 'PLAYER_1');
+    const isYou = !s.isSpectator && s.yourSide === 1;
+    if (!p) {
+      return {
+        name: s.mode === 'EVE' ? 'Bot 1 (Đỏ)' : 'Người chơi Đỏ',
+        isBot: s.mode === 'EVE' || s.mode === 'PVE',
+        isYou,
+      };
+    }
+    return {
+      name: p.displayName || p.username || p.userId || (p.isBot ? 'Bot Đỏ' : 'Phe Đỏ'),
+      isBot: p.isBot,
+      isYou,
+    };
+  }
+
+  get bluePlayer(): PlayerDisplayInfo {
+    const s = this.state();
+    if (!s) return { name: 'Phe Xanh', isBot: false, isYou: false };
+    const p = s.players.find(x => x.side === 'PLAYER_2');
+    const isYou = !s.isSpectator && s.yourSide === 0;
+    if (!p) {
+      return {
+        name: s.mode === 'EVE' ? 'Bot 2 (Xanh)' : 'Người chơi Xanh',
+        isBot: s.mode === 'EVE' || s.mode === 'PVE',
+        isYou,
+      };
+    }
+    return {
+      name: p.displayName || p.username || p.userId || (p.isBot ? 'Bot Xanh' : 'Phe Xanh'),
+      isBot: p.isBot,
+      isYou,
+    };
+  }
+
+  get isRedTurn(): boolean {
+    return this.state()?.currentTurn === 1;
+  }
+
+  get isBlueTurn(): boolean {
+    return this.state()?.currentTurn === 0;
+  }
+
   get isMyTurn(): boolean {
     const s = this.state();
     return !!s && !s.isSpectator && s.currentTurn === s.yourSide;
@@ -326,9 +407,17 @@ export class GameComponent implements OnInit, OnDestroy {
     const s = this.state();
     if (!s) return '';
     if (s.winner === null || s.winner === undefined) {
-      return 'Game Draw!';
+      return this.loc.currentLanguage === 'vn' ? 'Trận đấu Hòa!' : 'Game Draw!';
     }
-    return s.winner === 1 ? 'Red wins!' : 'Blue wins!';
+    const isVn = this.loc.currentLanguage === 'vn';
+    const winnerSideStr = s.winner === 1 ? 'PLAYER_1' : 'PLAYER_2';
+    const winnerPlayer = s.players?.find(p => p.side === winnerSideStr);
+    const winnerName = winnerPlayer?.displayName || winnerPlayer?.username || (s.winner === 1 ? (isVn ? 'Phe Đỏ' : 'Red Clan') : (isVn ? 'Phe Xanh' : 'Blue Clan'));
+    const sideName = s.winner === 1 ? (isVn ? 'Phe Đỏ' : 'Red Clan') : (isVn ? 'Phe Xanh' : 'Blue Clan');
+
+    return isVn
+      ? `🏆 Người chơi ${winnerName} (${sideName}) Chiến Thắng!`
+      : `🏆 Player ${winnerName} (${sideName}) Wins!`;
   }
 
   getLastMove(): Move | null {

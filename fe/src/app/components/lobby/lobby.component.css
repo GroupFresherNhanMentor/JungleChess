@@ -214,13 +214,13 @@
 
 .no-rooms-card h3 {
   margin: 0 0 6px 0;
-  color: var(--ink-strong);
+  color: #e9b45c;
   text-shadow: var(--text-emboss);
 }
 
 .no-rooms-card p {
   margin: 0 0 16px 0;
-  color: var(--ink);
+  color: #e9b45c;
 }
 
 .room-card {
@@ -267,7 +267,8 @@
   justify-content: center;
 }
 
-.mode-pvp_online {
+.mode-pvp_online,
+.mode-pvp {
   background: linear-gradient(180deg, #2563eb, #1e40af);
   color: #eff6ff !important;
   border: 1.5px solid #60a5fa;
@@ -549,7 +550,8 @@
   padding-bottom: 10px;
 }
 
-.modal-header h2 {
+.modal-header h2,
+.modal-header h3 {
   margin: 0;
   font-size: 1.2em;
   color: #e9b45c;
@@ -635,7 +637,7 @@
 
 .modal-cancel-btn {
   background: var(--btn-wood);
-  color: var(--ink-strong);
+  color: #e9b45c;
   border: 1px solid var(--wood-border-soft);
   box-shadow: var(--btn-shadow-3d-sml);
 }
@@ -668,7 +670,13 @@
 .form-group label {
   font-size: 0.85em;
   font-weight: bold;
-  color: var(--ink-strong);
+  color: #e9b45c;
+}
+
+.form-group small {
+  font-size: 0.78em;
+  color: #e9b45c;
+  opacity: 0.8;
 }
 
 .form-control {

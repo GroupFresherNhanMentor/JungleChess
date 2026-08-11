@@ -336,11 +336,14 @@ export class GameComponent implements OnInit, OnDestroy {
       return this.loc.currentLanguage === 'vn' ? 'Trận đấu Hòa!' : 'Game Draw!';
     }
     const isVn = this.loc.currentLanguage === 'vn';
-    if (s.winner === 1) {
-      return isVn ? '🏆 Phe Đỏ (PLAYER_1) Chiến Thắng!' : '🏆 Red Clan (PLAYER_1) Wins!';
-    } else {
-      return isVn ? '🏆 Phe Xanh (PLAYER_2) Chiến Thắng!' : '🏆 Blue Clan (PLAYER_2) Wins!';
-    }
+    const winnerSideStr = s.winner === 1 ? 'PLAYER_1' : 'PLAYER_2';
+    const winnerPlayer = s.players?.find(p => p.side === winnerSideStr);
+    const winnerName = winnerPlayer?.username || (s.winner === 1 ? (isVn ? 'Phe Đỏ' : 'Red Clan') : (isVn ? 'Phe Xanh' : 'Blue Clan'));
+    const sideName = s.winner === 1 ? (isVn ? 'Phe Đỏ' : 'Red Clan') : (isVn ? 'Phe Xanh' : 'Blue Clan');
+
+    return isVn
+      ? `🏆 Người chơi ${winnerName} (${sideName}) Chiến Thắng!`
+      : `🏆 Player ${winnerName} (${sideName}) Wins!`;
   }
 
   getLastMove(): Move | null {

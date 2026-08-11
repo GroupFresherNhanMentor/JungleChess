@@ -110,12 +110,13 @@ public class RoomService {
             yourSide = "SPECTATOR";
         } else {
             // PVP or PVE: creator is PLAYER_1
+            String username = sessionRegistry.getUsername(sessionId);
             PlayerInfo player1 = PlayerInfo.builder()
                     .sessionId(sessionId)
                     .side(PlayerSide.PLAYER_1.name())
                     .isBot(false)
                     .userId(userId)
-                    .displayName(displayName)
+                    .displayName(displayName != null ? displayName : userId)
                     .build();
             state.getPlayers().add(player1);
             yourSide = PlayerSide.PLAYER_1.name();
@@ -190,12 +191,13 @@ public class RoomService {
                 .anyMatch(p -> PlayerSide.PLAYER_1.name().equals(p.getSide()));
         String side = player1Taken ? PlayerSide.PLAYER_2.name() : PlayerSide.PLAYER_1.name();
 
+        String username = sessionRegistry.getUsername(sessionId);
         PlayerInfo joiner = PlayerInfo.builder()
                 .sessionId(sessionId)
                 .side(side)
                 .isBot(false)
                 .userId(userId)
-                .displayName(displayName)
+                .displayName(displayName != null ? displayName : userId)
                 .build();
         state.getPlayers().add(joiner);
         state.setUpdatedAt(Instant.now());
@@ -259,7 +261,7 @@ public class RoomService {
                 .side(side)
                 .isBot(true)
                 .userId(userId)
-                .displayName(displayName)
+                .displayName(displayName != null ? displayName : "Bot " + (state.getBotDifficulty() != null ? state.getBotDifficulty() : ""))
                 .build();
         state.getPlayers().add(bot);
         state.setUpdatedAt(Instant.now());

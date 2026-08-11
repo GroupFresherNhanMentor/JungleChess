@@ -182,6 +182,14 @@
                 <groupId>org.jooq</groupId>
                 <artifactId>jooq-codegen-maven</artifactId>
                 <version>${jooq.version}</version>
+                <dependencies>
+                    <!-- DDLDatabase: generates from SQL migration scripts — no live DB needed -->
+                    <dependency>
+                        <groupId>org.jooq</groupId>
+                        <artifactId>jooq-meta-extensions</artifactId>
+                        <version>${jooq.version}</version>
+                    </dependency>
+                </dependencies>
                 <executions>
                     <execution>
                         <id>jooq-codegen</id>
@@ -192,16 +200,24 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <jdbc>
-                        <driver>org.postgresql.Driver</driver>
-                        <url>${db.url}</url>
-                        <user>${db.username}</user>
-                        <password>${db.password}</password>
-                    </jdbc>
                     <generator>
                         <database>
-                            <name>org.jooq.meta.postgres.PostgresDatabase</name>
-                            <inputSchema>public</inputSchema>
+                            <name>org.jooq.meta.extensions.ddl.DDLDatabase</name>
+                            <properties>
+                                <property>
+                                    <key>scripts</key>
+                                    <value>src/main/resources/db/migration</value>
+                                </property>
+                                <property>
+                                    <key>sort</key>
+                                    <value>flyway</value>
+                                </property>
+                                <property>
+                                    <key>defaultNameCase</key>
+                                    <value>lower</value>
+                                </property>
+                            </properties>
+                            <inputSchema>PUBLIC</inputSchema>
                             <includes>.*</includes>
                             <excludes>flyway_schema_history</excludes>
                         </database>

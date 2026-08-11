@@ -245,25 +245,49 @@ public class RoomService {
         if (state == null) throw new RoomNotFoundException(roomId);
         if (state.getStatus() == RoomStatus.ENDED) throw new ActionNotAllowedException("game has ended");
 
+        // Check if rejoining as a player
         PlayerInfo player = state.getPlayers().stream()
                 .filter(p -> userId.equals(p.getUserId()))
-                .findFirst()
-                .orElseThrow(() -> new ActionNotAllowedException("you are not a player in this room"));
+                .findFirst().orElse(null);
 
-        String oldSessionId = player.getSessionId();
-        player.setSessionId(newSessionId);
-        state.setUpdatedAt(Instant.now());
+        if (player != null) {
+            String oldSessionId = player.getSessionId();
+            player.setSessionId(newSessionId);
+            state.setUpdatedAt(Instant.now());
+            roomRepo.save(state);
+            roomRepo.saveSessionMapping(newSessionId, roomId);
+            roomRepo.saveUserMapping(userId, roomId);
+            if (!oldSessionId.equals(newSessionId)) roomRepo.deleteSessionMapping(oldSessionId);
+            eventBus.destroySession(oldSessionId);
+            eventBus.emitToSession(newSessionId, new RoomJoinedEvent(
+                    roomId, player.getSide(), state.getMode().name(), state.getStatus().name(),
+                    state.getBoard(), state.getCurrentTurn(),
+                    state.getPlayers(), state.getSpectators()));
+            return;
+        }
 
-        roomRepo.save(state);
-        roomRepo.saveSessionMapping(newSessionId, roomId);
-        roomRepo.saveUserMapping(userId, roomId);
-        roomRepo.deleteSessionMapping(oldSessionId);
-        eventBus.destroySession(oldSessionId);
+        // Check if rejoining as a spectator (e.g. EVE creator after reload)
+        SpectatorInfo spectator = state.getSpectators().stream()
+                .filter(s -> userId.equals(s.getUserId()))
+                .findFirst().orElse(null);
 
-        eventBus.emitToSession(newSessionId, new RoomJoinedEvent(
-                roomId, player.getSide(), state.getMode().name(), state.getStatus().name(),
-                state.getBoard(), state.getCurrentTurn(),
-                state.getPlayers(), state.getSpectators()));
+        if (spectator != null) {
+            String oldSessionId = spectator.getSessionId();
+            spectator.setSessionId(newSessionId);
+            state.setUpdatedAt(Instant.now());
+            roomRepo.save(state);
+            roomRepo.saveSessionMapping(newSessionId, roomId);
+            roomRepo.saveUserMapping(userId, roomId);
+            if (!oldSessionId.equals(newSessionId)) roomRepo.deleteSessionMapping(oldSessionId);
+            eventBus.destroySession(oldSessionId);
+            eventBus.emitToSession(newSessionId, new RoomJoinedEvent(
+                    roomId, "SPECTATOR", state.getMode().name(), state.getStatus().name(),
+                    state.getBoard(), state.getCurrentTurn(),
+                    state.getPlayers(), state.getSpectators()));
+            return;
+        }
+
+        throw new ActionNotAllowedException("you are not in this room");
     }
 
     // ── Watch (as spectator) ──────────────────────────────────────────────────
@@ -532,7 +556,19 @@ public class RoomService {
     private void handleDisconnectNow(String sessionId) {
         try {
             String roomId = roomRepo.findRoomIdBySession(sessionId);
-            if (roomId != null) leaveRoom(roomId, sessionId);
+            if (roomId != null) {
+                RoomState state = roomRepo.findById(roomId);
+                boolean isPveOrEve = state != null &&
+                        (state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE);
+                if (isPveOrEve) {
+                    // Keep the room alive so the creator can reload/rejoin.
+                    // Bots continue playing via their own connection.
+                    roomRepo.deleteSessionMapping(sessionId);
+                    log.info("PVE/EVE creator disconnected — room {} preserved for rejoin", roomId);
+                } else {
+                    leaveRoom(roomId, sessionId);
+                }
+            }
         } finally {
             eventBus.destroySession(sessionId);
             sessionRegistry.deregister(sessionId);

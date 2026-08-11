@@ -1,6 +1,7 @@
 services:
+
   db:
-    image: postgres:18-alpine
+    image: postgres:17-alpine
     container_name: jc-db
     environment:
       POSTGRES_DB: jc
@@ -9,8 +10,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      # SỬA LỖI: Trỏ đúng vào thư mục /data của postgres
-      - jc-db-data:/var/lib/postgresql
+      - jc-db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d jc"]
       interval: 10s
@@ -32,36 +32,53 @@ services:
       retries: 5
     restart: always
 
-  # be:
-  #   build:
-  #     context: ./be
-  #   container_name: jc-be
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/jc
-  #     - SPRING_DATASOURCE_USERNAME=postgres
-  #     - SPRING_DATASOURCE_PASSWORD=postgres
-  #     - SPRING_DATA_REDIS_HOST=redis
-  #     - SPRING_DATA_REDIS_PORT=6379
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #   restart: always
+  be:
+    build:
+      context: ./be
+    container_name: jc-be
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/jc
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health 2>/dev/null | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 40s
+    restart: always
 
-  # bot-worker:
-  #   build:
-  #     context: ./bot-worker
-  #   container_name: jc-bot-worker
-  #   environment:
-  #     - SERVER_URL=ws://jc-be:8080/ws
-  #   depends_on:
-  #     - be
-  #   restart: always
+  bot-worker:
+    build:
+      context: ./bot-worker
+    container_name: jc-bot-worker
+    environment:
+      - SERVER_URL=ws://jc-be:8080/ws
+      - BACKEND_HTTP_URL=http://jc-be:8080
+    depends_on:
+      be:
+        condition: service_healthy
+    restart: always
 
-# Khai báo tất cả các named volumes bên dưới
+  fe:
+    build:
+      context: ./fe
+    container_name: jc-fe
+    ports:
+      - "80:80"
+    depends_on:
+      - be
+    restart: always
+
 volumes:
   jc-db-data:
     driver: local

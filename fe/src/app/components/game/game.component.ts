@@ -286,6 +286,14 @@ export class GameComponent implements OnInit, OnDestroy {
     return !!s && s.isCreator && s.status === 'WAITING' && s.players.length >= 2;
   }
 
+  get canRematch(): boolean {
+    const s = this.state();
+    if (!s || s.status !== 'ENDED') return false;
+    if (s.mode === 'PVP') return s.resultReason !== 'OPPONENT_DISCONNECTED_TIMEOUT';
+    // PVE/EVE: creator can always rematch (bots are re-assigned)
+    return s.isCreator;
+  }
+
   get sideLabel(): string {
     const raw = this.state()?.yourSideRaw;
     if (raw === 'PLAYER_1') return 'Red (PLAYER_1)';

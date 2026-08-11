@@ -161,6 +161,9 @@ public class RoomService {
             throw new ActionNotAllowedException("cannot join as player in PVE/EVE rooms — use watch instead");
         }
         if (state.getPlayers().size() >= 2) throw new RoomFullException();
+        if (userId != null && state.getPlayers().stream().anyMatch(p -> userId.equals(p.getUserId()))) {
+            throw new ActionNotAllowedException("Tài khoản của bạn đã ở trong phòng này");
+        }
 
         // Determine next available side
         boolean player1Taken = state.getPlayers().stream()
@@ -329,6 +332,13 @@ public class RoomService {
         if (!state.isAllowSpectator()) throw new ActionNotAllowedException("spectators not allowed in this room");
         if (state.getStatus() == RoomStatus.ENDED) throw new ActionNotAllowedException("game has ended");
 
+        // Role preemption: if user was previously a player, vacate playing slot
+        boolean wasPlayer = state.getPlayers().removeIf(p -> userId != null && userId.equals(p.getUserId()));
+        if (wasPlayer && state.getStatus() == RoomStatus.PLAYING) {
+            state.setStatus(RoomStatus.ENDED);
+            state.setWinner("DRAW");
+        }
+
         SpectatorInfo spectator = SpectatorInfo.builder()
                 .sessionId(sessionId)
                 .userId(userId)
@@ -406,12 +416,18 @@ public class RoomService {
         String drawReason = null;
         if (winner != null) {
             state.setStatus(RoomStatus.ENDED);
+            state.setWinner(winner.name());
+            state.setResultReason("WIN");
         } else if (repCount >= 3) {
             state.setStatus(RoomStatus.ENDED);
+            state.setWinner("DRAW");
             drawReason = "DRAW_REPETITION";
+            state.setResultReason(drawReason);
         } else if (state.getMoveNumber() >= 150) {
             state.setStatus(RoomStatus.ENDED);
+            state.setWinner("DRAW");
             drawReason = "DRAW_MAX_MOVES";
+            state.setResultReason(drawReason);
         }
         state.setUpdatedAt(Instant.now());
 
@@ -643,6 +659,7 @@ public class RoomService {
                     ? PlayerSide.PLAYER_2.name() : PlayerSide.PLAYER_1.name();
 
             state.setStatus(RoomStatus.ENDED);
+            state.setWinner(winnerSide);
             state.setUpdatedAt(Instant.now());
 
             roomRepo.save(state);

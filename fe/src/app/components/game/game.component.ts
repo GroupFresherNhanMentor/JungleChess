@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal, effect, HostBinding } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, effect, HostBinding, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -322,13 +322,25 @@ export class GameComponent implements OnInit, OnDestroy {
     return s.currentTurn === 1 ? 'Red' : 'Blue';
   }
 
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.roomId) {
+      this.gameRoom.leaveRoom(this.roomId);
+    }
+  }
+
   get winnerLabel(): string {
     const s = this.state();
     if (!s) return '';
     if (s.winner === null || s.winner === undefined) {
-      return 'Game Draw!';
+      return this.loc.currentLanguage === 'vn' ? 'Trận đấu Hòa!' : 'Game Draw!';
     }
-    return s.winner === 1 ? 'Red wins!' : 'Blue wins!';
+    const isVn = this.loc.currentLanguage === 'vn';
+    if (s.winner === 1) {
+      return isVn ? '🏆 Phe Đỏ (PLAYER_1) Chiến Thắng!' : '🏆 Red Clan (PLAYER_1) Wins!';
+    } else {
+      return isVn ? '🏆 Phe Xanh (PLAYER_2) Chiến Thắng!' : '🏆 Blue Clan (PLAYER_2) Wins!';
+    }
   }
 
   getLastMove(): Move | null {

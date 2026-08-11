@@ -8,7 +8,6 @@ import { AuthService } from '../../core/services/auth.service';
 import { LobbyRoomEntry } from '../../core/models/room-events.models';
 import { GameRoomService } from '../../core/services/game-room.service';
 import { LobbyRSocketService } from '../../core/services/lobby-rsocket.service';
-import { RSocketService } from '../../core/services/rsocket.service';
 
 @Component({
   selector: 'app-lobby',
@@ -24,7 +23,6 @@ export class LobbyComponent implements OnInit {
   private readonly lobbyRSocket = inject(LobbyRSocketService);
   private readonly gameRoom = inject(GameRoomService);
   private readonly authService = inject(AuthService);
-  private readonly rsocket = inject(RSocketService);
   private readonly router = inject(Router);
 
   readonly rooms = toSignal(this.lobbyRSocket.rooms$, { initialValue: [] as LobbyRoomEntry[] });
@@ -34,7 +32,7 @@ export class LobbyComponent implements OnInit {
   filterMode: 'ALL' | GameMode = 'ALL';
 
   isCreateModalOpen = false;
-  newRoomMode: GameMode = 'PVP';
+  newRoomMode: GameMode = 'PVP_ONLINE';
   newRoomDifficulty: 'EASY' | 'MEDIUM' | 'HARD' = 'MEDIUM';
   newRoomAllowSpectator = false;
 
@@ -74,7 +72,7 @@ export class LobbyComponent implements OnInit {
   }
 
   openCreateModal(): void {
-    this.newRoomMode = 'PVP';
+    this.newRoomMode = 'PVP_ONLINE';
     this.newRoomDifficulty = 'MEDIUM';
     this.newRoomAllowSpectator = false;
     this.selectedPlayer1BotId = '';

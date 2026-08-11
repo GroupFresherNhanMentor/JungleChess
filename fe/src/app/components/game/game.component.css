@@ -296,6 +296,7 @@ button {
   border: 2px solid var(--gold-accent);
   box-shadow: var(--btn-shadow-3d-sml);
   font-weight: bold;
+  color: #000 !important;
 }
 
 .btn-lobby:hover {

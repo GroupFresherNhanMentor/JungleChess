@@ -520,16 +520,17 @@ body {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  width: 98%;
-  max-width: 1000px;
-  gap: 14px;
+  width: fit-content;
+  max-width: 1350px;
+  gap: 16px;
   background-color: var(--wood-panel);
   border: 2px solid var(--wood-border);
-  padding: 12px;
+  padding: 16px;
   border-radius: 12px;
   box-shadow: var(--panel-shadow-3d);
   background-image: var(--panel-grad-top);
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 #side-chat-wrapper {
@@ -546,7 +547,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-width: 220px;
+  width: 260px;
+  min-width: 240px;
   flex-grow: 0;
   flex-shrink: 0;
 }
@@ -984,7 +986,7 @@ img.terrain-water {
   width: 100%;
 }
 
-#action-buttons-group.panel-button-group {
+#left-panel-actions  .panel-button-group {
   display: flex;
   flex-direction: column;
   align-items: center;

@@ -17,6 +17,19 @@
   font-weight: 600 !important;
 }
 
+.resign-btn {
+  background-color: rgba(220, 38, 38, 0.25) !important;
+  border-color: #ef4444 !important;
+  color: #fca5a5 !important;
+  font-weight: 600 !important;
+}
+
+.resign-btn:hover {
+  background-color: rgba(220, 38, 38, 0.45) !important;
+  border-color: #f87171 !important;
+  color: #ffffff !important;
+}
+
 .leave-btn {
   background-color: rgba(180, 30, 30, 0.18) !important;
   border-color: #c0392b !important;

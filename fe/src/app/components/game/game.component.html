@@ -130,12 +130,14 @@
       <!-- Left Panel -->
       <app-left-panel
         [capturedByRed]="capturedByRed()"
+        [moveHistory]="moveHistory()"
         [canUndo]="canUndo"
         [showUndo]="state()?.mode === 'PVE'"
         [onlineMode]="true"
         [playerName]="player1Name"
         (openRules)="openRules()"
         (undoMove)="onUndoMove()"
+        (resign)="onResign()"
         (backToLobby)="onBackToLobby()"
       ></app-left-panel>
 
@@ -174,7 +176,6 @@
       <div class="right-column-container">
         <app-right-panel
           [capturedByBlue]="capturedByBlue()"
-          [moveHistory]="moveHistory()"
           [currentTurn]="state()?.currentTurn ?? 0"
           [playerName]="player2Name"
           [turnPlayerName]="turnPlayerName"
@@ -264,3 +265,24 @@
 
 <!-- Eaten-animal popup (captured piece jumps from the corner) -->
 <app-eaten-popup [items]="eatenPopups()"></app-eaten-popup>
+
+<!-- Resign / Leave Room Confirmation Dialog -->
+<div
+  *ngIf="confirmModalOpen()"
+  class="result-popup-backdrop"
+  (click)="onCancelAction()"
+>
+  <div class="result-popup confirm-dialog" (click)="$event.stopPropagation()">
+    <div class="result-popup-icon">⚠️</div>
+    <div class="confirm-title">{{ confirmModalTitle() }}</div>
+    <p class="confirm-message">{{ confirmModalMessage() }}</p>
+    <div class="result-popup-actions">
+      <button class="btn-confirm-danger" (click)="onConfirmAction()">
+        {{ loc.currentLanguage === 'vn' ? 'Xác nhận' : 'Confirm' }}
+      </button>
+      <button class="btn-cancel-dialog" (click)="onCancelAction()">
+        {{ loc.currentLanguage === 'vn' ? 'Hủy bỏ' : 'Cancel' }}
+      </button>
+    </div>
+  </div>
+</div>

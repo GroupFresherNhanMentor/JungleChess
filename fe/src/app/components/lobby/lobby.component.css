@@ -267,7 +267,8 @@
   justify-content: center;
 }
 
-.mode-pvp_online {
+.mode-pvp_online,
+.mode-pvp {
   background: linear-gradient(180deg, #2563eb, #1e40af);
   color: #eff6ff !important;
   border: 1.5px solid #60a5fa;

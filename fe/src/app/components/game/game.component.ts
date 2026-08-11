@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject, signal, effect, HostBinding } fro
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Move, Piece, PieceType, PlayerDisplayInfo, Position } from '../../core/models/game.models';
+import { Move, Piece, PieceType, Position } from '../../core/models/game.models';
 import { GameRoomService, OnlineGameState } from '../../core/services/game-room.service';
 import { GameRuleService } from '../../core/services/game-rule.service';
 import { AudioService } from '../../core/services/audio.service';
@@ -275,52 +275,6 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   // ── Template helpers ──────────────────────────────────────────────────────
-
-  get redPlayer(): PlayerDisplayInfo {
-    const s = this.state();
-    if (!s) return { name: 'Phe Đỏ', isBot: false, isYou: false };
-    const p = s.players.find(x => x.side === 'PLAYER_1');
-    const isYou = !s.isSpectator && s.yourSide === 1;
-    if (!p) {
-      return {
-        name: s.mode === 'EVE' ? 'Bot 1 (Đỏ)' : 'Người chơi Đỏ',
-        isBot: s.mode === 'EVE' || s.mode === 'PVE',
-        isYou,
-      };
-    }
-    return {
-      name: p.username || p.userId || (p.isBot ? 'Bot Đỏ' : 'Phe Đỏ'),
-      isBot: p.isBot,
-      isYou,
-    };
-  }
-
-  get bluePlayer(): PlayerDisplayInfo {
-    const s = this.state();
-    if (!s) return { name: 'Phe Xanh', isBot: false, isYou: false };
-    const p = s.players.find(x => x.side === 'PLAYER_2');
-    const isYou = !s.isSpectator && s.yourSide === 0;
-    if (!p) {
-      return {
-        name: s.mode === 'EVE' ? 'Bot 2 (Xanh)' : 'Người chơi Xanh',
-        isBot: s.mode === 'EVE' || s.mode === 'PVE',
-        isYou,
-      };
-    }
-    return {
-      name: p.username || p.userId || (p.isBot ? 'Bot Xanh' : 'Phe Xanh'),
-      isBot: p.isBot,
-      isYou,
-    };
-  }
-
-  get isRedTurn(): boolean {
-    return this.state()?.currentTurn === 1;
-  }
-
-  get isBlueTurn(): boolean {
-    return this.state()?.currentTurn === 0;
-  }
 
   get isMyTurn(): boolean {
     const s = this.state();

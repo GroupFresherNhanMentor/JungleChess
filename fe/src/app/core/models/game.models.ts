@@ -1,12 +1,6 @@
 export type PieceType = 'rat' | 'cat' | 'wolf' | 'dog' | 'leopard' | 'tiger' | 'lion' | 'elephant';
 export type PieceSide = 0 | 1; // 0: Blue, 1: Red
 
-export interface PlayerDisplayInfo {
-  name: string;
-  isBot: boolean;
-  isYou: boolean;
-}
-
 export interface Position {
   col: number; // 0..6
   row: number; // 0..8

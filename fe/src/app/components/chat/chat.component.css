@@ -110,6 +110,7 @@
   border-radius: 12px;
   border: 1px solid var(--wood-border-soft);
   background-color: var(--wood-panel-solid);
+  color: #e9b45c;
   cursor: pointer;
   white-space: nowrap;
   transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -134,7 +135,7 @@
   border-radius: 5px;
   box-sizing: border-box;
   background-color: var(--wood-panel-light);
-  color: var(--ink-strong);
+  color: #e9b45c;
 }
 
 .chat-input:focus {

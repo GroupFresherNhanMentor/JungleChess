@@ -22,7 +22,7 @@
   margin: 0;
   display: inline-block;
   font-size: 1.5em;
-  color: var(--ink-strong);
+  color: #e9b45c;
   background-color: var(--wood-panel);
   border: 2px solid var(--wood-border);
   padding: 8px 28px;
@@ -74,7 +74,7 @@
 .search-icon {
   margin-right: 6px;
   font-size: 0.9em;
-  color: var(--ink);
+  color: #e9b45c;
 }
 
 .search-input {
@@ -82,8 +82,13 @@
   background: transparent;
   outline: none;
   font-size: 0.88em;
-  color: var(--ink-strong);
+  color: #e9b45c;
   width: 100%;
+}
+
+.search-input::placeholder {
+  color: #e9b45c;
+  opacity: 0.75;
 }
 
 .filter-select {
@@ -93,7 +98,7 @@
   border: 1px solid var(--wood-border-soft);
   border-radius: 6px;
   background-color: var(--wood-panel-solid);
-  color: var(--ink-strong);
+  color: #e9b45c;
   outline: none;
   cursor: pointer;
   box-sizing: border-box;
@@ -294,7 +299,7 @@
 .room-title {
   margin: 0 0 8px 0;
   font-size: 1.15em;
-  color: var(--ink-strong);
+  color: #e9b45c;
 }
 
 .room-id-block {
@@ -308,7 +313,7 @@
   align-items: center;
   gap: 8px;
   font-size: 0.85em;
-  color: var(--ink);
+  color: #e9b45c;
 }
 
 .code-label {
@@ -316,7 +321,7 @@
   font-size: 0.75em;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--ink);
+  color: #e9b45c;
 }
 
 .room-id {
@@ -346,6 +351,7 @@
   font-size: 0.95em;
   padding: 3px 6px;
   transition: background-color 0.15s ease;
+  color: #e9b45c;
 }
 
 .copy-code-btn:hover {
@@ -357,7 +363,7 @@
   flex-direction: column;
   gap: 5px;
   font-size: 0.88em;
-  color: var(--ink);
+  color: #e9b45c;
   margin-bottom: 14px;
 }
 
@@ -365,6 +371,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  color: #e9b45c;
 }
 
 .room-card-body {
@@ -378,7 +385,7 @@
   flex-wrap: wrap;
   gap: 8px;
   font-size: 0.88em;
-  color: var(--ink);
+  color: #e9b45c;
 }
 
 .meta-item {
@@ -389,7 +396,7 @@
   border: 1px solid var(--wood-border-soft);
   border-radius: 6px;
   padding: 4px 10px;
-  color: var(--ink-strong);
+  color: #e9b45c;
   font-size: 0.85em;
 }
 
@@ -519,7 +526,7 @@
 .modal-header h2 {
   margin: 0;
   font-size: 1.2em;
-  color: var(--ink-strong);
+  color: #e9b45c;
 }
 
 .modal-close-btn {
@@ -528,7 +535,7 @@
   font-size: 1.6em;
   line-height: 1;
   cursor: pointer;
-  color: var(--ink);
+  color: #e9b45c;
   padding: 0 4px;
 }
 
@@ -544,7 +551,7 @@
   border: 1px solid var(--wood-border-soft);
   border-radius: 6px;
   background-color: var(--wood-panel-light);
-  color: var(--ink-strong);
+  color: #e9b45c;
   outline: none;
   cursor: pointer;
   box-sizing: border-box;

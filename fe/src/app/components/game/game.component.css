@@ -30,12 +30,12 @@
 .waiting-room h2 {
   font-size: 1.6rem;
   margin-bottom: 8px;
-  color: var(--ink-strong);
+  color: #e9b45c;
   text-shadow: var(--text-emboss);
 }
 
 .your-side {
-  color: var(--ink-strong);
+  color: #e9b45c;
   margin-bottom: 18px;
   font-weight: 600;
 }

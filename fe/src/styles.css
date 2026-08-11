@@ -18,6 +18,10 @@
   --ink:               #3a2410;
   --ink-muted:         #6b4a28;
   --ink-strong:        #2a1808;
+  --gold-text:         #e9b45c;
+
+  /* Global helper for text on wood-panel-solid containers */
+  --wood-text-color:   #e9b45c;
 
   /* Clan accents */
   --clan-blue:         #2563eb;
@@ -240,7 +244,7 @@ body {
   padding: 8px 16px;
   border-radius: 12px;
   background: linear-gradient(180deg, #a83232, #7a1f1f);
-  color: #ffffff;
+  color: #e9b45c;
   border: 2px solid #e53e3e;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 0 #521515, inset 0 1px 0 rgba(255, 255, 255, 0.25);
   cursor: pointer;
@@ -262,11 +266,13 @@ body {
 
 .logout-icon {
   font-size: 15px;
+  color: #e9b45c;
 }
 
 .logout-text {
   font-weight: 800;
   letter-spacing: 0.3px;
+  color: #e9b45c;
 }
 
 .lang-toggle-btn {
@@ -278,11 +284,12 @@ body {
   padding: 6px 14px;
   border-radius: 20px;
   background-color: var(--wood-panel);
-  color: var(--ink-strong);
+  color: #e9b45c;
   border: 2px solid var(--gold-accent);
   box-shadow: var(--btn-shadow-3d-sml);
   cursor: pointer;
   transition: all 0.15s ease;
+  margin: 0 6px;
 }
 
 .lang-toggle-btn:hover {
@@ -303,7 +310,7 @@ body {
 
 .lang-code {
   font-weight: bold;
-  color: var(--gold-accent-bright);
+  color: #e9b45c;
 }
 
 /* --- Active Room Banner Header in Game View --- */
@@ -373,10 +380,16 @@ body {
   border: 1px solid var(--wood-border-soft);
 }
 
+.banner-right-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .room-title-text {
   font-size: 15px;
   font-weight: bold;
-  color: var(--ink-strong);
+  color: #e9b45c;
 }
 
 #game-controls {

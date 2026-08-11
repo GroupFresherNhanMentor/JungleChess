@@ -2,14 +2,14 @@
    Only adding page-specific overrides below */
 @import url('../login/login.component.css');
 
-/* Success banner */
+/* Success banner — warm wood panel with green accent */
 .success-banner {
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  border-radius: 10px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  border-radius: 8px;
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
-  color: #86efac;
+  color: #8be08f;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -18,11 +18,11 @@
 
 /* Error state on input */
 .form-input.input-error {
-  border-color: rgba(239, 68, 68, 0.5);
-  background: rgba(239, 68, 68, 0.05);
+  border-color: var(--clan-red-bright);
+  background-color: var(--clan-red-bg);
 }
 
 .form-input.input-error:focus {
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+  border-color: var(--clan-red-bright);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
 }

@@ -53,18 +53,6 @@ public class AlphaBetaBotEngine implements BotEngine {
             return null;
         }
 
-        // Check if any valid move avoids game history repetition
-        boolean hasNonRepeatedMove = false;
-        for (Move move : validMoves) {
-            workingBoard.makeMove(move);
-            long nextKey = computeTtKey(workingBoard.getZobristHash(), side.getOpposite());
-            workingBoard.undoMove(move);
-            if (context.getPositionCount(nextKey) == 0) {
-                hasNonRepeatedMove = true;
-                break;
-            }
-        }
-
         long startTime = System.nanoTime();
         long deadline = startTime + timeoutMillis * 1_000_000L;
         long softDeadline = startTime + (long) (timeoutMillis * 0.45) * 1_000_000L;
@@ -94,7 +82,7 @@ public class AlphaBetaBotEngine implements BotEngine {
             // Order moves before searching (captures first, then quiet moves)
             orderMoves(validMoves, bestMoveFound, 0, context);
 
-            SearchResult res = searchRootLevel(workingBoard, validMoves, side, currentDepth, windowAlpha, windowBeta, hasNonRepeatedMove, deadline, context, nodesSearched);
+            SearchResult res = searchRootLevel(workingBoard, validMoves, side, currentDepth, windowAlpha, windowBeta, deadline, context, nodesSearched);
 
             if (res.aborted()) {
                 break;
@@ -102,7 +90,7 @@ public class AlphaBetaBotEngine implements BotEngine {
 
             // Check Aspiration Window fail-high / fail-low: re-search with full window if score outside window
             if (currentDepth > 1 && (res.bestScore() <= windowAlpha || res.bestScore() >= windowBeta)) {
-                res = searchRootLevel(workingBoard, validMoves, side, currentDepth, Integer.MIN_VALUE, Integer.MAX_VALUE, hasNonRepeatedMove, deadline, context, nodesSearched);
+                res = searchRootLevel(workingBoard, validMoves, side, currentDepth, Integer.MIN_VALUE, Integer.MAX_VALUE, deadline, context, nodesSearched);
             }
 
             if (!res.aborted() && res.bestMove() != null) {
@@ -120,7 +108,7 @@ public class AlphaBetaBotEngine implements BotEngine {
     }
 
     private SearchResult searchRootLevel(Board workingBoard, List<Move> validMoves, Side side,
-                                         int depth, int alpha, int beta, boolean hasNonRepeatedMove,
+                                         int depth, int alpha, int beta,
                                          long deadline, BotContext context, AtomicLong nodesSearched) {
         Move iterBestMove = null;
         int iterBestScore = Integer.MIN_VALUE;
@@ -137,15 +125,9 @@ public class AlphaBetaBotEngine implements BotEngine {
             int repCount = context.getPositionCount(nextKey);
 
             nodesSearched.incrementAndGet();
-            int score;
-            if (hasNonRepeatedMove && repCount >= 1) {
-                // Hard filter repeated move when non-repeated move exists
-                score = -1_000_000;
-            } else {
-                score = minimax(workingBoard, depth - 1, 1, alpha, beta, false, side, deadline, context, nodesSearched);
-                if (repCount >= 1) {
-                    score -= (repCount * 3000);
-                }
+            int score = minimax(workingBoard, depth - 1, 1, alpha, beta, false, side, deadline, context, nodesSearched);
+            if (repCount >= 1) {
+                score -= (repCount * 3000);
             }
 
             workingBoard.undoMove(move);
@@ -222,53 +204,55 @@ public class AlphaBetaBotEngine implements BotEngine {
         Move bestMoveInNode = null;
         int bestEval;
 
-        if (isMaximizing) {
-            int maxEval = Integer.MIN_VALUE;
-            for (Move move : validMoves) {
-                board.makeMove(move);
-                nodesSearched.incrementAndGet();
+        try {
+            if (isMaximizing) {
+                int maxEval = Integer.MIN_VALUE;
+                for (Move move : validMoves) {
+                    board.makeMove(move);
+                    nodesSearched.incrementAndGet();
 
-                int eval = minimax(board, depth - 1, ply + 1, alpha, beta, false, botSide, deadline, context, nodesSearched);
+                    int eval = minimax(board, depth - 1, ply + 1, alpha, beta, false, botSide, deadline, context, nodesSearched);
 
-                board.undoMove(move);
-                if (eval > maxEval) {
-                    maxEval = eval;
-                    bestMoveInNode = move;
+                    board.undoMove(move);
+                    if (eval > maxEval) {
+                        maxEval = eval;
+                        bestMoveInNode = move;
+                    }
+                    alpha = Math.max(alpha, eval);
+
+                    if (beta <= alpha) {
+                        context.storeKillerMove(ply, move);
+                        context.addHistoryScore(move, depth);
+                        break; // Alpha/Beta Cutoff
+                    }
                 }
-                alpha = Math.max(alpha, eval);
+                bestEval = maxEval;
+            } else {
+                int minEval = Integer.MAX_VALUE;
+                for (Move move : validMoves) {
+                    board.makeMove(move);
+                    nodesSearched.incrementAndGet();
 
-                if (beta <= alpha) {
-                    context.storeKillerMove(ply, move);
-                    context.addHistoryScore(move, depth);
-                    break; // Alpha/Beta Cutoff
+                    int eval = minimax(board, depth - 1, ply + 1, alpha, beta, true, botSide, deadline, context, nodesSearched);
+
+                    board.undoMove(move);
+                    if (eval < minEval) {
+                        minEval = eval;
+                        bestMoveInNode = move;
+                    }
+                    beta = Math.min(beta, eval);
+
+                    if (beta <= alpha) {
+                        context.storeKillerMove(ply, move);
+                        context.addHistoryScore(move, depth);
+                        break; // Beta Cutoff
+                    }
                 }
+                bestEval = minEval;
             }
-            bestEval = maxEval;
-        } else {
-            int minEval = Integer.MAX_VALUE;
-            for (Move move : validMoves) {
-                board.makeMove(move);
-                nodesSearched.incrementAndGet();
-
-                int eval = minimax(board, depth - 1, ply + 1, alpha, beta, true, botSide, deadline, context, nodesSearched);
-
-                board.undoMove(move);
-                if (eval < minEval) {
-                    minEval = eval;
-                    bestMoveInNode = move;
-                }
-                beta = Math.min(beta, eval);
-
-                if (beta <= alpha) {
-                    context.storeKillerMove(ply, move);
-                    context.addHistoryScore(move, depth);
-                    break; // Beta Cutoff
-                }
-            }
-            bestEval = minEval;
+        } finally {
+            context.popPosition(posKey);
         }
-
-        context.popPosition(posKey);
 
         // Store result in Transposition Table
         TtEntry.Flag flag;

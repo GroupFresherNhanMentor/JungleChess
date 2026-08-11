@@ -297,7 +297,10 @@ export class GameComponent implements OnInit, OnDestroy {
 
   get winnerLabel(): string {
     const s = this.state();
-    if (!s || s.winner === undefined) return '';
+    if (!s) return '';
+    if (s.winner === null || s.winner === undefined) {
+      return 'Game Draw!';
+    }
     return s.winner === 1 ? 'Red wins!' : 'Blue wins!';
   }
 

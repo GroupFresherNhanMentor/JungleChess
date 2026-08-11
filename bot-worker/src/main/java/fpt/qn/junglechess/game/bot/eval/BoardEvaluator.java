@@ -26,6 +26,9 @@ public class BoardEvaluator {
 
     public static final Map<PieceType, Integer> PIECE_VALUES = new EnumMap<>(PieceType.class);
 
+    private static final int[][] P1_TRAPS = { { 0, 2 }, { 0, 4 }, { 1, 3 } };
+    private static final int[][] P2_TRAPS = { { 8, 2 }, { 8, 4 }, { 7, 3 } };
+
     static {
         PIECE_VALUES.put(PieceType.RAT, 100);
         PIECE_VALUES.put(PieceType.CAT, 200);
@@ -112,11 +115,6 @@ public class BoardEvaluator {
                 int pieceVal = PIECE_VALUES.getOrDefault(piece.type(), 0);
                 int positionalBonus = getPstValue(piece, r, c);
 
-                // River bonus for Rat
-                if (piece.type() == PieceType.RAT && Board.isRiver(r, c)) {
-                    positionalBonus += 30;
-                }
-
                 // Trap penalty: piece standing in enemy trap is neutralized
                 int trapPenalty = 0;
                 if (Board.isTrap(r, c, pieceOpponent)) {
@@ -180,9 +178,7 @@ public class BoardEvaluator {
 
     private int evaluateHomeTrapAmbush(Board board, Side side) {
         int bonus = 0;
-        int[][] homeTraps = (side == Side.PLAYER_1)
-                ? new int[][] { { 0, 2 }, { 0, 4 }, { 1, 3 } }
-                : new int[][] { { 8, 2 }, { 8, 4 }, { 7, 3 } };
+        int[][] homeTraps = (side == Side.PLAYER_1) ? P1_TRAPS : P2_TRAPS;
 
         for (int[] trap : homeTraps) {
             Piece trapPiece = board.getPiece(trap[0], trap[1]);
@@ -233,9 +229,7 @@ public class BoardEvaluator {
 
     private boolean isAdjacentToEnemyTrap(int row, int col, Side pieceOpponent) {
         // Simple check if (row, col) is neighbor of any enemy trap
-        int[][] enemyTraps = (pieceOpponent == Side.PLAYER_2)
-                ? new int[][] { { 8, 2 }, { 8, 4 }, { 7, 3 } }
-                : new int[][] { { 0, 2 }, { 0, 4 }, { 1, 3 } };
+        int[][] enemyTraps = (pieceOpponent == Side.PLAYER_2) ? P2_TRAPS : P1_TRAPS;
 
         for (int[] trap : enemyTraps) {
             if (Math.abs(row - trap[0]) + Math.abs(col - trap[1]) == 1) {

@@ -7,9 +7,16 @@ public class Board {
     public static final int COLS = 7;
 
     private final Piece[][] grid;
+    /** Running Zobrist hash, updated incrementally on every makeMove/undoMove. */
+    private long zobristHash;
 
     public Board() {
         this.grid = new Piece[ROWS][COLS];
+        this.zobristHash = 0L;
+    }
+
+    public long getZobristHash() {
+        return zobristHash;
     }
 
     public static Board createInitialBoard() {
@@ -34,7 +41,20 @@ public class Board {
         board.setPiece(6, 2, new Piece(Side.PLAYER_2, PieceType.WOLF));
         board.setPiece(6, 0, new Piece(Side.PLAYER_2, PieceType.ELEPHANT));
 
+        board.recomputeZobrist();
         return board;
+    }
+
+    /** Full Zobrist recompute from scratch. */
+    public void recomputeZobrist() {
+        zobristHash = 0L;
+        for (int r = 0; r < ROWS; r++) {
+            for (int c = 0; c < COLS; c++) {
+                if (grid[r][c] != null) {
+                    zobristHash ^= ZobristTable.forPiece(grid[r][c], r, c);
+                }
+            }
+        }
     }
 
     public Piece getPiece(int row, int col) {
@@ -58,14 +78,26 @@ public class Board {
         setPiece(pos.row(), pos.col(), piece);
     }
 
-    // Option A: In-Place Make Move
+    // In-Place Make Move — XOR hash incrementally
     public void makeMove(Move move) {
+        zobristHash ^= ZobristTable.forPiece(move.movedPiece(), move.from().row(), move.from().col());
+        if (move.capturedPiece() != null) {
+            zobristHash ^= ZobristTable.forPiece(move.capturedPiece(), move.to().row(), move.to().col());
+        }
+        zobristHash ^= ZobristTable.forPiece(move.movedPiece(), move.to().row(), move.to().col());
+
         setPiece(move.from(), null);
         setPiece(move.to(), move.movedPiece());
     }
 
-    // Option A: In-Place Undo Move
+    // In-Place Undo Move — reverses makeMove XOR operations exactly
     public void undoMove(Move move) {
+        zobristHash ^= ZobristTable.forPiece(move.movedPiece(), move.to().row(), move.to().col());
+        if (move.capturedPiece() != null) {
+            zobristHash ^= ZobristTable.forPiece(move.capturedPiece(), move.to().row(), move.to().col());
+        }
+        zobristHash ^= ZobristTable.forPiece(move.movedPiece(), move.from().row(), move.from().col());
+
         setPiece(move.from(), move.movedPiece());
         setPiece(move.to(), move.capturedPiece());
     }
@@ -77,6 +109,7 @@ public class Board {
                 clone.grid[r][c] = this.grid[r][c];
             }
         }
+        clone.zobristHash = this.zobristHash;
         return clone;
     }
 

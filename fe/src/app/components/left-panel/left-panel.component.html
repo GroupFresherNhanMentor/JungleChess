@@ -47,6 +47,10 @@
       <button *ngIf="!onlineMode" (click)="randomizeBoard.emit()" class="panel-btn random-btn">
         {{ loc.translate('randomizeBoardButton') }}
       </button>
+
+      <button *ngIf="onlineMode" (click)="backToLobby.emit()" class="panel-btn leave-btn">
+        {{ loc.translate('backToLobbyBtn') }}
+      </button>
     </div>
   </div>
 </div>

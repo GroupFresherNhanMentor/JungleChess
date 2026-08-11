@@ -28,6 +28,7 @@ import fpt.qn.junglechess.room.model.MoveRecord;
 import fpt.qn.junglechess.room.model.PlayerInfo;
 import fpt.qn.junglechess.room.model.RoomState;
 import fpt.qn.junglechess.room.model.RoomStatus;
+import java.util.List;
 import fpt.qn.junglechess.room.model.SpectatorInfo;
 import fpt.qn.junglechess.room.repository.RoomStateRepository;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +56,25 @@ public class RoomService {
     // ── Create ────────────────────────────────────────────────────────────────
 
     public void createRoom(CreateRoomRequest req, String sessionId, String userId, String displayName) {
+        // Auto purge any previous WAITING room created by this user
+        if (userId != null) {
+            try {
+                List<RoomState> existing = roomRepo.findAllActive();
+                for (RoomState r : existing) {
+                    if (r.getStatus() == RoomStatus.WAITING) {
+                        boolean isUserCreator = (r.getCreatorSessionId() != null && r.getCreatorSessionId().equals(sessionId)) ||
+                                (r.getPlayers() != null && r.getPlayers().stream().anyMatch(p -> userId.equals(p.getUserId())));
+                        if (isUserCreator) {
+                            roomRepo.delete(r.getRoomId());
+                            log.info("Purged previous unstarted room {} for user {}", r.getRoomId(), userId);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to purge old waiting room for user {}: {}", userId, e.getMessage());
+            }
+        }
+
         String roomId = "room-" + UuidV7.generate().toString().substring(0, 8);
         boolean isEve = req.getMode() == GameMode.EVE;
         boolean isPve = req.getMode() == GameMode.PVE;
@@ -90,12 +110,13 @@ public class RoomService {
             yourSide = "SPECTATOR";
         } else {
             // PVP or PVE: creator is PLAYER_1
+            String username = sessionRegistry.getUsername(sessionId);
             PlayerInfo player1 = PlayerInfo.builder()
                     .sessionId(sessionId)
                     .side(PlayerSide.PLAYER_1.name())
                     .isBot(false)
                     .userId(userId)
-                    .displayName(displayName)
+                    .displayName(displayName != null ? displayName : userId)
                     .build();
             state.getPlayers().add(player1);
             yourSide = PlayerSide.PLAYER_1.name();
@@ -161,18 +182,22 @@ public class RoomService {
             throw new ActionNotAllowedException("cannot join as player in PVE/EVE rooms — use watch instead");
         }
         if (state.getPlayers().size() >= 2) throw new RoomFullException();
+        if (userId != null && state.getPlayers().stream().anyMatch(p -> userId.equals(p.getUserId()))) {
+            throw new ActionNotAllowedException("Tài khoản của bạn đã ở trong phòng này");
+        }
 
         // Determine next available side
         boolean player1Taken = state.getPlayers().stream()
                 .anyMatch(p -> PlayerSide.PLAYER_1.name().equals(p.getSide()));
         String side = player1Taken ? PlayerSide.PLAYER_2.name() : PlayerSide.PLAYER_1.name();
 
+        String username = sessionRegistry.getUsername(sessionId);
         PlayerInfo joiner = PlayerInfo.builder()
                 .sessionId(sessionId)
                 .side(side)
                 .isBot(false)
                 .userId(userId)
-                .displayName(displayName)
+                .displayName(displayName != null ? displayName : userId)
                 .build();
         state.getPlayers().add(joiner);
         state.setUpdatedAt(Instant.now());
@@ -236,7 +261,7 @@ public class RoomService {
                 .side(side)
                 .isBot(true)
                 .userId(userId)
-                .displayName(displayName)
+                .displayName(displayName != null ? displayName : "Bot " + (state.getBotDifficulty() != null ? state.getBotDifficulty() : ""))
                 .build();
         state.getPlayers().add(bot);
         state.setUpdatedAt(Instant.now());
@@ -329,6 +354,16 @@ public class RoomService {
         if (!state.isAllowSpectator()) throw new ActionNotAllowedException("spectators not allowed in this room");
         if (state.getStatus() == RoomStatus.ENDED) throw new ActionNotAllowedException("game has ended");
 
+        // Role preemption: if user was previously a player, vacate playing slot
+        boolean wasPlayer = state.getPlayers().removeIf(p -> userId != null && userId.equals(p.getUserId()));
+        if (wasPlayer && state.getStatus() == RoomStatus.PLAYING) {
+            state.setStatus(RoomStatus.ENDED);
+            state.setWinner("DRAW");
+        }
+
+        // Deduplicate spectator entries for this user/session
+        state.getSpectators().removeIf(s -> (userId != null && userId.equals(s.getUserId())) || sessionId.equals(s.getSessionId()));
+
         SpectatorInfo spectator = SpectatorInfo.builder()
                 .sessionId(sessionId)
                 .userId(userId)
@@ -406,12 +441,18 @@ public class RoomService {
         String drawReason = null;
         if (winner != null) {
             state.setStatus(RoomStatus.ENDED);
+            state.setWinner(winner.name());
+            state.setResultReason("WIN");
         } else if (repCount >= 3) {
             state.setStatus(RoomStatus.ENDED);
+            state.setWinner("DRAW");
             drawReason = "DRAW_REPETITION";
+            state.setResultReason(drawReason);
         } else if (state.getMoveNumber() >= 150) {
             state.setStatus(RoomStatus.ENDED);
+            state.setWinner("DRAW");
             drawReason = "DRAW_MAX_MOVES";
+            state.setResultReason(drawReason);
         }
         state.setUpdatedAt(Instant.now());
 
@@ -504,7 +545,9 @@ public class RoomService {
         RoomState state = roomRepo.findById(roomId);
         if (state == null) return;
 
-        boolean isCreator = sessionId.equals(state.getCreatorSessionId());
+        String userId = sessionRegistry.getUserId(sessionId);
+        boolean isCreator = sessionId.equals(state.getCreatorSessionId()) ||
+                (userId != null && state.getPlayers().stream().anyMatch(p -> PlayerSide.PLAYER_1.name().equals(p.getSide()) && userId.equals(p.getUserId())));
         boolean isPveOrEve = state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE;
 
         // PVE/EVE: creator leaving always terminates the room and releases bots
@@ -514,10 +557,10 @@ public class RoomService {
         }
 
         boolean isSpectator = state.getSpectators().stream()
-                .anyMatch(s -> s.getSessionId().equals(sessionId));
+                .anyMatch(s -> s.getSessionId().equals(sessionId) || (userId != null && userId.equals(s.getUserId())));
 
         if (isSpectator) {
-            state.getSpectators().removeIf(s -> s.getSessionId().equals(sessionId));
+            state.getSpectators().removeIf(s -> s.getSessionId().equals(sessionId) || (userId != null && userId.equals(s.getUserId())));
             state.setUpdatedAt(Instant.now());
             roomRepo.save(state);
             roomRepo.deleteSessionMapping(sessionId);
@@ -529,10 +572,12 @@ public class RoomService {
         }
 
         boolean isPlayer = state.getPlayers().stream()
-                .anyMatch(p -> p.getSessionId().equals(sessionId));
-        if (!isPlayer) return;
+                .anyMatch(p -> p.getSessionId().equals(sessionId) || (userId != null && userId.equals(p.getUserId())));
 
-        handlePlayerLeave(state, sessionId);
+        if (isCreator || isPlayer) {
+            handlePlayerLeave(state, sessionId, userId);
+            return;
+        }
     }
 
     private void terminatePveEveRoom(RoomState state, String creatorSessionId) {
@@ -661,13 +706,14 @@ public class RoomService {
             String roomId = roomRepo.findRoomIdBySession(sessionId);
             if (roomId != null) {
                 RoomState state = roomRepo.findById(roomId);
-                boolean isPveOrEve = state != null &&
-                        (state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE);
-                if (isPveOrEve) {
-                    // Keep the room alive so the creator can reload/rejoin.
-                    // Bots continue playing via their own connection.
+                // Keep the room alive so the user can reload/rejoin.
+                // Only remove the session mapping so a fresh WebSocket session
+                // (browser refresh, reconnection) can rejoin the same room.
+                if (state != null &&
+                        (state.getStatus() == RoomStatus.WAITING || state.getStatus() == RoomStatus.PLAYING)) {
                     roomRepo.deleteSessionMapping(sessionId);
-                    log.info("PVE/EVE creator disconnected — room {} preserved for rejoin", roomId);
+                    log.info("Session {} disconnected — room {} preserved for rejoin (status={})",
+                            sessionId, roomId, state.getStatus());
                 } else {
                     leaveRoom(roomId, sessionId);
                 }
@@ -678,36 +724,55 @@ public class RoomService {
         }
     }
 
-    private void handlePlayerLeave(RoomState state, String sessionId) {
+    private void handlePlayerLeave(RoomState state, String sessionId, String currentUserId) {
         String roomId = state.getRoomId();
-        String userId = state.getPlayers().stream()
+        String userId = currentUserId != null ? currentUserId : state.getPlayers().stream()
                 .filter(p -> p.getSessionId().equals(sessionId))
                 .map(PlayerInfo::getUserId)
                 .findFirst().orElse(null);
 
         if (state.getStatus() == RoomStatus.WAITING) {
-            // Notify bots so their sessions self-terminate before we delete the room
-            if (state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE) {
-                eventBus.emit(roomId, new GameResultEvent(roomId, null, "ROOM_CANCELLED"));
+            boolean isCreator = sessionId.equals(state.getCreatorSessionId()) ||
+                    (userId != null && state.getPlayers().stream().anyMatch(p -> PlayerSide.PLAYER_1.name().equals(p.getSide()) && userId.equals(p.getUserId())));
+
+            if (isCreator) {
+                // Creator leaving during WAITING cancels the room completely
+                if (state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE) {
+                    eventBus.emit(roomId, new GameResultEvent(roomId, null, "ROOM_CANCELLED"));
+                }
+                roomRepo.delete(roomId);
+                roomRepo.deleteSessionMapping(sessionId);
+                if (userId != null) roomRepo.deleteUserMapping(userId);
+                refreshLobby();
+                eventBus.destroyRoom(roomId);
+                eventBus.destroySession(sessionId);
+            } else {
+                // Non-creator (Player 2) leaving during WAITING: just remove Player 2
+                state.getPlayers().removeIf(p -> p.getSessionId().equals(sessionId) || (userId != null && userId.equals(p.getUserId())));
+                state.setUpdatedAt(Instant.now());
+                roomRepo.save(state);
+                roomRepo.deleteSessionMapping(sessionId);
+                if (userId != null) roomRepo.deleteUserMapping(userId);
+                refreshLobby();
+
+                // Broadcast updated players list to room so Creator UI updates immediately
+                eventBus.emit(roomId, new PlayersUpdatedEvent(
+                        roomId, state.getPlayers(), state.getSpectators(), RoomStatus.WAITING.name()));
+                eventBus.destroySession(sessionId);
             }
-            roomRepo.delete(roomId);
-            roomRepo.deleteSessionMapping(sessionId);
-            if (userId != null) roomRepo.deleteUserMapping(userId);
-            refreshLobby();
-            eventBus.destroyRoom(roomId);
-            eventBus.destroySession(sessionId);
             return;
         }
 
         if (state.getStatus() == RoomStatus.PLAYING) {
             String leavingSide = state.getPlayers().stream()
-                    .filter(p -> p.getSessionId().equals(sessionId))
+                    .filter(p -> p.getSessionId().equals(sessionId) || (userId != null && userId.equals(p.getUserId())))
                     .map(PlayerInfo::getSide)
                     .findFirst().orElse(null);
             String winnerSide = PlayerSide.PLAYER_1.name().equals(leavingSide)
                     ? PlayerSide.PLAYER_2.name() : PlayerSide.PLAYER_1.name();
 
             state.setStatus(RoomStatus.ENDED);
+            state.setWinner(winnerSide);
             state.setUpdatedAt(Instant.now());
 
             roomRepo.save(state);

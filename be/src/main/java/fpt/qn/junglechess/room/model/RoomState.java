@@ -41,6 +41,8 @@ public class RoomState {
     List<MoveRecord> history = new ArrayList<>();
     @Builder.Default
     List<Long> positionHistory = new ArrayList<>();
+    String winner;
+    String resultReason;
     Instant createdAt;
     Instant updatedAt;
 }

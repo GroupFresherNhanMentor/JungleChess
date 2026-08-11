@@ -15,6 +15,66 @@
 
   </div>
 
+  <!-- Top Match Versus Player Header Bar -->
+  <div id="match-players-bar" *ngIf="(state()?.status === 'PLAYING' || state()?.status === 'ENDED') && state() as s">
+    <!-- Red Player Card -->
+    <div class="match-player-card red-card" [class.active-turn]="isRedTurn">
+      <div class="player-avatar red-avatar">
+        <img src="assets/images/head_no_background/lion.png" alt="Red Player" class="avatar-img" />
+        <span class="side-dot red-dot">🔴</span>
+      </div>
+      <div class="player-details">
+        <div class="player-name-row">
+          <span class="player-name">{{ redPlayer.name }}</span>
+          <span *ngIf="redPlayer.isYou" class="badge-tag you-tag">({{ loc.currentLanguage === 'vn' ? 'Bạn' : 'You' }})</span>
+          <span *ngIf="redPlayer.isBot" class="badge-tag bot-tag">BOT</span>
+        </div>
+        <div class="player-side-info">
+          <span class="side-badge red-side-badge">🔴 {{ loc.currentLanguage === 'vn' ? 'Phe Đỏ' : 'Red Team' }}</span>
+          <span *ngIf="isRedTurn" class="turn-status-badge active-red">
+            <span class="pulse-dot red-pulse"></span> {{ loc.currentLanguage === 'vn' ? 'Đang đến lượt' : 'Thinking...' }}
+          </span>
+          <span *ngIf="!isRedTurn" class="turn-status-badge waiting">
+            {{ loc.currentLanguage === 'vn' ? 'Đang chờ...' : 'Waiting...' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- VS Center Indicator -->
+    <div class="vs-center-badge">
+      <div class="vs-circle">VS</div>
+      <div class="turn-direction-indicator" [class.turn-red]="isRedTurn" [class.turn-blue]="isBlueTurn">
+        <span *ngIf="isRedTurn" class="direction-arrow left-arrow">◄ {{ loc.currentLanguage === 'vn' ? 'Lượt Đỏ' : 'Red Turn' }}</span>
+        <span *ngIf="isBlueTurn" class="direction-arrow right-arrow">{{ loc.currentLanguage === 'vn' ? 'Lượt Xanh' : 'Blue Turn' }} ►</span>
+      </div>
+    </div>
+
+    <!-- Blue Player Card -->
+    <div class="match-player-card blue-card" [class.active-turn]="isBlueTurn">
+      <div class="player-details align-right">
+        <div class="player-name-row">
+          <span *ngIf="bluePlayer.isBot" class="badge-tag bot-tag">BOT</span>
+          <span *ngIf="bluePlayer.isYou" class="badge-tag you-tag">({{ loc.currentLanguage === 'vn' ? 'Bạn' : 'You' }})</span>
+          <span class="player-name">{{ bluePlayer.name }}</span>
+        </div>
+        <div class="player-side-info">
+          <span *ngIf="isBlueTurn" class="turn-status-badge active-blue">
+            <span class="pulse-dot blue-pulse"></span> {{ loc.currentLanguage === 'vn' ? 'Đang đến lượt' : 'Thinking...' }}
+          </span>
+          <span *ngIf="!isBlueTurn" class="turn-status-badge waiting">
+            {{ loc.currentLanguage === 'vn' ? 'Đang chờ...' : 'Waiting...' }}
+          </span>
+          <span class="side-badge blue-side-badge">🔵 {{ loc.currentLanguage === 'vn' ? 'Phe Xanh' : 'Blue Team' }}</span>
+        </div>
+      </div>
+      <div class="player-avatar blue-avatar">
+        <img src="assets/images/head_no_background/elephant.png" alt="Blue Player" class="avatar-img" />
+        <span class="side-dot blue-dot">🔵</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Waiting Room -->
   <div *ngIf="state()?.status === 'WAITING'" class="waiting-room">
     <h2>🏠 Room {{ state()?.roomId }}</h2>
@@ -28,8 +88,8 @@
       <ul>
         <li *ngFor="let p of state()?.players">
           <span class="player-side-dot" [class.red-dot]="p.side === 'PLAYER_1'" [class.blue-dot]="p.side === 'PLAYER_2'"></span>
-          <strong>{{ p.displayName || p.side }}</strong>
-          <span class="side-tag">({{ p.side === 'PLAYER_1' ? 'Red' : 'Blue' }})</span>
+          <strong>{{ p.displayName || p.username || p.userId || p.side }}</strong>
+          <span class="side-tag">({{ p.side === 'PLAYER_1' ? 'Phe Đỏ' : 'Phe Xanh' }})</span>
           <span *ngIf="p.isBot" class="bot-tag">🤖 Bot</span>
         </li>
       </ul>
@@ -57,6 +117,7 @@
 
   <!-- Game Board (rich layout) — stays visible after the game ends -->
   <div *ngIf="state()?.status === 'PLAYING' || state()?.status === 'ENDED'" id="game-page-wrapper">
+
     <div id="game-layout">
       <!-- Left Panel -->
       <app-left-panel
@@ -158,7 +219,7 @@
 >
   <div class="celebration-inner">
     <div class="celebration-icon">{{ resultWon() ? '🏆' : '😵' }}</div>
-    <div class="celebration-line">{{ resultWon() ? 'Chiến Thắng!' : 'Thua Cuộc!' }}</div>
+    <div class="celebration-line">{{ winnerLabel }}</div>
     <div class="celebration-hint">(click để tiếp tục)</div>
   </div>
 </div>

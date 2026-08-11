@@ -19,8 +19,8 @@ from game.bot import AlphaBetaBotEngine
 def main():
     server_url = os.getenv("SERVER_URL", "ws://localhost:8080/ws")
     backend_url = os.getenv("BACKEND_HTTP_URL", "http://localhost:8080")
-    bot_username = os.getenv("BOT_USERNAME", "bot-worker")
-    bot_password = os.getenv("BOT_PASSWORD", "Bot@worker1")
+    bot_username = os.getenv("BOT_USERNAME", "py-bot-worker")
+    bot_password = os.getenv("BOT_PASSWORD", "PyBot@worker1")
     manual_room = os.getenv("ROOM_ID")
     manual_side = os.getenv("SIDE", "PLAYER_2")
     manual_diff = os.getenv("DIFFICULTY", "MEDIUM")

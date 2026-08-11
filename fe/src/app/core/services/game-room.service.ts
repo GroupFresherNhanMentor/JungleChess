@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, Subject, first } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, first, switchMap, throwError } from 'rxjs';
 import { StompSubscription } from '@stomp/stompjs';
 import { BotInfo, Move, Piece, PieceSide, Position, RoomStatus } from '../models/game.models';
 import {
@@ -151,24 +151,30 @@ export class GameRoomService {
   rejoinRoom(roomId: string): Observable<void> {
     this.cleanupRoom();
     this.gameState$.next(null);
-    const result$ = new Subject<void>();
 
-    const tempSub = this.stomp.subscribe<RoomEvent>('/user/queue/events', event => {
-      this.handleEvent(event);
-      if (event.type === 'ROOM_JOINED' && !result$.closed) {
-        this.subscribeToRoom(roomId);
-        tempSub.unsubscribe();
-        result$.next();
-        result$.complete();
-      }
-      if (event.type === 'ROOM_ERROR' && !result$.closed) {
-        tempSub.unsubscribe();
-        result$.error(new Error((event as any).message));
-      }
-    });
+    const token = this.authService.getAccessToken();
+    if (!token) return throwError(() => new Error('Not authenticated'));
 
-    this.stomp.send(`/app/room.${roomId}.rejoin`);
-    return result$.asObservable();
+    return this.stomp.connect(token).pipe(
+      switchMap(() => {
+        const result$ = new Subject<void>();
+        const tempSub = this.stomp.subscribe<RoomEvent>('/user/queue/events', event => {
+          this.handleEvent(event);
+          if (event.type === 'ROOM_JOINED' && !result$.closed) {
+            this.subscribeToRoom(roomId);
+            tempSub.unsubscribe();
+            result$.next();
+            result$.complete();
+          }
+          if (event.type === 'ROOM_ERROR' && !result$.closed) {
+            tempSub.unsubscribe();
+            result$.error(new Error((event as any).message));
+          }
+        });
+        this.stomp.send(`/app/room.${roomId}.rejoin`);
+        return result$.asObservable();
+      })
+    );
   }
 
   // ── Watch (spectator) ─────────────────────────────────────────────────────

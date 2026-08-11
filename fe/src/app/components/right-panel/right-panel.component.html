@@ -1,7 +1,10 @@
 <div id="right-panel">
   <!-- Captured by Blue (Player 0) -->
   <div id="captured-by-player0" class="captured-panel">
-    <h2>{{ loc.translate('capturedByBlueLabel') }}</h2>
+    <h2>
+      <span class="player-name-label blue-name">{{ playerName || loc.translate('capturedByBlueLabel') }}</span>
+      <span *ngIf="playerName" class="side-color-dot blue-dot"></span>
+    </h2>
     <div class="pieces-container">
       <ng-container *ngIf="capturedByBlue.length === 0">
         <span class="captured-none-text">
@@ -44,7 +47,7 @@
   <p class="turn-info">
     <span>{{ loc.translate('turnLabel') }} </span>
     <span [style.color]="currentTurn === 0 ? 'blue' : 'red'">
-      {{ getTurnText() }}
+      {{ turnPlayerName || getTurnText() }}
     </span>
   </p>
 </div>

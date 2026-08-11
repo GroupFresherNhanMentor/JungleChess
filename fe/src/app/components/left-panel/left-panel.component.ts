@@ -15,6 +15,8 @@ export class LeftPanelComponent {
   @Input() canUndo: boolean = false;
   /** Online mode: hide local-only controls (undo / random board) the server doesn't support. */
   @Input() onlineMode: boolean = false;
+  /** Display name of the PLAYER_1 (Red) player. */
+  @Input() playerName = '';
 
   @Output() resetGame = new EventEmitter<void>();
   @Output() undoMove = new EventEmitter<void>();

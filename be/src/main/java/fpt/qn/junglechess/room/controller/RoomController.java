@@ -71,13 +71,13 @@ public class RoomController {
     public void create(@Payload CreateRoomRequest req, SimpMessageHeaderAccessor sha) {
         String sessionId = sha.getSessionId();
         JwtUserPrincipal principal = extractPrincipal(sha);
-        roomService.createRoom(req, sessionId, principal.userId().toString());
+        roomService.createRoom(req, sessionId, principal.userId().toString(), principal.username());
     }
 
     @MessageMapping("room.{id}.join")
     public void join(@DestinationVariable String id, SimpMessageHeaderAccessor sha) {
         JwtUserPrincipal principal = extractPrincipal(sha);
-        roomService.joinRoom(id, sha.getSessionId(), principal.userId().toString());
+        roomService.joinRoom(id, sha.getSessionId(), principal.userId().toString(), principal.username());
     }
 
     @MessageMapping("room.{id}.rejoin")
@@ -124,7 +124,7 @@ public class RoomController {
                         @Payload BotJoinRequest req,
                         SimpMessageHeaderAccessor sha) {
         JwtUserPrincipal principal = extractPrincipal(sha);
-        roomService.joinRoomAsBot(id, sha.getSessionId(), req.getSide(), principal.userId().toString());
+        roomService.joinRoomAsBot(id, sha.getSessionId(), req.getSide(), principal.userId().toString(), principal.username());
     }
 
     @MessageMapping("/room/{id}/move")

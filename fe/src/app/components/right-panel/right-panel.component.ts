@@ -14,6 +14,10 @@ export class RightPanelComponent {
   @Input() capturedByBlue: Piece[] = [];
   @Input() moveHistory: Move[] = [];
   @Input() currentTurn: PieceSide = 0;
+  /** Display name of the PLAYER_2 (Blue) player. */
+  @Input() playerName = '';
+  /** Display name of whoever's turn it currently is. */
+  @Input() turnPlayerName = '';
 
   constructor(public loc: LocalizationService) {}
 

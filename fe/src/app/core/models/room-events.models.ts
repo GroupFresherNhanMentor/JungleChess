@@ -70,6 +70,7 @@ export interface ServerPlayerInfo {
   side: string;
   isBot: boolean;
   userId: string;
+  displayName: string;
 }
 
 export interface ServerSpectatorInfo {

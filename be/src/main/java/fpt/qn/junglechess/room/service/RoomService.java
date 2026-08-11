@@ -54,7 +54,7 @@ public class RoomService {
 
     // ── Create ────────────────────────────────────────────────────────────────
 
-    public void createRoom(CreateRoomRequest req, String sessionId, String userId) {
+    public void createRoom(CreateRoomRequest req, String sessionId, String userId, String displayName) {
         String roomId = "room-" + UuidV7.generate().toString().substring(0, 8);
         boolean isEve = req.getMode() == GameMode.EVE;
         boolean isPve = req.getMode() == GameMode.PVE;
@@ -95,6 +95,7 @@ public class RoomService {
                     .side(PlayerSide.PLAYER_1.name())
                     .isBot(false)
                     .userId(userId)
+                    .displayName(displayName)
                     .build();
             state.getPlayers().add(player1);
             yourSide = PlayerSide.PLAYER_1.name();
@@ -152,7 +153,7 @@ public class RoomService {
 
     // ── Join (human player, always fills next available slot) ─────────────────
 
-    public void joinRoom(String roomId, String sessionId, String userId) {
+    public void joinRoom(String roomId, String sessionId, String userId, String displayName) {
         RoomState state = roomRepo.findById(roomId);
         if (state == null) throw new RoomNotFoundException(roomId);
         if (state.getStatus() != RoomStatus.WAITING) throw new ActionNotAllowedException("game already started or ended");
@@ -171,6 +172,7 @@ public class RoomService {
                 .side(side)
                 .isBot(false)
                 .userId(userId)
+                .displayName(displayName)
                 .build();
         state.getPlayers().add(joiner);
         state.setUpdatedAt(Instant.now());
@@ -190,14 +192,14 @@ public class RoomService {
 
     // ── Bot join (honors requested side, auto-starts PVE/EVE) ────────────────
 
-    public void joinRoomAsBot(String roomId, String sessionId, String requestedSide, String userId) {
+    public void joinRoomAsBot(String roomId, String sessionId, String requestedSide, String userId, String displayName) {
         Object lock = roomJoinLocks.computeIfAbsent(roomId, k -> new Object());
         synchronized (lock) {
-            joinRoomAsBotInternal(roomId, sessionId, requestedSide, userId);
+            joinRoomAsBotInternal(roomId, sessionId, requestedSide, userId, displayName);
         }
     }
 
-    private void joinRoomAsBotInternal(String roomId, String sessionId, String requestedSide, String userId) {
+    private void joinRoomAsBotInternal(String roomId, String sessionId, String requestedSide, String userId, String displayName) {
         RoomState state = roomRepo.findById(roomId);
         if (state == null) throw new RoomNotFoundException(roomId);
 
@@ -234,6 +236,7 @@ public class RoomService {
                 .side(side)
                 .isBot(true)
                 .userId(userId)
+                .displayName(displayName)
                 .build();
         state.getPlayers().add(bot);
         state.setUpdatedAt(Instant.now());

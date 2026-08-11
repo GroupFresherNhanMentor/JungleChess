@@ -114,8 +114,8 @@ class StompConnectionService:
             self.connected = True
             logger.info("STOMP session CONNECTED!")
             
-            # Subscribe to bot assignment queue
-            self._send_subscribe("/user/queue/assign", "sub-assign")
+            # Subscribe to bot invite queue
+            self._send_subscribe("/user/queue/bot-invite", "sub-bot-invite")
 
             # Resubscribe topics
             for topic, (sub_id, _) in list(self.subscriptions.items()):
@@ -137,7 +137,7 @@ class StompConnectionService:
                 except Exception as e:
                     logger.warning(f"Failed to parse JSON body: {body}")
 
-            if dest == "/user/queue/assign" or dest.endswith("/queue/assign"):
+            if dest == "/user/queue/bot-invite" or dest.endswith("/queue/bot-invite"):
                 if self.on_assign_callback:
                     self.on_assign_callback(payload)
             else:

@@ -13,19 +13,12 @@ public interface BotEngine {
      * Compute the best move for {@code side} within the default time budget.
      * Convenience alias for {@link #nextMove(Board, Side, int, long)}.
      */
-    default Move nextMove(Board board, Side side, int depth) {
-        return nextMove(board, side, depth, DEFAULT_TIMEOUT_MS);
+    default Move nextMove(Board board, Side side, int depth, long timeoutMillis) {
+        return nextMove(board, side, depth, timeoutMillis, new BotContext());
     }
 
     /**
-     * Compute the best move for {@code side}, stopping the search when
-     * {@code timeoutMillis} elapses and returning the best move found so far.
-     *
-     * @param board         current board state (must NOT be mutated by the implementation)
-     * @param side          the side to move
-     * @param depth         minimax search depth
-     * @param timeoutMillis hard deadline for the whole search
-     * @return the best move found, or {@code null} if there are no legal moves
+     * Compute the best move for {@code side} with per-game context (TT and position history).
      */
-    Move nextMove(Board board, Side side, int depth, long timeoutMillis);
+    Move nextMove(Board board, Side side, int depth, long timeoutMillis, BotContext context);
 }

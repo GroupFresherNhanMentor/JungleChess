@@ -28,6 +28,9 @@ public class BotGameSession {
     private final StompConnectionService connection;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
+    /** Per-game context (TT + position history) owned by this game session. */
+    private final fpt.qn.junglechess.game.bot.BotContext botContext = new fpt.qn.junglechess.game.bot.BotContext();
+
     private volatile boolean ended = false;
 
     public BotGameSession(String roomId, String side, String difficulty,
@@ -65,9 +68,15 @@ public class BotGameSession {
 
         if (!"PLAYING".equals(status)) return;
 
+        // Record incoming board state hash for repetition tracking
+        String[][] boardArray = parseBoard(map);
+        Board board = boardFromArray(boardArray);
+        Side turnSide = currentTurn != null ? Side.valueOf(currentTurn.toUpperCase()) : Side.PLAYER_1;
+        long posKey = fpt.qn.junglechess.game.model.ZobristTable.computeKey(board.getZobristHash(), turnSide);
+        botContext.recordPosition(posKey);
+
         if (side.equalsIgnoreCase(currentTurn)) {
             log.debug("[Room {}] Bot's turn ({}), computing move...", roomId, side);
-            String[][] board = parseBoard(map);
             executor.submit(() -> computeAndSendMove(board));
         }
     }
@@ -95,12 +104,11 @@ public class BotGameSession {
         return result;
     }
 
-    private void computeAndSendMove(String[][] boardArray) {
+    private void computeAndSendMove(Board board) {
         long startMs = System.currentTimeMillis();
         try {
-            Board board = boardFromArray(boardArray);
             Side botSide = Side.valueOf(side.toUpperCase());
-            Move best = botEngine.nextMove(board, botSide, difficulty.getSearchDepth(), 2500);
+            Move best = botEngine.nextMove(board, botSide, difficulty.getSearchDepth(), 2500, botContext);
             if (best != null) {
                 long elapsed = System.currentTimeMillis() - startMs;
                 long remaining = MIN_MOVE_MS - elapsed;
@@ -139,6 +147,7 @@ public class BotGameSession {
                 }
             }
         }
+        board.recomputeZobrist();
         return board;
     }
 

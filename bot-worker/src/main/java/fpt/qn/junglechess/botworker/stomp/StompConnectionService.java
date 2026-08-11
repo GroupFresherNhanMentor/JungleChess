@@ -171,4 +171,9 @@ public class StompConnectionService {
     public boolean isConnected() {
         return session != null && session.isConnected();
     }
+
+    @jakarta.annotation.PreDestroy
+    public void destroy() {
+        reconnectScheduler.shutdownNow();
+    }
 }

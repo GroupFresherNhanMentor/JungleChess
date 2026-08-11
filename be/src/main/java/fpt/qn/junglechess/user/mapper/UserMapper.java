@@ -2,7 +2,6 @@ package fpt.qn.junglechess.user.mapper;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.util.List;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -16,7 +15,8 @@ import fpt.qn.junglechess.user.dto.response.UserDto;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserMapper {
 
-    // `roles` is populated manually by the service layer (via user_roles JOIN roles).
+    // `roles` is populated manually by the service layer (via user_roles JOIN
+    // roles).
     @Mapping(target = "roles", ignore = true)
     UserDto toDto(UsersRecord record);
 

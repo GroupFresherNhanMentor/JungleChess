@@ -109,7 +109,29 @@
     </div>
   </div>
 
-<!-- Loading / Connecting -->
+  <!-- Game Over -->
+  <div *ngIf="state()?.status === 'ENDED'" class="game-over">
+    <h2 class="result">{{ winnerLabel }}</h2>
+    <p *ngIf="state()?.resultReason === 'DRAW_REPETITION'">
+      Draw by 3-Fold Repetition.
+    </p>
+    <p *ngIf="state()?.resultReason === 'DRAW_MAX_MOVES'">
+      Draw by 150-Move Limit.
+    </p>
+    <p *ngIf="state()?.resultReason === 'OPPONENT_DISCONNECTED_TIMEOUT'">
+      Opponent disconnected.
+    </p>
+    <div class="end-actions">
+      <button class="btn-rematch" (click)="requestRematch()">
+        {{ state()?.mode === 'PVP' ? 'Request Rematch' : 'Rematch' }}
+      </button>
+      <button class="btn-lobby" (click)="onBackToLobby()">
+        {{ loc.translate('backToLobbyBtn') }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading / Connecting -->
   <div *ngIf="!state()" class="connecting">
     <p>Connecting to room...</p>
   </div>

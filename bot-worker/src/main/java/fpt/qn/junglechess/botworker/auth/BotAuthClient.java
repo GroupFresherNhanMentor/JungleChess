@@ -3,6 +3,9 @@ package fpt.qn.junglechess.botworker.auth;
 import fpt.qn.junglechess.botworker.config.BotProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -14,6 +17,7 @@ import java.util.Map;
 public class BotAuthClient {
 
     private static final Logger log = LoggerFactory.getLogger(BotAuthClient.class);
+    private static final ParameterizedTypeReference<Map<String, Object>> MAP_TYPE_REF = new ParameterizedTypeReference<>() {};
 
     private final RestTemplate rest = new RestTemplate();
     private final BotProperties props;
@@ -36,7 +40,7 @@ public class BotAuthClient {
                 "fullName", "Bot Worker"
         );
         try {
-            rest.postForEntity(url, body, Map.class);
+            rest.exchange(url, HttpMethod.POST, new HttpEntity<>(body), MAP_TYPE_REF);
             log.info("Bot account registered successfully");
         } catch (HttpClientErrorException.Conflict e) {
             log.debug("Bot account already exists, skipping registration");
@@ -60,9 +64,8 @@ public class BotAuthClient {
         return extractTokens(url, body);
     }
 
-    @SuppressWarnings("unchecked")
     private BotTokens extractTokens(String url, Object body) {
-        ResponseEntity<Map> response = rest.postForEntity(url, body, Map.class);
+        ResponseEntity<Map<String, Object>> response = rest.exchange(url, HttpMethod.POST, new HttpEntity<>(body), MAP_TYPE_REF);
         if (response.getBody() == null) throw new IllegalStateException("Empty response from " + url);
 
         Object dataObj = response.getBody().get("data");

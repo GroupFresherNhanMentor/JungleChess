@@ -341,8 +341,23 @@ public class RoomService {
                 .build();
         state.getHistory().add(record);
 
+        // Record position hash for 3-fold repetition detection
+        Side nextTurnSide = Side.valueOf(nextTurn.toUpperCase());
+        long posKey = fpt.qn.junglechess.game.model.ZobristTable.computeKey(board.getZobristHash(), nextTurnSide);
+        state.getPositionHistory().add(posKey);
+        int repCount = java.util.Collections.frequency(state.getPositionHistory(), posKey);
+
         Side winner = ruleEngine.isGameOver(board) ? ruleEngine.getWinner(board) : null;
-        if (winner != null) state.setStatus(RoomStatus.ENDED);
+        String drawReason = null;
+        if (winner != null) {
+            state.setStatus(RoomStatus.ENDED);
+        } else if (repCount >= 3) {
+            state.setStatus(RoomStatus.ENDED);
+            drawReason = "DRAW_REPETITION";
+        } else if (state.getMoveNumber() >= 150) {
+            state.setStatus(RoomStatus.ENDED);
+            drawReason = "DRAW_MAX_MOVES";
+        }
         state.setUpdatedAt(Instant.now());
 
         roomRepo.save(state);
@@ -354,6 +369,9 @@ public class RoomService {
 
         if (winner != null) {
             eventBus.emit(roomId, new GameResultEvent(roomId, winner.name(), "WIN"));
+            refreshLobby();
+        } else if (drawReason != null) {
+            eventBus.emit(roomId, new GameResultEvent(roomId, null, drawReason));
             refreshLobby();
         }
 
@@ -582,6 +600,7 @@ public class RoomService {
                 }
             }
         }
+        board.recomputeZobrist();
         return board;
     }
 

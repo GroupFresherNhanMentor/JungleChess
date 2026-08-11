@@ -45,8 +45,8 @@ public class Board {
         return board;
     }
 
-    /** Full Zobrist recompute from scratch — called once after board construction. */
-    private void recomputeZobrist() {
+    /** Full Zobrist recompute from scratch. */
+    public void recomputeZobrist() {
         zobristHash = 0L;
         for (int r = 0; r < ROWS; r++) {
             for (int c = 0; c < COLS; c++) {

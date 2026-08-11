@@ -36,6 +36,8 @@ public class RoomState {
     List<SpectatorInfo> spectators = new ArrayList<>();
     @Builder.Default
     List<MoveRecord> history = new ArrayList<>();
+    @Builder.Default
+    List<Long> positionHistory = new ArrayList<>();
     Instant createdAt;
     Instant updatedAt;
 }

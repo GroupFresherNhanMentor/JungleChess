@@ -15,22 +15,22 @@ class BotAuthClient:
         self.password = password
 
     def register(self):
+        """
+        Registers the bot account with BOT role.
+        Raises if the username is already taken — the developer must configure a unique BOT_USERNAME.
+        """
         url = f"{self.backend_url}/api/auth/bot-register"
-        body = {
-            "username": self.username,
-            "password": self.password,
-            "fullName": "Bot Worker Python"
-        }
-        try:
-            resp = requests.post(url, json=body, timeout=10)
-            if resp.status_code == 200 or resp.status_code == 201:
-                logger.info("Bot account registered successfully")
-            elif resp.status_code == 409:
-                logger.debug("Bot account already exists, skipping registration")
-            else:
-                logger.warning(f"Bot registration status {resp.status_code}: {resp.text}")
-        except Exception as e:
-            logger.warning(f"Bot registration call failed: {e}")
+        body = {"username": self.username, "password": self.password, "fullName": "Bot Worker Python"}
+        resp = requests.post(url, json=body, timeout=10)
+        if resp.status_code in (200, 201):
+            logger.info(f"Bot account '{self.username}' registered successfully")
+        elif resp.status_code == 409:
+            raise RuntimeError(
+                f"Username '{self.username}' is already taken. "
+                f"Please set a unique BOT_USERNAME for your bot and restart."
+            )
+        else:
+            resp.raise_for_status()
 
     def login(self) -> BotTokens:
         url = f"{self.backend_url}/api/auth/login"

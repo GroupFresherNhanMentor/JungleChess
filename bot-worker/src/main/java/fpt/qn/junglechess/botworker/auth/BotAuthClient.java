@@ -29,8 +29,8 @@ public class BotAuthClient {
     }
 
     /**
-     * Registers the bot account with BOT role. Idempotent: if the account already
-     * exists the server returns 409 and we silently ignore it.
+     * Registers the bot account with BOT role.
+     * Throws if the username is already taken — the developer must configure a unique BOT_USERNAME.
      */
     public void register() {
         String url = props.getBackendHttpUrl() + "/api/auth/bot-register";
@@ -41,11 +41,11 @@ public class BotAuthClient {
         );
         try {
             rest.exchange(url, HttpMethod.POST, new HttpEntity<>(body), MAP_TYPE_REF);
-            log.info("Bot account registered successfully");
+            log.info("Bot account '{}' registered successfully", props.getBotUsername());
         } catch (HttpClientErrorException.Conflict e) {
-            log.debug("Bot account already exists, skipping registration");
-        } catch (Exception e) {
-            log.warn("Bot registration call failed: {}", e.getMessage());
+            throw new IllegalStateException(
+                    "Username '" + props.getBotUsername() + "' is already taken. " +
+                    "Please set a unique BOT_USERNAME for your bot and restart.");
         }
     }
 

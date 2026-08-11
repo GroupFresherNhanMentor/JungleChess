@@ -116,4 +116,18 @@ class AlphaBetaBotEngineTest {
         assertNotNull(move);
         assertTrue(context.getTtSize() > 0, "Transposition table should contain evaluated positions after search");
     }
+
+    @Test
+    void nextMove_IncrementsMoveNumber_AndTracksOpeningState() {
+        Board board = Board.createInitialBoard();
+        fpt.qn.junglechess.game.bot.BotContext context = new fpt.qn.junglechess.game.bot.BotContext();
+
+        assertEquals(0, context.getMoveNumber());
+
+        botEngine.nextMove(board, Side.PLAYER_1, 2, 2000, context);
+        assertEquals(1, context.getMoveNumber(), "moveNumber should be incremented to 1 after first move");
+
+        botEngine.nextMove(board, Side.PLAYER_1, 2, 2000, context);
+        assertEquals(2, context.getMoveNumber(), "moveNumber should be incremented to 2 after second move");
+    }
 }

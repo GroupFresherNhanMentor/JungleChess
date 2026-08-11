@@ -83,7 +83,7 @@
 .settings-header h2 {
   margin: 0;
   font-size: 1.2em;
-  color: var(--ink-strong);
+  color: #e9b45c;
 }
 
 .settings-close-btn {
@@ -91,7 +91,7 @@
   border: none;
   font-size: 1.5em;
   line-height: 1;
-  color: var(--ink-muted);
+  color: #e9b45c;
   cursor: pointer;
   transition: color 0.15s ease;
 }
@@ -118,7 +118,7 @@
 .settings-item .ai-info {
   font-size: 14px;
   font-weight: 600;
-  color: var(--ink-strong);
+  color: #e9b45c;
   white-space: nowrap;
 }
 

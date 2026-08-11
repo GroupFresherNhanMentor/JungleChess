@@ -2,8 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable, of, shareReplay } from 'rxjs';
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 
-const WS_URL = 'ws://localhost:8080/ws';
-// const WS_URL = `ws://${location.host}/ws`;
+const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
 
 @Injectable({ providedIn: 'root' })
 export class RSocketService {

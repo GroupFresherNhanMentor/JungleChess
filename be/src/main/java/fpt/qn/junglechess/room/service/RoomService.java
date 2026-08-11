@@ -58,14 +58,15 @@ public class RoomService {
         createRoom(req, sessionId, userId, null);
     }
 
-    public void createRoom(CreateRoomRequest req, String sessionId, String userId, String username) {
+    public void createRoom(CreateRoomRequest req, String sessionId, String userId,
+            String username) {
         String roomId = "room-" + UuidV7.generate().toString().substring(0, 8);
         boolean isEve = req.getMode() == GameMode.EVE;
         boolean isPve = req.getMode() == GameMode.PVE;
 
         // PVE and EVE always allow spectators; PVP respects the request flag
         boolean allowSpectator = isPve || isEve || req.isAllowSpectator();
-        boolean allowBet       = !isPve && !isEve && (allowSpectator && req.isAllowBet());
+        boolean allowBet = !isPve && !isEve && (allowSpectator && req.isAllowBet());
         Instant now = Instant.now();
 
         RoomState state = RoomState.builder()
@@ -138,12 +139,16 @@ public class RoomService {
 
     public void joinRoom(String roomId, String sessionId, String userId, String username) {
         RoomState state = roomRepo.findById(roomId);
-        if (state == null) throw new RoomNotFoundException(roomId);
-        if (state.getStatus() != RoomStatus.WAITING) throw new ActionNotAllowedException("game already started or ended");
+        if (state == null)
+            throw new RoomNotFoundException(roomId);
+        if (state.getStatus() != RoomStatus.WAITING)
+            throw new ActionNotAllowedException("game already started or ended");
         if (state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE) {
-            throw new ActionNotAllowedException("cannot join as player in PVE/EVE rooms — use watch instead");
+            throw new ActionNotAllowedException(
+                    "cannot join as player in PVE/EVE rooms — use watch instead");
         }
-        if (state.getPlayers().size() >= 2) throw new RoomFullException();
+        if (state.getPlayers().size() >= 2)
+            throw new RoomFullException();
 
         // Determine next available side
         boolean player1Taken = state.getPlayers().stream()
@@ -177,16 +182,19 @@ public class RoomService {
 
     // ── Bot join (honors requested side, auto-starts PVE/EVE) ────────────────
 
-    public void joinRoomAsBot(String roomId, String sessionId, String requestedSide, String userId) {
+    public void joinRoomAsBot(String roomId, String sessionId, String requestedSide,
+            String userId) {
         Object lock = roomJoinLocks.computeIfAbsent(roomId, k -> new Object());
         synchronized (lock) {
             joinRoomAsBotInternal(roomId, sessionId, requestedSide, userId);
         }
     }
 
-    private void joinRoomAsBotInternal(String roomId, String sessionId, String requestedSide, String userId) {
+    private void joinRoomAsBotInternal(String roomId, String sessionId, String requestedSide,
+            String userId) {
         RoomState state = roomRepo.findById(roomId);
-        if (state == null) throw new RoomNotFoundException(roomId);
+        if (state == null)
+            throw new RoomNotFoundException(roomId);
 
         String side = requestedSide != null ? requestedSide : PlayerSide.PLAYER_2.name();
 
@@ -201,7 +209,8 @@ public class RoomService {
             roomRepo.save(state);
             roomRepo.saveSessionMapping(sessionId, roomId);
             roomRepo.saveUserMapping(userId, roomId);
-            if (!oldSessionId.equals(sessionId)) roomRepo.deleteSessionMapping(oldSessionId);
+            if (!oldSessionId.equals(sessionId))
+                roomRepo.deleteSessionMapping(oldSessionId);
             eventBus.emitToSession(sessionId, new RoomJoinedEvent(
                     roomId, side, state.getMode().name(), state.getStatus().name(),
                     state.getBoard(), state.getCurrentTurn(),
@@ -210,11 +219,14 @@ public class RoomService {
             return;
         }
 
-        if (state.getStatus() != RoomStatus.WAITING) throw new ActionNotAllowedException("game already started or ended");
-        if (state.getPlayers().size() >= 2) throw new RoomFullException();
+        if (state.getStatus() != RoomStatus.WAITING)
+            throw new ActionNotAllowedException("game already started or ended");
+        if (state.getPlayers().size() >= 2)
+            throw new RoomFullException();
 
         boolean sideTaken = state.getPlayers().stream().anyMatch(p -> side.equals(p.getSide()));
-        if (sideTaken) throw new ActionNotAllowedException("side " + side + " is already taken");
+        if (sideTaken)
+            throw new ActionNotAllowedException("side " + side + " is already taken");
 
         PlayerInfo bot = PlayerInfo.builder()
                 .sessionId(sessionId)
@@ -243,13 +255,17 @@ public class RoomService {
 
     public void startGame(String roomId, String sessionId) {
         RoomState state = roomRepo.findById(roomId);
-        if (state == null) throw new RoomNotFoundException(roomId);
-        if (state.getStatus() != RoomStatus.WAITING) throw new ActionNotAllowedException("game already started or ended");
-        if (state.getPlayers().size() < 2) throw new ActionNotAllowedException("waiting for players to join");
+        if (state == null)
+            throw new RoomNotFoundException(roomId);
+        if (state.getStatus() != RoomStatus.WAITING)
+            throw new ActionNotAllowedException("game already started or ended");
+        if (state.getPlayers().size() < 2)
+            throw new ActionNotAllowedException("waiting for players to join");
 
         // EVE creator is a spectator; PVP/PVE creator is PLAYER_1
         boolean isCreator = sessionId.equals(state.getCreatorSessionId());
-        if (!isCreator) throw new ActionNotAllowedException("only the room creator can start the game");
+        if (!isCreator)
+            throw new ActionNotAllowedException("only the room creator can start the game");
 
         autoStartGame(state);
     }
@@ -262,31 +278,61 @@ public class RoomService {
 
     public void rejoinRoom(String roomId, String newSessionId, String userId, String username) {
         RoomState state = roomRepo.findById(roomId);
-        if (state == null) throw new RoomNotFoundException(roomId);
-        if (state.getStatus() == RoomStatus.ENDED) throw new ActionNotAllowedException("game has ended");
+        if (state == null)
+            throw new RoomNotFoundException(roomId);
+        if (state.getStatus() == RoomStatus.ENDED)
+            throw new ActionNotAllowedException("game has ended");
 
+        // Check if rejoining as a player
         PlayerInfo player = state.getPlayers().stream()
                 .filter(p -> userId.equals(p.getUserId()))
-                .findFirst()
-                .orElseThrow(() -> new ActionNotAllowedException("you are not a player in this room"));
+                .findFirst().orElse(null);
 
-        String oldSessionId = player.getSessionId();
-        player.setSessionId(newSessionId);
-        if (username != null && !username.isBlank() && (player.getUsername() == null || player.getUsername().isBlank())) {
-            player.setUsername(username);
+        if (player != null) {
+            String oldSessionId = player.getSessionId();
+            player.setSessionId(newSessionId);
+
+            if (username != null && !username.isBlank()
+                    && (player.getUsername() == null || player.getUsername().isBlank())) {
+                player.setUsername(username);
+            }
+            state.setUpdatedAt(Instant.now());
+            roomRepo.save(state);
+            roomRepo.saveSessionMapping(newSessionId, roomId);
+            roomRepo.saveUserMapping(userId, roomId);
+            if (!oldSessionId.equals(newSessionId))
+                roomRepo.deleteSessionMapping(oldSessionId);
+            eventBus.destroySession(oldSessionId);
+            eventBus.emitToSession(newSessionId, new RoomJoinedEvent(
+                    roomId, player.getSide(), state.getMode().name(), state.getStatus().name(),
+                    state.getBoard(), state.getCurrentTurn(),
+                    state.getPlayers(), state.getSpectators()));
+            return;
         }
-        state.setUpdatedAt(Instant.now());
 
-        roomRepo.save(state);
-        roomRepo.saveSessionMapping(newSessionId, roomId);
-        roomRepo.saveUserMapping(userId, roomId);
-        roomRepo.deleteSessionMapping(oldSessionId);
-        eventBus.destroySession(oldSessionId);
+        // Check if rejoining as a spectator (e.g. EVE creator after reload)
+        SpectatorInfo spectator = state.getSpectators().stream()
+                .filter(s -> userId.equals(s.getUserId()))
+                .findFirst().orElse(null);
 
-        eventBus.emitToSession(newSessionId, new RoomJoinedEvent(
-                roomId, player.getSide(), state.getMode().name(), state.getStatus().name(),
-                state.getBoard(), state.getCurrentTurn(),
-                state.getPlayers(), state.getSpectators()));
+        if (spectator != null) {
+            String oldSessionId = spectator.getSessionId();
+            spectator.setSessionId(newSessionId);
+            state.setUpdatedAt(Instant.now());
+            roomRepo.save(state);
+            roomRepo.saveSessionMapping(newSessionId, roomId);
+            roomRepo.saveUserMapping(userId, roomId);
+            if (!oldSessionId.equals(newSessionId))
+                roomRepo.deleteSessionMapping(oldSessionId);
+            eventBus.destroySession(oldSessionId);
+            eventBus.emitToSession(newSessionId, new RoomJoinedEvent(
+                    roomId, "SPECTATOR", state.getMode().name(), state.getStatus().name(),
+                    state.getBoard(), state.getCurrentTurn(),
+                    state.getPlayers(), state.getSpectators()));
+            return;
+        }
+
+        throw new ActionNotAllowedException("you are not in this room");
     }
 
     // ── Watch (as spectator) ──────────────────────────────────────────────────
@@ -297,9 +343,12 @@ public class RoomService {
 
     public void watchRoom(String roomId, String sessionId, String userId, String username) {
         RoomState state = roomRepo.findById(roomId);
-        if (state == null) throw new RoomNotFoundException(roomId);
-        if (!state.isAllowSpectator()) throw new ActionNotAllowedException("spectators not allowed in this room");
-        if (state.getStatus() == RoomStatus.ENDED) throw new ActionNotAllowedException("game has ended");
+        if (state == null)
+            throw new RoomNotFoundException(roomId);
+        if (!state.isAllowSpectator())
+            throw new ActionNotAllowedException("spectators not allowed in this room");
+        if (state.getStatus() == RoomStatus.ENDED)
+            throw new ActionNotAllowedException("game has ended");
 
         String effectiveUsername = (username != null && !username.isBlank()) ? username : userId;
 
@@ -327,23 +376,29 @@ public class RoomService {
 
     public MoveAckResponse move(String roomId, String sessionId, MoveRequest req) {
         RoomState state = roomRepo.findById(roomId);
-        if (state == null) throw new RoomNotFoundException(roomId);
-        if (state.getStatus() == RoomStatus.ENDED) throw new ActionNotAllowedException("game has ended");
-        if (state.getStatus() != RoomStatus.PLAYING) throw new ActionNotAllowedException("game has not started");
+        if (state == null)
+            throw new RoomNotFoundException(roomId);
+        if (state.getStatus() == RoomStatus.ENDED)
+            throw new ActionNotAllowedException("game has ended");
+        if (state.getStatus() != RoomStatus.PLAYING)
+            throw new ActionNotAllowedException("game has not started");
 
         // For bots, multiple players share the same session (one bot-worker connection).
-        // Disambiguate by also matching the current turn so PLAYER_2 bot isn't misidentified as PLAYER_1.
+        // Disambiguate by also matching the current turn so PLAYER_2 bot isn't misidentified as
+        // PLAYER_1.
         PlayerInfo player = state.getPlayers().stream()
                 .filter(p -> p.getSessionId().equals(sessionId))
                 .filter(p -> !p.isBot() || p.getSide().equals(state.getCurrentTurn()))
                 .findFirst()
-                .orElseThrow(() -> new ActionNotAllowedException("you are not a player in this room"));
+                .orElseThrow(
+                        () -> new ActionNotAllowedException("you are not a player in this room"));
 
-        if (!player.getSide().equals(state.getCurrentTurn())) throw new NotYourTurnException();
+        if (!player.getSide().equals(state.getCurrentTurn()))
+            throw new NotYourTurnException();
 
         Board board = boardFromState(state.getBoard());
         Position fromPos = new Position(req.getFrom()[0], req.getFrom()[1]);
-        Position toPos   = new Position(req.getTo()[0], req.getTo()[1]);
+        Position toPos = new Position(req.getTo()[0], req.getTo()[1]);
 
         Piece movedPiece = board.getPiece(fromPos);
         if (movedPiece == null || !movedPiece.side().name().equals(player.getSide())) {
@@ -352,12 +407,14 @@ public class RoomService {
 
         Piece capturedPiece = board.getPiece(toPos);
         Move move = new Move(fromPos, toPos, movedPiece, capturedPiece);
-        if (!ruleEngine.isValidMove(board, move)) throw new InvalidMoveException();
+        if (!ruleEngine.isValidMove(board, move))
+            throw new InvalidMoveException();
 
         board.makeMove(move);
 
         String nextTurn = PlayerSide.PLAYER_1.name().equals(player.getSide())
-                ? PlayerSide.PLAYER_2.name() : PlayerSide.PLAYER_1.name();
+                ? PlayerSide.PLAYER_2.name()
+                : PlayerSide.PLAYER_1.name();
         state.setBoard(board.toBoardStateArray());
         state.setCurrentTurn(nextTurn);
         state.setMoveNumber(state.getMoveNumber() + 1);
@@ -373,7 +430,8 @@ public class RoomService {
 
         // Record position hash for 3-fold repetition detection
         Side nextTurnSide = Side.valueOf(nextTurn.toUpperCase());
-        long posKey = fpt.qn.junglechess.game.model.ZobristTable.computeKey(board.getZobristHash(), nextTurnSide);
+        long posKey = fpt.qn.junglechess.game.model.ZobristTable.computeKey(board.getZobristHash(),
+                nextTurnSide);
         state.getPositionHistory().add(posKey);
         int repCount = java.util.Collections.frequency(state.getPositionHistory(), posKey);
 
@@ -412,7 +470,8 @@ public class RoomService {
 
     public void leaveRoom(String roomId, String sessionId) {
         RoomState state = roomRepo.findById(roomId);
-        if (state == null) return;
+        if (state == null)
+            return;
 
         boolean isCreator = sessionId.equals(state.getCreatorSessionId());
         boolean isPveOrEve = state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE;
@@ -440,7 +499,8 @@ public class RoomService {
 
         boolean isPlayer = state.getPlayers().stream()
                 .anyMatch(p -> p.getSessionId().equals(sessionId));
-        if (!isPlayer) return;
+        if (!isPlayer)
+            return;
 
         handlePlayerLeave(state, sessionId);
     }
@@ -467,7 +527,8 @@ public class RoomService {
 
     public void syncRoom(String roomId, String sessionId) {
         RoomState state = roomRepo.findById(roomId);
-        if (state == null) return;
+        if (state == null)
+            return;
         eventBus.emitToSession(sessionId, new PlayersUpdatedEvent(
                 roomId, state.getPlayers(), state.getSpectators(), state.getStatus().name()));
     }
@@ -476,17 +537,21 @@ public class RoomService {
 
     public void rematch(String roomId, String sessionId) {
         RoomState state = roomRepo.findById(roomId);
-        if (state == null) throw new RoomNotFoundException(roomId);
-        if (state.getStatus() != RoomStatus.ENDED) throw new ActionNotAllowedException("game has not ended");
+        if (state == null)
+            throw new RoomNotFoundException(roomId);
+        if (state.getStatus() != RoomStatus.ENDED)
+            throw new ActionNotAllowedException("game has not ended");
 
         boolean isCreator = sessionId.equals(state.getCreatorSessionId());
 
         if (state.getMode() == GameMode.PVP) {
             boolean bothConnected = state.getPlayers().stream()
                     .allMatch(p -> sessionRegistry.isConnected(p.getSessionId()));
-            if (!bothConnected) throw new ActionNotAllowedException("opponent has disconnected");
+            if (!bothConnected)
+                throw new ActionNotAllowedException("opponent has disconnected");
         } else {
-            if (!isCreator) throw new ActionNotAllowedException("only the room creator can rematch");
+            if (!isCreator)
+                throw new ActionNotAllowedException("only the room creator can rematch");
         }
 
         // Reset board and remove finished bot players so they re-join fresh
@@ -533,7 +598,8 @@ public class RoomService {
 
         if (userId == null) {
             String roomId = roomRepo.findRoomIdBySession(sessionId);
-            if (roomId != null) leaveRoom(roomId, sessionId);
+            if (roomId != null)
+                leaveRoom(roomId, sessionId);
             eventBus.destroySession(sessionId);
             sessionRegistry.deregister(sessionId);
             return;
@@ -550,8 +616,10 @@ public class RoomService {
         roomRepo.save(state);
         refreshLobby();
         eventBus.emit(state.getRoomId(), new PlayersUpdatedEvent(
-                state.getRoomId(), state.getPlayers(), state.getSpectators(), RoomStatus.PLAYING.name()));
-        // StateUpdatedEvent signals bots (and spectators) of the initial board state and first turn.
+                state.getRoomId(), state.getPlayers(), state.getSpectators(),
+                RoomStatus.PLAYING.name()));
+        // StateUpdatedEvent signals bots (and spectators) of the initial board state and first
+        // turn.
         // Without this, bots only listen for STATE_UPDATED and never learn the game has begun.
         eventBus.emit(state.getRoomId(), new StateUpdatedEvent(
                 state.getRoomId(), state.getBoard(), state.getCurrentTurn(),
@@ -562,7 +630,19 @@ public class RoomService {
     private void handleDisconnectNow(String sessionId) {
         try {
             String roomId = roomRepo.findRoomIdBySession(sessionId);
-            if (roomId != null) leaveRoom(roomId, sessionId);
+            if (roomId != null) {
+                RoomState state = roomRepo.findById(roomId);
+                boolean isPveOrEve = state != null &&
+                        (state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE);
+                if (isPveOrEve) {
+                    // Keep the room alive so the creator can reload/rejoin.
+                    // Bots continue playing via their own connection.
+                    roomRepo.deleteSessionMapping(sessionId);
+                    log.info("PVE/EVE creator disconnected — room {} preserved for rejoin", roomId);
+                } else {
+                    leaveRoom(roomId, sessionId);
+                }
+            }
         } finally {
             eventBus.destroySession(sessionId);
             sessionRegistry.deregister(sessionId);
@@ -583,7 +663,8 @@ public class RoomService {
             }
             roomRepo.delete(roomId);
             roomRepo.deleteSessionMapping(sessionId);
-            if (userId != null) roomRepo.deleteUserMapping(userId);
+            if (userId != null)
+                roomRepo.deleteUserMapping(userId);
             refreshLobby();
             eventBus.destroyRoom(roomId);
             eventBus.destroySession(sessionId);
@@ -596,24 +677,28 @@ public class RoomService {
                     .map(PlayerInfo::getSide)
                     .findFirst().orElse(null);
             String winnerSide = PlayerSide.PLAYER_1.name().equals(leavingSide)
-                    ? PlayerSide.PLAYER_2.name() : PlayerSide.PLAYER_1.name();
+                    ? PlayerSide.PLAYER_2.name()
+                    : PlayerSide.PLAYER_1.name();
 
             state.setStatus(RoomStatus.ENDED);
             state.setUpdatedAt(Instant.now());
 
             roomRepo.save(state);
             roomRepo.deleteSessionMapping(sessionId);
-            if (userId != null) roomRepo.deleteUserMapping(userId);
+            if (userId != null)
+                roomRepo.deleteUserMapping(userId);
             refreshLobby();
 
-            eventBus.emit(roomId, new GameResultEvent(roomId, winnerSide, "OPPONENT_DISCONNECTED_TIMEOUT"));
+            eventBus.emit(roomId,
+                    new GameResultEvent(roomId, winnerSide, "OPPONENT_DISCONNECTED_TIMEOUT"));
             eventBus.destroySession(sessionId);
             return;
         }
 
         // ENDED — just clean up
         roomRepo.deleteSessionMapping(sessionId);
-        if (userId != null) roomRepo.deleteUserMapping(userId);
+        if (userId != null)
+            roomRepo.deleteUserMapping(userId);
         eventBus.destroySession(sessionId);
     }
 

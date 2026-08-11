@@ -12,9 +12,7 @@ FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/jc-bot-worker-*.jar app.jar
 
-ENV ROOM_ID=room-test \
-    SERVER_URL=ws://jc-be:8080/ws \
-    SIDE=PLAYER_2 \
-    DIFFICULTY=MEDIUM
+ENV SERVER_URL=ws://jc-be:8080/ws \
+    BACKEND_HTTP_URL=http://jc-be:8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

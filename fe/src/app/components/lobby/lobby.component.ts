@@ -143,6 +143,42 @@ export class LobbyComponent implements OnInit {
     return room.allowSpectator && room.status !== 'ENDED' && !this.canJoin(room);
   }
 
+  copiedRoomId: string | null = null;
+
+  copyRoomCode(roomId: string, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const successMsg = `Đã sao chép mã phòng: ${roomId}`;
+    navigator.clipboard.writeText(roomId).then(() => {
+      this.copiedRoomId = roomId;
+      this.showToast(successMsg);
+      setTimeout(() => {
+        if (this.copiedRoomId === roomId) {
+          this.copiedRoomId = null;
+        }
+      }, 2000);
+    }).catch(() => {
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = roomId;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        this.copiedRoomId = roomId;
+        this.showToast(successMsg);
+        setTimeout(() => {
+          if (this.copiedRoomId === roomId) {
+            this.copiedRoomId = null;
+          }
+        }, 2000);
+      } catch (err) {
+        this.showToast('Failed to copy: ' + err);
+      }
+    });
+  }
+
   private frontendModeToBackend(mode: GameMode): string {
     return mode === 'PVP_ONLINE' ? 'PVP' : mode;
   }

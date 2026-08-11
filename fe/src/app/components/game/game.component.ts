@@ -222,6 +222,37 @@ export class GameComponent implements OnInit, OnDestroy {
     this.gameRoom.requestRematch(this.roomId);
   }
 
+  copiedRoomId: string | null = null;
+
+  copyRoomCode(roomId: string): void {
+    if (!roomId) return;
+    navigator.clipboard.writeText(roomId).then(() => {
+      this.copiedRoomId = roomId;
+      setTimeout(() => {
+        if (this.copiedRoomId === roomId) {
+          this.copiedRoomId = null;
+        }
+      }, 2000);
+    }).catch(() => {
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = roomId;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        this.copiedRoomId = roomId;
+        setTimeout(() => {
+          if (this.copiedRoomId === roomId) {
+            this.copiedRoomId = null;
+          }
+        }, 2000);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
   onLogout(): void {
     this.authService.logout().subscribe({
       error: () => this.router.navigate(['/login']),
@@ -299,6 +330,14 @@ export class GameComponent implements OnInit, OnDestroy {
   get canStart(): boolean {
     const s = this.state();
     return !!s && s.isCreator && s.status === 'WAITING' && s.players.length >= 2;
+  }
+
+  get canRematch(): boolean {
+    const s = this.state();
+    if (!s || s.status !== 'ENDED') return false;
+    if (s.mode === 'PVP') return s.resultReason !== 'OPPONENT_DISCONNECTED_TIMEOUT';
+    // PVE/EVE: creator can always rematch (bots are re-assigned)
+    return s.isCreator;
   }
 
   get sideLabel(): string {

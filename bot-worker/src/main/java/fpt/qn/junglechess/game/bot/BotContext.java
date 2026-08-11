@@ -6,6 +6,7 @@ import fpt.qn.junglechess.game.model.Move;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * Per-game state context owned by a single BotGameSession instance.
@@ -20,6 +21,26 @@ public class BotContext {
     private final Map<Long, TtEntry> transpositionTable = new HashMap<>();
     private final Move[][] killerMoves = new Move[MAX_PLY][2];
     private final int[][] historyTable = new int[63][63];
+
+    private int moveNumber = 0;
+    private final long rngSeed = System.currentTimeMillis();
+    private final Random openingRng = new Random(rngSeed);
+
+    public int getMoveNumber() {
+        return moveNumber;
+    }
+
+    public void incrementMoveNumber() {
+        moveNumber++;
+    }
+
+    public Random getOpeningRng() {
+        return openingRng;
+    }
+
+    public long getRngSeed() {
+        return rngSeed;
+    }
 
     public Map<Long, Integer> getPositionHistory() {
         return positionHistory;
@@ -114,6 +135,7 @@ public class BotContext {
     }
 
     public void clear() {
+        moveNumber = 0;
         positionHistory.clear();
         transpositionTable.clear();
         for (int i = 0; i < MAX_PLY; i++) {

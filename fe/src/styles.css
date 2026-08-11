@@ -361,12 +361,14 @@ body {
 
 .room-badge {
   font-size: 11px;
-  font-weight: bold;
-  padding: 2px 8px;
+  font-weight: 800;
+  padding: 3px 10px;
   border-radius: 10px;
-  background-color: var(--clan-blue-bg);
-  color: var(--clan-blue-bright);
+  background-color: rgba(59, 130, 246, 0.25);
+  color: #93c5fd !important;
   text-transform: uppercase;
+  text-shadow: 0 0 6px rgba(147, 197, 253, 0.5);
+  border: 1px solid rgba(59, 130, 246, 0.4);
 }
 
 .room-code-tag {
@@ -554,7 +556,7 @@ body {
   justify-content: center;
   align-items: center;
   font-size: 0.75em;
-  color: var(--ink-strong);
+  color: #e9b45c !important;
   font-weight: bold;
   pointer-events: none;
   background-color: var(--wood-panel);
@@ -715,7 +717,7 @@ img.terrain-water {
 }
 
 .captured-panel h2, #move-history h2 {
-  font-size: 1em; margin-top: 0; margin-bottom: 8px; text-align: center; color: var(--ink-strong);
+  font-size: 1em; margin-top: 0; margin-bottom: 8px; text-align: center; color: #e9b45c !important;
   text-shadow: var(--text-emboss);
 }
 .pieces-container {
@@ -738,11 +740,15 @@ img.terrain-water {
   list-style: decimal; margin: 0; padding: 0 0 0 25px; font-size: 0.9em;
   flex-grow: 1; overflow-y: auto; background-color: var(--wood-inset);
   border: 1px solid var(--wood-border-soft); border-radius: 3px;
+  color: #e9b45c !important;
 }
 #move-list li {
   padding: 3px 5px;
-  border-bottom: 1px solid var(--wood-border); line-height: 1.4; color: var(--ink-strong);
+  border-bottom: 1px solid var(--wood-border); line-height: 1.4; color: #e9b45c !important;
   display: flex; align-items: center;
+}
+#move-list li span {
+  color: #e9b45c !important;
 }
 #move-list li:last-child { border-bottom: none; }
 
@@ -786,7 +792,7 @@ img.terrain-water {
   cursor: pointer;
   transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, color 0.15s ease-in-out, transform 0.1s ease, box-shadow 0.15s ease;
   background: var(--btn-wood);
-  color: var(--ink-strong);
+  color: #e9b45c !important;
   border: 1px solid var(--wood-border-soft);
   box-shadow: var(--btn-shadow-3d-sml);
   width: 90%;
@@ -825,7 +831,7 @@ img.terrain-water {
 /* Styled Back to Lobby button in Left Panel */
 #left-panel-actions .back-lobby-btn {
   background: var(--btn-gold) !important;
-  color: var(--ink-strong) !important;
+  color: #e9b45c !important;
   font-weight: bold !important;
   box-shadow: var(--btn-shadow-3d) !important;
   border: 2px solid var(--gold-accent) !important;
@@ -842,12 +848,13 @@ img.terrain-water {
   background-image: var(--panel-grad-top);
   width: 98%; max-width: 1000px; margin: 20px auto 0 auto; font-size: 0.9em;
   max-height: 400px; overflow-y: auto; line-height: 1.5;
+  color: #e9b45c !important;
 }
-#game-rules h2 { font-size: 1.1em; margin-top: 0; margin-bottom: 12px; text-align: center; color: var(--ink-strong); text-shadow: var(--text-emboss); }
+#game-rules h2 { font-size: 1.1em; margin-top: 0; margin-bottom: 12px; text-align: center; color: #e9b45c !important; text-shadow: var(--text-emboss); }
 #game-rules ul { margin: 0; padding-left: 20px; list-style-position: outside; }
 #game-rules ul ul { padding-left: 15px; margin-top: 4px; margin-bottom: 8px; }
-#game-rules li { margin-bottom: 8px; color: var(--ink); }
-#game-rules strong { color: var(--ink-strong); }
+#game-rules li { margin-bottom: 8px; color: #e9b45c !important; }
+#game-rules strong { color: #e9b45c !important; }
 .rank-piece, .rule-piece {
     display: inline-block; vertical-align: middle;
     margin: 0 2px; height: 1.2em; line-height: 1.2em;
@@ -855,20 +862,20 @@ img.terrain-water {
 .rank-piece-icon, .rule-piece-icon {
     width: auto; height: 100%; object-fit: contain; vertical-align: middle;
 }
-.rank-separator { display: inline-block; vertical-align: middle; margin: 0 3px; font-weight: bold; color: var(--ink-muted); line-height: 1; }
+.rank-separator { display: inline-block; vertical-align: middle; margin: 0 3px; font-weight: bold; color: #e9b45c !important; line-height: 1; }
 
 /* Status and Turn styling */
 #status {
-  font-size: 1em; font-weight: bold; background-color: var(--wood-panel); color: var(--ink-strong);
+  font-size: 1em; font-weight: bold; background-color: var(--wood-panel); color: #e9b45c !important;
   text-align: center; min-height: 1.2em; width: 95%; max-width: calc(476px + 2 * 24px);
   padding: 6px 10px; border-radius: 6px; border: 2px solid var(--wood-border);
   box-shadow: var(--btn-shadow-3d-sml); margin: 8px auto 0 auto;
   text-shadow: var(--text-emboss);
 }
-.turn-info {
+.turn-info, .turn-info span {
   font-size: 0.9em; font-weight: bold; text-align: center; margin-top: 10px; padding: 5px;
   background-color: var(--wood-inset); border: 1px solid var(--wood-border-soft);
-  border-radius: 6px; color: var(--ink-strong);
+  border-radius: 6px; color: #e9b45c !important;
 }
 
 /* --- Announcement Banner --- */

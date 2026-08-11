@@ -126,22 +126,14 @@ export class LobbyComponent implements OnInit {
     const player2BotId = (this.newRoomMode === 'PVE' || this.newRoomMode === 'EVE')
       ? (this.selectedPlayer2BotId || undefined) : undefined;
 
-    this.rsocket.connect(token).subscribe({
-      next: () => {
-        this.gameRoom.createRoom(backendMode, difficulty, allowSpectator, player1BotId, player2BotId).subscribe({
-          next: roomId => {
-            this.isLoading = false;
-            this.router.navigate(['/game', roomId]);
-          },
-          error: err => {
-            this.isLoading = false;
-            this.showToast('Failed to create room: ' + (err?.message ?? err));
-          },
-        });
+    this.gameRoom.createRoom(backendMode, difficulty, allowSpectator, player1BotId, player2BotId).subscribe({
+      next: roomId => {
+        this.isLoading = false;
+        this.router.navigate(['/game', roomId]);
       },
       error: err => {
         this.isLoading = false;
-        this.showToast('Failed to connect: ' + (err?.message ?? err));
+        this.showToast('Failed to create room: ' + (err?.message ?? err));
       },
     });
   }

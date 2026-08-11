@@ -667,16 +667,34 @@ public class RoomService {
                 .findFirst().orElse(null);
 
         if (state.getStatus() == RoomStatus.WAITING) {
-            // Notify bots so their sessions self-terminate before we delete the room
-            if (state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE) {
-                eventBus.emit(roomId, new GameResultEvent(roomId, null, "ROOM_CANCELLED"));
+            boolean isCreator = sessionId.equals(state.getCreatorSessionId()) ||
+                    (userId != null && state.getPlayers().stream().anyMatch(p -> PlayerSide.PLAYER_1.name().equals(p.getSide()) && userId.equals(p.getUserId())));
+
+            if (isCreator) {
+                // Creator leaving during WAITING cancels the room completely
+                if (state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE) {
+                    eventBus.emit(roomId, new GameResultEvent(roomId, null, "ROOM_CANCELLED"));
+                }
+                roomRepo.delete(roomId);
+                roomRepo.deleteSessionMapping(sessionId);
+                if (userId != null) roomRepo.deleteUserMapping(userId);
+                refreshLobby();
+                eventBus.destroyRoom(roomId);
+                eventBus.destroySession(sessionId);
+            } else {
+                // Non-creator (Player 2) leaving during WAITING: just remove Player 2
+                state.getPlayers().removeIf(p -> p.getSessionId().equals(sessionId) || (userId != null && userId.equals(p.getUserId())));
+                state.setUpdatedAt(Instant.now());
+                roomRepo.save(state);
+                roomRepo.deleteSessionMapping(sessionId);
+                if (userId != null) roomRepo.deleteUserMapping(userId);
+                refreshLobby();
+
+                // Broadcast updated players list to room so Creator UI updates immediately
+                eventBus.emit(roomId, new PlayersUpdatedEvent(
+                        roomId, state.getPlayers(), state.getSpectators(), RoomStatus.WAITING.name()));
+                eventBus.destroySession(sessionId);
             }
-            roomRepo.delete(roomId);
-            roomRepo.deleteSessionMapping(sessionId);
-            if (userId != null) roomRepo.deleteUserMapping(userId);
-            refreshLobby();
-            eventBus.destroyRoom(roomId);
-            eventBus.destroySession(sessionId);
             return;
         }
 

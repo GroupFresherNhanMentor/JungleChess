@@ -32,7 +32,7 @@ export class LobbyComponent implements OnInit {
   filterMode: 'ALL' | GameMode = 'ALL';
 
   isCreateModalOpen = false;
-  newRoomMode: GameMode = 'PVP_ONLINE';
+  newRoomMode: GameMode = 'PVP';
   newRoomDifficulty: 'EASY' | 'MEDIUM' | 'HARD' = 'MEDIUM';
   newRoomAllowSpectator = false;
 
@@ -72,7 +72,7 @@ export class LobbyComponent implements OnInit {
   }
 
   openCreateModal(): void {
-    this.newRoomMode = 'PVP_ONLINE';
+    this.newRoomMode = 'PVP';
     this.newRoomDifficulty = 'MEDIUM';
     this.newRoomAllowSpectator = false;
     this.selectedPlayer1BotId = '';

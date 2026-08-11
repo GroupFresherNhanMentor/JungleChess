@@ -69,6 +69,21 @@ services:
         condition: service_healthy
     restart: always
 
+  win-bot:
+    build:
+      context: ./win-bot
+    container_name: jc-win-bot
+    environment:
+      - SERVER_URL=ws://jc-be:8080/ws
+      - BACKEND_HTTP_URL=http://jc-be:8080
+      - BOT_USERNAME=win-bot
+      - BOT_PASSWORD=WinBot@password1
+      - DIFFICULTY=HARD
+    depends_on:
+      be:
+        condition: service_healthy
+    restart: always
+
   fe:
     build:
       context: ./fe

@@ -1,0 +1,15 @@
+{
+  "name": "win-bot",
+  "version": "1.0.0",
+  "description": "Undefeatable Jungle Chess bot using PVS + NMP + LMR + TT",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

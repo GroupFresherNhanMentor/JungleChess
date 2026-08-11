@@ -339,7 +339,7 @@
   align-items: center;
   gap: 8px;
   font-size: 0.85em;
-  color: var(--ink);
+  color: #e9b45c;
 }
 
 .code-label {
@@ -347,7 +347,7 @@
   font-size: 0.75em;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--ink);
+  color: #e9b45c;
 }
 
 .room-id {

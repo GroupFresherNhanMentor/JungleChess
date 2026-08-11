@@ -60,11 +60,9 @@
 
         <div class="room-id-block">
           <span class="code-label">Mã phòng</span>
-          <div class="room-code-row" (click)="copyRoomCode(room.roomId, $event)" title="Click để sao chép mã phòng">
+          <div class="room-code-row">
             <code class="room-id">{{ room.roomId }}</code>
-            <button class="copy-code-btn" (click)="copyRoomCode(room.roomId, $event)" [title]="copiedRoomId === room.roomId ? 'Đã sao chép!' : 'Sao chép mã phòng'">
-              {{ copiedRoomId === room.roomId ? '✅' : '📋' }}
-            </button>
+            <span class="copy-hint">🔗</span>
           </div>
         </div>
       </div>
@@ -123,10 +121,8 @@
 
       <div class="form-group form-group-checkbox">
         <label>
-          <input type="checkbox"
-                 [checked]="newRoomMode !== 'PVP_ONLINE' || newRoomAllowSpectator"
-                 [disabled]="newRoomMode !== 'PVP_ONLINE'"
-                 (change)="newRoomAllowSpectator = $any($event.target).checked" />
+          <input type="checkbox" [checked]="newRoomMode !== 'PVP_ONLINE' || newRoomAllowSpectator"
+            [disabled]="newRoomMode !== 'PVP_ONLINE'" (change)="newRoomAllowSpectator = $any($event.target).checked" />
           Cho phép xem (Spectator)
         </label>
         <small *ngIf="newRoomMode !== 'PVP_ONLINE'">Mặc định bật cho PvE/EvE</small>

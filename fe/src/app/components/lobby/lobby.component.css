@@ -342,25 +342,17 @@
   width: fit-content;
 }
 
-.copy-code-btn {
-  background: var(--wood-inset);
-  border: 1px solid var(--wood-border-soft);
-  border-radius: 4px;
+.copy-hint {
+  font-size: 1.05em;
+  opacity: 0.75;
   cursor: pointer;
-  font-size: 1.1em;
-  padding: 4px 8px;
-  transition: all 0.15s ease;
-  color: #e9b45c;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
-.copy-code-btn:hover,
-.room-code-row:hover .copy-code-btn {
-  background-color: var(--wood-panel-solid);
-  border-color: var(--gold-accent);
-  transform: scale(1.1);
+.copy-hint:hover,
+.room-code-row:hover .copy-hint {
+  opacity: 1;
+  transform: scale(1.15);
 }
 
 .room-details {

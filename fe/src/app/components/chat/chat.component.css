@@ -85,6 +85,11 @@
   background-color: var(--clan-red-bg);
 }
 
+.sender-badge.spectator {
+  color: #b0bec5;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
 .msg-time {
   font-size: 0.8em;
   color: var(--ink-muted);

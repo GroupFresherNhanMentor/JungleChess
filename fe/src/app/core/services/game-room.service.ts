@@ -4,6 +4,8 @@ import { BehaviorSubject, Observable, Subject, first, switchMap, throwError } fr
 import { StompSubscription } from '@stomp/stompjs';
 import { BotInfo, Move, Piece, PieceSide, Position, RoomStatus } from '../models/game.models';
 import {
+  ChatMessageEvent,
+  ChatMessageRecord,
   GameResultEvent,
   LobbyRoomEntry,
   PlayersUpdatedEvent,
@@ -35,6 +37,7 @@ export interface OnlineGameState {
   resultReason?: string;
   players: ServerPlayerInfo[];
   spectators: ServerSpectatorInfo[];
+  chatMessages: ChatMessageRecord[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -231,6 +234,11 @@ export class GameRoomService {
     this.stomp.send(`/app/room.${roomId}.rematch`);
   }
 
+  sendChatMessage(roomId: string, content: string): void {
+    if (!content || !content.trim()) return;
+    this.stomp.send(`/app/room.${roomId}.chat`, { content: content.trim() });
+  }
+
   // ── Internal ──────────────────────────────────────────────────────────────
 
   private handleEvent(event: RoomEvent): void {
@@ -252,6 +260,7 @@ export class GameRoomService {
           lastMove: null,
           players: e.players ?? [],
           spectators: e.spectators ?? [],
+          chatMessages: [],
         });
         break;
       }
@@ -274,6 +283,17 @@ export class GameRoomService {
           lastMove: null,
           players: e.players ?? [],
           spectators: e.spectators ?? [],
+          chatMessages: e.recentChat ?? [],
+        });
+        break;
+      }
+      case 'CHAT_MESSAGE': {
+        const e = event as ChatMessageEvent;
+        const current = this.gameState$.value;
+        if (!current) return;
+        this.gameState$.next({
+          ...current,
+          chatMessages: [...current.chatMessages, e.message],
         });
         break;
       }

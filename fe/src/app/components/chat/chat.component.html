@@ -23,7 +23,7 @@
         <div class="msg-header">
           <span
             class="sender-badge"
-            [ngClass]="msg.side === 0 ? 'player0' : 'player1'"
+            [ngClass]="msg.side === 0 ? 'player0' : (msg.side === 1 ? 'player1' : 'spectator')"
           >
             {{ msg.sender }}
           </span>

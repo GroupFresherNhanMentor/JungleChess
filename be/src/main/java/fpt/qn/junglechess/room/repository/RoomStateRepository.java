@@ -75,7 +75,13 @@ public class RoomStateRepository {
         Set<String> keys = redisTemplate.keys(ROOM_PREFIX + "*");
         if (keys == null || keys.isEmpty()) return List.of();
         return keys.stream()
-                .map(key -> redisTemplate.opsForValue().get(key))
+                .map(key -> {
+                    try {
+                        return redisTemplate.opsForValue().get(key);
+                    } catch (Exception e) {
+                        return null;
+                    }
+                })
                 .filter(Objects::nonNull)
                 .map(json -> {
                     try {

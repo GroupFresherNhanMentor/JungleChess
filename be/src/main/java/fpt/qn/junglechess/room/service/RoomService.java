@@ -10,6 +10,7 @@ import fpt.qn.junglechess.game.model.Position;
 import fpt.qn.junglechess.game.model.Side;
 import fpt.qn.junglechess.game.rule.BoardInitializer;
 import fpt.qn.junglechess.game.rule.GameRuleEngine;
+import fpt.qn.junglechess.room.dto.event.ChatMessageEvent;
 import fpt.qn.junglechess.room.dto.event.GameResultEvent;
 import fpt.qn.junglechess.room.dto.event.PlayersUpdatedEvent;
 import fpt.qn.junglechess.room.dto.event.RoomCreatedEvent;
@@ -23,12 +24,14 @@ import fpt.qn.junglechess.room.exception.InvalidMoveException;
 import fpt.qn.junglechess.room.exception.NotYourTurnException;
 import fpt.qn.junglechess.room.exception.RoomFullException;
 import fpt.qn.junglechess.room.exception.RoomNotFoundException;
+import fpt.qn.junglechess.room.model.ChatMessageRecord;
 import fpt.qn.junglechess.room.model.GameMode;
 import fpt.qn.junglechess.room.model.MoveRecord;
 import fpt.qn.junglechess.room.model.PlayerInfo;
 import fpt.qn.junglechess.room.model.RoomState;
 import fpt.qn.junglechess.room.model.RoomStatus;
 import fpt.qn.junglechess.room.model.SpectatorInfo;
+import fpt.qn.junglechess.room.repository.ChatRepository;
 import fpt.qn.junglechess.room.repository.RoomStateRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RoomService {
 
     private final RoomStateRepository roomRepo;
+    private final ChatRepository chatRepository;
     private final RoomEventBus eventBus;
     private final LobbyService lobbyService;
     private final GameRuleEngine ruleEngine;
@@ -187,7 +191,8 @@ public class RoomService {
         eventBus.emitToSession(sessionId, new RoomJoinedEvent(
                 roomId, side, state.getMode().name(), RoomStatus.WAITING.name(),
                 state.getCreatorUserId(), state.getBoard(), state.getCurrentTurn(),
-                state.getPlayers(), state.getSpectators()));
+                state.getPlayers(), state.getSpectators(),
+                chatRepository.getRecentMessages(roomId)));
     }
 
     // ── Bot join (honors requested side, auto-starts PVE/EVE) ────────────────
@@ -220,7 +225,8 @@ public class RoomService {
             eventBus.emitToSession(sessionId, new RoomJoinedEvent(
                     roomId, side, state.getMode().name(), state.getStatus().name(),
                     state.getCreatorUserId(), state.getBoard(), state.getCurrentTurn(),
-                    state.getPlayers(), state.getSpectators()));
+                    state.getPlayers(), state.getSpectators(),
+                    chatRepository.getRecentMessages(roomId)));
             log.info("Bot reconnected: room={} side={}", roomId, side);
             return;
         }
@@ -251,7 +257,8 @@ public class RoomService {
         eventBus.emitToSession(sessionId, new RoomJoinedEvent(
                 roomId, side, state.getMode().name(), RoomStatus.WAITING.name(),
                 state.getCreatorUserId(), state.getBoard(), state.getCurrentTurn(),
-                state.getPlayers(), state.getSpectators()));
+                state.getPlayers(), state.getSpectators(),
+                chatRepository.getRecentMessages(roomId)));
     }
 
     // ── Start game (PVP only — explicit start by PLAYER_1) ───────────────────
@@ -293,7 +300,8 @@ public class RoomService {
             eventBus.emitToSession(newSessionId, new RoomJoinedEvent(
                     roomId, player.getSide(), state.getMode().name(), state.getStatus().name(),
                     state.getCreatorUserId(), state.getBoard(), state.getCurrentTurn(),
-                    state.getPlayers(), state.getSpectators()));
+                    state.getPlayers(), state.getSpectators(),
+                    chatRepository.getRecentMessages(roomId)));
             return;
         }
 
@@ -314,7 +322,8 @@ public class RoomService {
             eventBus.emitToSession(newSessionId, new RoomJoinedEvent(
                     roomId, "SPECTATOR", state.getMode().name(), state.getStatus().name(),
                     state.getCreatorUserId(), state.getBoard(), state.getCurrentTurn(),
-                    state.getPlayers(), state.getSpectators()));
+                    state.getPlayers(), state.getSpectators(),
+                    chatRepository.getRecentMessages(roomId)));
             return;
         }
 
@@ -345,7 +354,54 @@ public class RoomService {
         eventBus.emitToSession(sessionId, new RoomJoinedEvent(
                 roomId, "SPECTATOR", state.getMode().name(), state.getStatus().name(),
                 state.getCreatorUserId(), state.getBoard(), state.getCurrentTurn(),
-                state.getPlayers(), state.getSpectators()));
+                state.getPlayers(), state.getSpectators(),
+                chatRepository.getRecentMessages(roomId)));
+    }
+
+    // ── Chat ──────────────────────────────────────────────────────────────────
+
+    public void sendChatMessage(String roomId, String sessionId, String content) {
+        if (content == null || content.isBlank()) {
+            throw new ActionNotAllowedException("message content cannot be empty");
+        }
+        if (content.length() > 500) {
+            throw new ActionNotAllowedException("message content cannot exceed 500 characters");
+        }
+
+        RoomState state = roomRepo.findById(roomId);
+        if (state == null) throw new RoomNotFoundException(roomId);
+
+        String userId = sessionRegistry.getUserId(sessionId);
+        String username = sessionRegistry.getUsername(sessionId);
+
+        PlayerInfo player = state.getPlayers().stream()
+                .filter(p -> p.getSessionId().equals(sessionId) || (userId != null && userId.equals(p.getUserId())))
+                .findFirst().orElse(null);
+
+        SpectatorInfo spectator = (player == null) ? state.getSpectators().stream()
+                .filter(s -> s.getSessionId().equals(sessionId) || (userId != null && userId.equals(s.getUserId())))
+                .findFirst().orElse(null) : null;
+
+        if (player == null && spectator == null) {
+            throw new ActionNotAllowedException("you must be in the room to send chat messages");
+        }
+
+        String side = (player != null) ? player.getSide() : "SPECTATOR";
+        String senderName = (player != null)
+                ? (player.getDisplayName() != null ? player.getDisplayName() : player.getSide())
+                : (username != null ? username : "Spectator");
+
+        ChatMessageRecord msg = new ChatMessageRecord(
+                "msg-" + UuidV7.generate().toString().substring(0, 8),
+                userId != null ? userId : sessionId,
+                senderName,
+                side,
+                content.trim(),
+                Instant.now().toEpochMilli()
+        );
+
+        chatRepository.pushMessage(roomId, msg);
+        eventBus.emit(roomId, new ChatMessageEvent(roomId, msg));
     }
 
     // ── Move ──────────────────────────────────────────────────────────────────

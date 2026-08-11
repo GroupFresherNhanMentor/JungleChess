@@ -25,6 +25,22 @@ export interface RoomJoinedEvent extends RoomEvent {
   currentTurn: string;
   players: ServerPlayerInfo[];
   spectators: ServerSpectatorInfo[];
+  recentChat?: ChatMessageRecord[];
+}
+
+export interface ChatMessageRecord {
+  id: string;
+  senderUserId: string;
+  senderName: string;
+  senderSide: string;
+  content: string;
+  timestamp: number;
+}
+
+export interface ChatMessageEvent extends RoomEvent {
+  type: 'CHAT_MESSAGE';
+  roomId: string;
+  message: ChatMessageRecord;
 }
 
 export interface StateUpdatedEvent extends RoomEvent {

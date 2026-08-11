@@ -3,6 +3,7 @@ package fpt.qn.junglechess.room.controller;
 import fpt.qn.junglechess.common.exception.AppException;
 import fpt.qn.junglechess.room.dto.event.RoomErrorEvent;
 import fpt.qn.junglechess.room.dto.request.BotJoinRequest;
+import fpt.qn.junglechess.room.dto.request.SendChatRequest;
 import fpt.qn.junglechess.room.dto.request.CreateRoomRequest;
 import fpt.qn.junglechess.room.dto.request.MoveRequest;
 import fpt.qn.junglechess.room.service.DisconnectScheduler;
@@ -117,6 +118,11 @@ public class RoomController {
         roomService.syncRoom(id, sha.getSessionId());
     }
 
+    @MessageMapping("room.{id}.chat")
+    public void chat(@DestinationVariable String id, @Payload SendChatRequest req, SimpMessageHeaderAccessor sha) {
+        roomService.sendChatMessage(id, sha.getSessionId(), req.getContent());
+    }
+
     // ── Bot-worker endpoints (slash-notation used by bot-worker service) ───────
 
     @MessageMapping("/room/{id}/bot-join")
@@ -132,6 +138,11 @@ public class RoomController {
                         @Payload MoveRequest req,
                         SimpMessageHeaderAccessor sha) {
         roomService.move(id, sha.getSessionId(), req);
+    }
+
+    @MessageMapping("/room/{id}/chat")
+    public void chatSlash(@DestinationVariable String id, @Payload SendChatRequest req, SimpMessageHeaderAccessor sha) {
+        roomService.sendChatMessage(id, sha.getSessionId(), req.getContent());
     }
 
     // ── Error handling ────────────────────────────────────────────────────────

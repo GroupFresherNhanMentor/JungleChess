@@ -458,7 +458,9 @@ public class RoomService {
         RoomState state = roomRepo.findById(roomId);
         if (state == null) return;
 
-        boolean isCreator = sessionId.equals(state.getCreatorSessionId());
+        String userId = sessionRegistry.getUserId(sessionId);
+        boolean isCreator = sessionId.equals(state.getCreatorSessionId()) ||
+                (userId != null && state.getPlayers().stream().anyMatch(p -> PlayerSide.PLAYER_1.name().equals(p.getSide()) && userId.equals(p.getUserId())));
         boolean isPveOrEve = state.getMode() == GameMode.PVE || state.getMode() == GameMode.EVE;
 
         // PVE/EVE: creator leaving always terminates the room and releases bots
@@ -467,7 +469,6 @@ public class RoomService {
             return;
         }
 
-        String userId = sessionRegistry.getUserId(sessionId);
         boolean isSpectator = state.getSpectators().stream()
                 .anyMatch(s -> s.getSessionId().equals(sessionId) || (userId != null && userId.equals(s.getUserId())));
 
@@ -484,10 +485,12 @@ public class RoomService {
         }
 
         boolean isPlayer = state.getPlayers().stream()
-                .anyMatch(p -> p.getSessionId().equals(sessionId));
-        if (!isPlayer) return;
+                .anyMatch(p -> p.getSessionId().equals(sessionId) || (userId != null && userId.equals(p.getUserId())));
 
-        handlePlayerLeave(state, sessionId);
+        if (isCreator || isPlayer) {
+            handlePlayerLeave(state, sessionId, userId);
+            return;
+        }
     }
 
     private void terminatePveEveRoom(RoomState state, String creatorSessionId) {
@@ -633,9 +636,9 @@ public class RoomService {
         }
     }
 
-    private void handlePlayerLeave(RoomState state, String sessionId) {
+    private void handlePlayerLeave(RoomState state, String sessionId, String currentUserId) {
         String roomId = state.getRoomId();
-        String userId = state.getPlayers().stream()
+        String userId = currentUserId != null ? currentUserId : state.getPlayers().stream()
                 .filter(p -> p.getSessionId().equals(sessionId))
                 .map(PlayerInfo::getUserId)
                 .findFirst().orElse(null);
@@ -656,7 +659,7 @@ public class RoomService {
 
         if (state.getStatus() == RoomStatus.PLAYING) {
             String leavingSide = state.getPlayers().stream()
-                    .filter(p -> p.getSessionId().equals(sessionId))
+                    .filter(p -> p.getSessionId().equals(sessionId) || (userId != null && userId.equals(p.getUserId())))
                     .map(PlayerInfo::getSide)
                     .findFirst().orElse(null);
             String winnerSide = PlayerSide.PLAYER_1.name().equals(leavingSide)

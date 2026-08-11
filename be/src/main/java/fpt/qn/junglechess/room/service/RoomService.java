@@ -402,6 +402,71 @@ public class RoomService {
         return MoveAckResponse.ok();
     }
 
+    // ── Undo Move ─────────────────────────────────────────────────────────────
+
+    public void undoMove(String roomId, String sessionId) {
+        RoomState state = roomRepo.findById(roomId);
+        if (state == null) throw new RoomNotFoundException(roomId);
+        if (state.getStatus() != RoomStatus.PLAYING) {
+            throw new ActionNotAllowedException("game is not in playing state");
+        }
+        if (state.getMode() != GameMode.PVE) {
+            throw new ActionNotAllowedException("undo is only allowed in PVE mode");
+        }
+
+        PlayerInfo player = state.getPlayers().stream()
+                .filter(p -> p.getSessionId().equals(sessionId))
+                .filter(p -> !p.isBot())
+                .findFirst()
+                .orElseThrow(() -> new ActionNotAllowedException("you are not a player in this room"));
+
+        if (state.getHistory().isEmpty()) {
+            throw new ActionNotAllowedException("no moves to undo");
+        }
+
+        int popCount;
+        if (PlayerSide.PLAYER_1.name().equals(state.getCurrentTurn())) {
+            // Human turn: revert bot's response move and human's previous move if available
+            popCount = state.getHistory().size() >= 2 ? 2 : 1;
+        } else {
+            // Bot turn: human just moved, bot hasn't responded yet
+            popCount = 1;
+        }
+
+        for (int i = 0; i < popCount; i++) {
+            if (!state.getHistory().isEmpty()) {
+                state.getHistory().remove(state.getHistory().size() - 1);
+            }
+            if (!state.getPositionHistory().isEmpty()) {
+                state.getPositionHistory().remove(state.getPositionHistory().size() - 1);
+            }
+        }
+
+        // Rebuild board state from remaining move history
+        Board board = Board.createInitialBoard();
+        for (MoveRecord rec : state.getHistory()) {
+            Position fromPos = new Position(rec.getFrom()[0], rec.getFrom()[1]);
+            Position toPos   = new Position(rec.getTo()[0], rec.getTo()[1]);
+            Piece movedPiece = board.getPiece(fromPos);
+            Piece capturedPiece = board.getPiece(toPos);
+            Move move = new Move(fromPos, toPos, movedPiece, capturedPiece);
+            board.makeMove(move);
+        }
+
+        state.setBoard(board.toBoardStateArray());
+        state.setCurrentTurn(PlayerSide.PLAYER_1.name());
+        state.setMoveNumber(state.getHistory().size());
+        state.setUpdatedAt(Instant.now());
+
+        roomRepo.save(state);
+
+        MoveRecord lastMove = state.getHistory().isEmpty() ? null : state.getHistory().get(state.getHistory().size() - 1);
+        eventBus.emit(roomId, new StateUpdatedEvent(
+                roomId, state.getBoard(), state.getCurrentTurn(),
+                lastMove, state.getStatus().name(), state.getMoveNumber()));
+        log.info("Room {} undo executed: popCount={}, moveNumber={}", roomId, popCount, state.getMoveNumber());
+    }
+
     // ── Leave ────────────────────────────────────────────────────────────────
 
     public void leaveRoom(String roomId, String sessionId) {

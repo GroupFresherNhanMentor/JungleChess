@@ -33,7 +33,7 @@
       </button>
 
       <button
-        *ngIf="!onlineMode"
+        *ngIf="!onlineMode || showUndo"
         (click)="undoMove.emit()"
         [disabled]="!canUndo"
         class="panel-btn undo-btn"

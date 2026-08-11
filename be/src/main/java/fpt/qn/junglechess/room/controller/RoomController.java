@@ -102,6 +102,11 @@ public class RoomController {
         roomService.move(id, sha.getSessionId(), req);
     }
 
+    @MessageMapping("room.{id}.undo")
+    public void undo(@DestinationVariable String id, SimpMessageHeaderAccessor sha) {
+        roomService.undoMove(id, sha.getSessionId());
+    }
+
     @MessageMapping("room.{id}.leave")
     public void leave(@DestinationVariable String id, SimpMessageHeaderAccessor sha) {
         roomService.leaveRoom(id, sha.getSessionId());

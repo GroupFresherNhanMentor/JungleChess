@@ -209,6 +209,10 @@ export class GameRoomService {
     this.stomp.send(`/app/room.${roomId}.rematch`);
   }
 
+  undoMove(roomId: string): void {
+    this.stomp.send(`/app/room.${roomId}.undo`);
+  }
+
   // ── Internal ──────────────────────────────────────────────────────────────
 
   private handleEvent(event: RoomEvent): void {

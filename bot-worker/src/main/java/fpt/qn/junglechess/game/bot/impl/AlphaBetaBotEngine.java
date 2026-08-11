@@ -35,7 +35,7 @@ public class AlphaBetaBotEngine implements BotEngine {
     private static final int P1_DEN_ROW = 0, P1_DEN_COL = 3;
     private static final int P2_DEN_ROW = 8, P2_DEN_COL = 3;
     private static final int MAX_QS_DEPTH = 4;
-    private static final int OPENING_MOVES_THRESHOLD = 6;
+    private static final int OPENING_MOVES_THRESHOLD = 1;
     private static final int OPENING_MARGIN = 25;
 
     public AlphaBetaBotEngine(GameRuleEngine gameRuleEngine, BoardEvaluator boardEvaluator) {

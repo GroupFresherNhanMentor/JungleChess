@@ -497,14 +497,11 @@ public class RoomService {
         String drawReason = null;
         if (winner != null) {
             state.setStatus(RoomStatus.ENDED);
-            state.setWinner(winner.name());
-            state.setResultReason("WIN");
-        } else if (repCount >= 3) {
+        } else if (repCount >= 5) {
             state.setStatus(RoomStatus.ENDED);
             state.setWinner("DRAW");
             drawReason = "DRAW_REPETITION";
-            state.setResultReason(drawReason);
-        } else if (state.getMoveNumber() >= 150) {
+        } else if (state.getMoveNumber() >= 1000) {
             state.setStatus(RoomStatus.ENDED);
             state.setWinner("DRAW");
             drawReason = "DRAW_MAX_MOVES";

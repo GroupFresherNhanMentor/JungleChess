@@ -8,7 +8,6 @@
     <div class="room-banner-details">
       <span class="room-badge">{{ s.mode }}</span>
       <span class="room-code-tag">[{{ s.roomId }}]</span>
-      <span class="room-title-text">{{ s.mode === 'PVP' ? 'PVP' : s.mode === 'PVE' ? 'PVE' : s.mode }}</span>
     </div>
     <div class="banner-right-controls">
       <button (click)="toggleLanguage()" class="lang-toggle-btn">
@@ -16,7 +15,8 @@
         <span class="lang-code">{{ loc.currentLanguage === 'vn' ? 'VN' : 'EN' }}</span>
       </button>
       <button (click)="onLogout()" class="logout-btn">
-        {{ loc.currentLanguage === 'vn' ? 'Đăng xuất' : 'Logout' }}
+        <span class="logout-icon">🚪</span>
+        <span class="logout-text">{{ loc.currentLanguage === 'vn' ? 'Đăng xuất' : 'Logout' }}</span>
       </button>
     </div>
   </div>

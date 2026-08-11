@@ -324,29 +324,5 @@ button {
 .banner-right-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.logout-btn {
-  font-size: 14px;
-  font-weight: bold;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background-color: var(--wood-panel);
-  color: var(--ink-strong);
-  border: 2px solid var(--wood-border);
-  box-shadow: var(--btn-shadow-3d-sml);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.logout-btn:hover {
-  background-color: var(--wood-panel-solid);
-  border-color: var(--gold-accent-bright);
-  box-shadow: var(--btn-shadow-3d);
-}
-
-.logout-btn:active {
-  transform: translateY(2px);
-  box-shadow: var(--btn-shadow-3d-active-sml);
+  gap: 12px;
 }

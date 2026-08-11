@@ -356,8 +356,7 @@ body {
 .room-banner-details {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-left: 16px;
+  gap: 12px;
 }
 
 .room-badge {

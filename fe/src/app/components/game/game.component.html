@@ -2,9 +2,6 @@
 
   <!-- Active Room Banner Header (all statuses) -->
   <div id="active-room-banner" *ngIf="state() as s">
-    <button (click)="onBackToLobby()" class="back-lobby-header-btn">
-      {{ loc.translate('backToLobbyBtn') }}
-    </button>
     <div class="room-banner-details">
       <span class="room-badge">{{ s.mode }}</span>
       <span class="room-code-tag">[{{ s.roomId }}]</span>

@@ -64,8 +64,16 @@ Before connecting, register a bot account. This call is idempotent — call it e
 }
 ```
 
-**Success:** `200 OK` or `201 Created`  
-**Already exists:** `409 Conflict` — ignore and continue to login.
+**Success:** `200 OK` or `201 Created` — proceed to login with this username.
+
+**`409 Conflict` — username is already taken. The bot must stop and report an error:**
+
+```
+ERROR: Username 'my-bot' is already taken.
+Please set a unique BOT_USERNAME for your bot and restart.
+```
+
+Each bot must use a username that no other account (human or bot) has registered. Choose something specific to your bot, e.g. `team-alpha-bot`, `openings-bot-v2`, etc. Do **not** try to continue or silently fall back — a duplicate username means the server cannot route game invitations to the correct bot.
 
 **Then login:**
 
@@ -437,7 +445,7 @@ Default credentials: `py-bot-worker` / `PyBot@worker1`
 
 To build your own bot from scratch:
 
-- [ ] `POST /api/auth/bot-register` on startup (ignore 409)
+- [ ] `POST /api/auth/bot-register` on startup; stop with a clear error if 409 (username already taken — developer must configure a unique `BOT_USERNAME`)
 - [ ] `POST /api/auth/login` → store access + refresh tokens
 - [ ] WebSocket connect to `/ws`
 - [ ] STOMP `CONNECT` with `Authorization: Bearer <token>`

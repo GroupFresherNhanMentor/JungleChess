@@ -26,11 +26,6 @@ public class RoomJoinedEvent extends RoomEvent {
     List<SpectatorInfo> spectators;
     List<ChatMessageRecord> recentChat;
 
-    public RoomJoinedEvent(String roomId, String yourSide, String mode, String status,
-                           String creatorUserId, String[][] board, String currentTurn,
-                           List<PlayerInfo> players, List<SpectatorInfo> spectators) {
-        this(roomId, yourSide, mode, status, creatorUserId, board, currentTurn, players, spectators, List.of());
-    }
 
     public RoomJoinedEvent(String roomId, String yourSide, String mode, String status,
                            String creatorUserId, String[][] board, String currentTurn,

@@ -30,12 +30,12 @@
 .waiting-room h2 {
   font-size: 1.6rem;
   margin-bottom: 8px;
-  color: var(--ink-strong);
+  color: #e9b45c;
   text-shadow: var(--text-emboss);
 }
 
 .your-side {
-  color: var(--ink-strong);
+  color: #e9b45c;
   margin-bottom: 18px;
   font-weight: 600;
 }
@@ -52,11 +52,11 @@
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 20px;
-  color: var(--ink-strong);
+  color: #e9b45c;
 }
 
 .players-joined {
-  color: var(--ink-strong);
+  color: #e9b45c;
   font-weight: 600;
 }
 
@@ -73,7 +73,7 @@
 
 .player-list li {
   padding: 5px 0;
-  color: var(--ink-strong);
+  color: #e9b45c;
   border-bottom: 1px solid var(--wood-border);
 }
 
@@ -87,7 +87,7 @@
 }
 
 .waiting-note {
-  color: var(--ink-strong);
+  color: #e9b45c;
   font-weight: 500;
 }
 
@@ -237,12 +237,12 @@ button {
   font-size: 1rem;
   cursor: pointer;
   font-weight: 600;
-  color: var(--ink-strong);
+  color: #e9b45c;
 }
 
 .btn-start {
   background: var(--btn-wood);
-  color: var(--ink-strong);
+  color: #e9b45c;
   box-shadow: var(--btn-shadow-3d-sml);
   margin-bottom: 12px;
 }
@@ -259,11 +259,14 @@ button {
 
 .btn-leave {
   background: var(--btn-wood);
+  color: #e9b45c;
   box-shadow: var(--btn-shadow-3d-sml);
 }
 
 .btn-leave:hover {
   background: var(--btn-wood-hot);
+  border-color: var(--gold-accent);
+  color: #e9b45c;
   box-shadow: var(--btn-shadow-3d);
 }
 
@@ -274,6 +277,7 @@ button {
 
 .btn-rematch {
   background: var(--btn-wood);
+  color: #e9b45c;
   box-shadow: var(--btn-shadow-3d-sml);
 }
 
@@ -324,29 +328,5 @@ button {
 .banner-right-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.logout-btn {
-  font-size: 14px;
-  font-weight: bold;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background-color: var(--wood-panel);
-  color: var(--ink-strong);
-  border: 2px solid var(--wood-border);
-  box-shadow: var(--btn-shadow-3d-sml);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.logout-btn:hover {
-  background-color: var(--wood-panel-solid);
-  border-color: var(--gold-accent-bright);
-  box-shadow: var(--btn-shadow-3d);
-}
-
-.logout-btn:active {
-  transform: translateY(2px);
-  box-shadow: var(--btn-shadow-3d-active-sml);
+  gap: 12px;
 }

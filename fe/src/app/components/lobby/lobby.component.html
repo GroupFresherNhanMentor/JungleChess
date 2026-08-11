@@ -62,7 +62,6 @@
           <span class="code-label">Mã phòng</span>
           <div class="room-code-row">
             <code class="room-id">{{ room.roomId }}</code>
-            <span class="copy-hint">🔗</span>
           </div>
         </div>
       </div>
@@ -121,10 +120,8 @@
 
       <div class="form-group form-group-checkbox">
         <label>
-          <input type="checkbox"
-                 [checked]="newRoomMode !== 'PVP_ONLINE' || newRoomAllowSpectator"
-                 [disabled]="newRoomMode !== 'PVP_ONLINE'"
-                 (change)="newRoomAllowSpectator = $any($event.target).checked" />
+          <input type="checkbox" [checked]="newRoomMode !== 'PVP_ONLINE' || newRoomAllowSpectator"
+            [disabled]="newRoomMode !== 'PVP_ONLINE'" (change)="newRoomAllowSpectator = $any($event.target).checked" />
           Cho phép xem (Spectator)
         </label>
         <small *ngIf="newRoomMode !== 'PVP_ONLINE'">Mặc định bật cho PvE/EvE</small>

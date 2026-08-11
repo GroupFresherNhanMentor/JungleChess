@@ -55,6 +55,10 @@ public class RoomService {
     // ── Create ────────────────────────────────────────────────────────────────
 
     public void createRoom(CreateRoomRequest req, String sessionId, String userId) {
+        createRoom(req, sessionId, userId, null);
+    }
+
+    public void createRoom(CreateRoomRequest req, String sessionId, String userId, String username) {
         String roomId = "room-" + UuidV7.generate().toString().substring(0, 8);
         boolean isEve = req.getMode() == GameMode.EVE;
         boolean isPve = req.getMode() == GameMode.PVE;
@@ -78,12 +82,15 @@ public class RoomService {
                 .updatedAt(now)
                 .build();
 
+        String effectiveUsername = (username != null && !username.isBlank()) ? username : userId;
+
         String yourSide;
         if (isEve) {
             // Creator watches; two bots will fill both player slots
             SpectatorInfo creator = SpectatorInfo.builder()
                     .sessionId(sessionId)
                     .userId(userId)
+                    .username(effectiveUsername)
                     .build();
             state.getSpectators().add(creator);
             yourSide = "SPECTATOR";
@@ -94,6 +101,7 @@ public class RoomService {
                     .side(PlayerSide.PLAYER_1.name())
                     .isBot(false)
                     .userId(userId)
+                    .username(effectiveUsername)
                     .build();
             state.getPlayers().add(player1);
             yourSide = PlayerSide.PLAYER_1.name();
@@ -125,6 +133,10 @@ public class RoomService {
     // ── Join (human player, always fills next available slot) ─────────────────
 
     public void joinRoom(String roomId, String sessionId, String userId) {
+        joinRoom(roomId, sessionId, userId, null);
+    }
+
+    public void joinRoom(String roomId, String sessionId, String userId, String username) {
         RoomState state = roomRepo.findById(roomId);
         if (state == null) throw new RoomNotFoundException(roomId);
         if (state.getStatus() != RoomStatus.WAITING) throw new ActionNotAllowedException("game already started or ended");
@@ -138,11 +150,14 @@ public class RoomService {
                 .anyMatch(p -> PlayerSide.PLAYER_1.name().equals(p.getSide()));
         String side = player1Taken ? PlayerSide.PLAYER_2.name() : PlayerSide.PLAYER_1.name();
 
+        String effectiveUsername = (username != null && !username.isBlank()) ? username : userId;
+
         PlayerInfo joiner = PlayerInfo.builder()
                 .sessionId(sessionId)
                 .side(side)
                 .isBot(false)
                 .userId(userId)
+                .username(effectiveUsername)
                 .build();
         state.getPlayers().add(joiner);
         state.setUpdatedAt(Instant.now());
@@ -206,6 +221,7 @@ public class RoomService {
                 .side(side)
                 .isBot(true)
                 .userId(userId)
+                .username("Bot (" + side + ")")
                 .build();
         state.getPlayers().add(bot);
         state.setUpdatedAt(Instant.now());
@@ -241,6 +257,10 @@ public class RoomService {
     // ── Rejoin (reconnect) ────────────────────────────────────────────────────
 
     public void rejoinRoom(String roomId, String newSessionId, String userId) {
+        rejoinRoom(roomId, newSessionId, userId, null);
+    }
+
+    public void rejoinRoom(String roomId, String newSessionId, String userId, String username) {
         RoomState state = roomRepo.findById(roomId);
         if (state == null) throw new RoomNotFoundException(roomId);
         if (state.getStatus() == RoomStatus.ENDED) throw new ActionNotAllowedException("game has ended");
@@ -252,6 +272,9 @@ public class RoomService {
 
         String oldSessionId = player.getSessionId();
         player.setSessionId(newSessionId);
+        if (username != null && !username.isBlank() && (player.getUsername() == null || player.getUsername().isBlank())) {
+            player.setUsername(username);
+        }
         state.setUpdatedAt(Instant.now());
 
         roomRepo.save(state);
@@ -269,14 +292,21 @@ public class RoomService {
     // ── Watch (as spectator) ──────────────────────────────────────────────────
 
     public void watchRoom(String roomId, String sessionId, String userId) {
+        watchRoom(roomId, sessionId, userId, null);
+    }
+
+    public void watchRoom(String roomId, String sessionId, String userId, String username) {
         RoomState state = roomRepo.findById(roomId);
         if (state == null) throw new RoomNotFoundException(roomId);
         if (!state.isAllowSpectator()) throw new ActionNotAllowedException("spectators not allowed in this room");
         if (state.getStatus() == RoomStatus.ENDED) throw new ActionNotAllowedException("game has ended");
 
+        String effectiveUsername = (username != null && !username.isBlank()) ? username : userId;
+
         SpectatorInfo spectator = SpectatorInfo.builder()
                 .sessionId(sessionId)
                 .userId(userId)
+                .username(effectiveUsername)
                 .build();
         state.getSpectators().add(spectator);
         state.setUpdatedAt(Instant.now());

@@ -18,4 +18,5 @@ public class SpectatorInfo {
 
     String sessionId;
     String userId;
+    String username;
 }

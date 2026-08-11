@@ -20,5 +20,4 @@ public class PlayerInfo {
     String side;
     boolean isBot;
     String userId;
-    String username;
 }

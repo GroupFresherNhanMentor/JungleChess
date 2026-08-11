@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { Piece } from '../../core/models/game.models';
 import { LocalizationService } from '../../core/services/localization.service';
 
-
 @Component({
   selector: 'app-left-panel',
   standalone: true,
@@ -14,8 +13,9 @@ import { LocalizationService } from '../../core/services/localization.service';
 export class LeftPanelComponent {
   @Input() capturedByRed: Piece[] = [];
   @Input() canUndo: boolean = false;
+  /** Online mode: hide local-only controls (undo / random board) the server doesn't support. */
   @Input() onlineMode: boolean = false;
-  
+
   @Output() resetGame = new EventEmitter<void>();
   @Output() undoMove = new EventEmitter<void>();
   @Output() randomizeBoard = new EventEmitter<void>();
